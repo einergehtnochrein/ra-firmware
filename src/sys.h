@@ -1,0 +1,54 @@
+
+#ifndef __TASK_SYS_H
+#define __TASK_SYS_H
+
+#include "lpclib.h"
+#include "pt.h"
+#include "sonde.h"
+
+
+/** Opcodes for application events. */
+enum {
+    APP_EVENT_SUSPEND,                      /**< System suspended */
+    APP_EVENT_HEARD_SONDE,                  /**< Information about heard sonde */
+    APP_EVENT_RAW_FRAME,                    /**< Raw frame received */
+};
+
+
+struct SYS_ConfigCallback {
+    LPCLIB_Callback callback;               /**< New callback handler */
+    LPCLIB_Callback *pOldCallback;          /**< Takes previously installed callback handler */
+};
+
+
+/** Submit a job for the system handler. */
+LPCLIB_Result SYS_handleEvent (LPCLIB_Event event);
+
+/** Install a callback to become informed about system events. */
+void SYS_installCallback (struct SYS_ConfigCallback configCallback);
+
+typedef struct SYS_Context *SYS_Handle;
+
+LPCLIB_Result SYS_open (SYS_Handle *pHandle);
+LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_Decoder decoder);
+
+void SYS_setAttenuator (SYS_Handle handle, bool enable);
+
+/* Return last RSSI measurement in an RX frame */
+float SYS_getFrameRssi (SYS_Handle handle);
+
+/* Return frequency offset for this frame */
+float SYS_getFrameOffsetKhz (SYS_Handle handle);
+
+#define HOST_CHANNEL_PING           0
+#define HOST_CHANNEL_KISS           1
+#define HOST_CHANNEL_GUI            3
+#define HOST_CHANNEL_EPHEMUPDATE    4
+#define HOST_CHANNEL_FIRMWAREUPDATE 9
+
+LPCLIB_Result SYS_send2Host (int channel, const char *message);
+
+/** System management task. */
+PT_THREAD(SYS_thread (SYS_Handle handle));
+
+#endif

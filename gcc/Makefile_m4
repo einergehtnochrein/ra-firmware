@@ -1,0 +1,96 @@
+#
+# You MUST define a project name (PROJECT),
+# the list of C source files (SRCS) and ASM source files (ASM_SRSC),
+# and the name of the linker script (LINKER_SCRIPT).
+#
+PROJECT = ra1_firmware
+
+PDL = $(shell pwd)/../../../../..
+OBJDIR = obj_m4_ra1
+MAKEFILE = Makefile_m4
+
+vpath %.c $(PDL)/libs/graphics/swim
+
+C_SRCS = \
+    main.c bspra1.c linregression.c config.c \
+    adf7021.c sys.c scanner.c ephemupdate.c \
+    gps/gps.c \
+    reedsolomon/reedsolomon.c \
+    dfm/dfm.c dfm/dfmconfig.c dfm/dfmgps.c \
+    rs41/rs41.c rs41/rs41calibconfig.c rs41/rs41gps.c rs41/rs41metrology.c \
+    rs92/rs92.c rs92/rs92calibconfig.c rs92/rs92gps.c rs92/rs92metrology.c rs92/rinex.c rs92/observer.c \
+    srsc/srsc.c srsc/srscconfig.c srsc/srscdsp.c srsc/srscgps.c \
+    imet/imet.c imet/imetconfig.c imet/imetdsp.c imet/imetgps.c \
+    modem/m10.c modem/m10calibconfig.c modem/m10gps.c modem/m10metrology.c \
+    \
+    semihosting/syscalls.c semihosting/t32term.c semihosting/t32term_memory.c
+
+CPP_SRCS =
+
+ASM_SRCS =
+
+CFLAGS += \
+    -DEZH_IMPL_NIOBE1 \
+    -DBOARD_RA=1 \
+    -mfloat-abi=hard -mfpu=fpv4-sp-d16
+
+LDFLAGS += \
+    $(OBJDIR)/$(RINEXLIB) $(OBJDIR)/$(M0LIB) ../libs/pdm/libpdm.a -u _printf_float
+
+EXE_DEPENDENCIES += \
+    $(OBJDIR)/$(RINEXLIB) $(OBJDIR)/$(M0LIB) ../libs/pdm/libpdm.a
+
+INCLUDES += \
+    -I../src/dfm \
+    -I../src/gps \
+    -I../src/imet \
+    -I../src/modem \
+    -I../src/reedsolomon \
+    -I../src/rs41 \
+    -I../src/rs92 \
+    -I../src/semihosting \
+    -I../src/srsc \
+    -I../libs/pdm \
+    -I../libs/pt/pt-1.4 \
+
+LINKER_SCRIPT = lpc54102j512_m4.ld
+
+#
+# RINEX data is wrapped in a library
+#
+RINEXDATA = rinexdata
+RINEXLIB = $(RINEXDATA).a
+
+all :: $(OBJDIR)/$(RINEXLIB)
+
+$(OBJDIR)/$(RINEXLIB): $(MAKEFILE) $(RINEXDATA).bin
+	@echo Create library $@ from RINEX data...
+	@mkdir -p $(OBJDIR)
+	@$(OBJCOPY) -I binary -O elf32-littlearm -B arm \
+            --rename-section .data=.rinexdata,contents,alloc,load,readonly,data \
+            $(RINEXDATA).bin $(OBJDIR)/$(RINEXDATA).o
+	@$(AR) r $@ $(OBJDIR)/$(RINEXDATA).o
+
+#
+# M0 code is wrapped in a library
+#
+M0CODE = m0code
+M0LIB = $(M0CODE).a
+M0IMAGE_LOCATION = obj_m0_ra1
+
+all :: $(OBJDIR)/$(M0LIB)
+
+$(OBJDIR)/$(M0LIB): $(MAKEFILE) $(M0IMAGE_LOCATION)/ra1_m0.bin
+	@echo Create library $@ from M0 code image...
+	@mkdir -p $(OBJDIR)
+	@$(OBJCOPY) -I binary -O elf32-littlearm -B arm \
+            --rename-section .data=.m0code,contents,alloc,load,readonly,data \
+            --add-symbol M0IMAGE_start=.m0code:_binary_obj_m0_ra1_m0_bin_start \
+            $(M0IMAGE_LOCATION)/ra1_m0.bin $(OBJDIR)/$(M0CODE).o
+	@$(AR) r $@ $(OBJDIR)/$(M0CODE).o
+
+#
+# Include the make template
+#
+include ./gccmake54102_m4.mk
+

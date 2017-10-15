@@ -1,0 +1,35 @@
+#
+# You MUST define a project name (PROJECT),
+# the list of C source files (SRCS) and ASM source files (ASM_SRSC),
+# and the name of the linker script (LINKER_SCRIPT).
+#
+PROJECT = ra1_m0
+
+PDL = $(shell pwd)/../../../../..
+OBJDIR = obj_m0_ra1
+MAKEFILE = Makefile_m0
+
+C_SRCS = \
+    main_m0.c sync_detect.c
+
+CPP_SRCS =
+
+ASM_SRCS =
+
+CFLAGS += \
+    -DBOARD_RA=1
+
+LDFLAGS +=
+
+INCLUDES += \
+    -I$(PDL)/libs/pt/pt-1.4 \
+    -I$(PDL)/libs/rtos/none
+
+LINKER_SCRIPT = lpc54102j512_m0.ld
+
+
+#
+# Include the make template
+#
+include ./gccmake54102_m0.mk
+
