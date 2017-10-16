@@ -1,0 +1,6 @@
+*.kdev4
+gcc/obj_m0_ra1/
+gcc/obj_m4_ra1/
+gcc/obj_m0_ra2/
+gcc/obj_m4_ra2/
+
