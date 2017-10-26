@@ -17,8 +17,8 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
     SRSC_InstanceData *p;
     SRSC_InstanceData *instance;
 
-    /* Check if we already have the calibration data. Count the number of sondes
-     * while traversing the list.
+    /* Check if we already know a sonde on that frequency.
+     * Count the number of sondes while traversing the list.
      */
     int numSondes = 0;
     p = instanceList;
@@ -32,8 +32,9 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
         p = p->next;
     }
 
-    /* If we have reached the maximum number of sondes that we want to track in parallel,
-     * do a garbage collection now: Identify the least recently used entry and reuse it.
+    /* Sonde not yet in list. If we have reached the maximum number of sondes
+     * that we want to track in parallel, do a garbage collection now:
+     * Identify the least recently used entry and delete it.
      */
     if (numSondes >= SRSC_MAX_SONDES) {
         uint32_t oldest = (uint32_t)-1;
@@ -48,11 +49,13 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
 
             p = p->next;
         }
+
+        /* Remove entry */
+        _SRSC_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (SRSC_InstanceData *)malloc(sizeof(SRSC_InstanceData));
-    }
+
+    /* We need a new instance */
+    instance = (SRSC_InstanceData *)malloc(sizeof(SRSC_InstanceData));
 
     if (instance) {
         /* Prepare structure */
