@@ -35,4 +35,7 @@ extern const Config_t *config_g;
 
 void CONFIG_open (void);
 
+/* Access functions (should replace direct structure access */
+float CONFIG_getGeoidHeight (void);
+
 #endif

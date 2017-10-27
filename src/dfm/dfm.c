@@ -9,6 +9,7 @@
 
 #include "lpclib.h"
 #include "bsp.h"
+#include "config.h"
 #include "sys.h"
 #include "dfm.h"
 #include "dfmprivate.h"
@@ -184,7 +185,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     /* Print altitude string first (empty for an invalid altitude) */
     sAltitude[0] = 0;
     if (!isnan(instance->gps.observerLLA.alt)) {
-        sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt);
+        sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt + CONFIG_getGeoidHeight());
     }
 
     /* DFM type indicator */
