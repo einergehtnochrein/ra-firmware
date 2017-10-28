@@ -138,6 +138,7 @@ typedef struct _SRSC_InstanceData {
     struct _SRSC_InstanceData *next;
     char name[20];
     float rxFrequencyMHz;
+    float rxOffset;
 
     SRSC_DetectorState detectorState;
     uint32_t lastUpdated;

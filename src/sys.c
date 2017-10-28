@@ -1334,6 +1334,12 @@ handle->lastInPacketRssi = rssi;
 
                         rate = 0;
                     }
+
+#if (BOARD_RA == 2)
+                    //TODO
+                    /* Get frequency offset from PDM DC bias (only AFSK modes) */
+                    SRSC_setRxOffset(handle->srsc, PDM_getDcOffset(handle->pdm) / 1.32f); //TODO factor
+#endif
                 }
                 break;
 

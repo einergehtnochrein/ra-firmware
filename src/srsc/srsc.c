@@ -21,6 +21,7 @@ typedef struct SRSC_Context {
 
     SRSC_InstanceData *instance;
     float rxFrequencyHz;
+    float rxOffset;
 
 #if SEMIHOSTING
     FILE *fpLog;
@@ -58,12 +59,30 @@ static bool _SRSC_doParityCheck (uint8_t *buffer, uint8_t length)
 //TODO
 LPCLIB_Result SRSC_open (SRSC_Handle *pHandle)
 {
-    *pHandle = &_srsc;
+    SRSC_Handle handle = &_srsc;
+
+    *pHandle = handle;
+
+    handle->rxOffset = NAN;
     SRSC_DSP_initAudio();
 
 #if 0 //#if SEMIHOSTING
-    _srsc.fpLog = fopen("srsc.txt", "w");
+    handle->fpLog = fopen("srsc.txt", "w");
 #endif
+
+    return LPCLIB_SUCCESS;
+}
+
+
+
+/* Inform decoder about RX offset */
+LPCLIB_Result SRSC_setRxOffset (SRSC_Handle handle, float rxOffset)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    handle->rxOffset = rxOffset;
 
     return LPCLIB_SUCCESS;
 }
@@ -75,6 +94,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 {
     char s[120];
     char sAltitude[20];
+    char sOffset[8];
     int length = 0;
     float f;
 
@@ -95,9 +115,15 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
         sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt);
     }
 
+    /* Frequency offset */
+    sOffset[0] = 0;
+    if (!isnan(instance->rxOffset)) {
+        snprintf(sOffset, sizeof(sOffset), "%.2f", instance->rxOffset / 1e3f);
+    }
+
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,,,,%.1f,",
+        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,,,,%.1f,%s",
                         instance->config.name,
                         instance->config.isC50 ? "9" : "5",
                         f,         /* Frequency [MHz] */
@@ -106,11 +132,12 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
                         instance->config.hasO3 ? "1" : "",
-                        SYS_getFrameRssi(sys)
+                        SYS_getFrameRssi(sys),
+                        sOffset                             /* RX signal offset [kHz] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,%s,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,,,%.2f,%.1f,,%d",
+        length = sprintf((char *)s, "%s,%s,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,,,%.2f,%.1f,%s,%d",
                         instance->config.name,
                         instance->config.isC50 ? "9" : "5",
                         f,                                  /* Frequency [MHz] */
@@ -124,6 +151,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         instance->config.hasO3 ? "1" : "",
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
+                        sOffset,                            /* RX signal offset [kHz] */
                         instance->gps.usedSats
                         );
     }
@@ -151,6 +179,8 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
 
             /* Always call config handler first to obtain an instance */
             if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz) == LPCLIB_SUCCESS) {
+                handle->instance->rxOffset = handle->rxOffset;
+
                 if (SRSC_isGpsType(handle->packet.type)) {
                     _SRSC_processGpsFrame(&handle->packet, &handle->instance->gps);
                 }
