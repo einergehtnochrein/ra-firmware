@@ -204,6 +204,7 @@ LPCLIB_Result _RS92_processConfigBlock (
 #define CALIB_FREQUENCY             0x00000001
 #define CALIB_TEMPERATURE           0x00003800
 #define CALIB_PRESSURE              0x00000FF0
+#define CALIB_KILLTIMER             0x00000001
 
 bool _RS92_checkValidCalibration(RS92_InstanceData *instance, uint32_t purpose);
 

@@ -163,6 +163,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
     char sClimbRate[16];
     char sPressure[10];
     char sTemperature[10];
+    char sKillTimer[6];
     int length = 0;
     float offset;
 
@@ -203,9 +204,17 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         sprintf(sClimbRate, "%.1f", instance->gps.climbRate);
     }
 
+    /* Kill timer (if active) */
+    sKillTimer[0] = 0;
+    if (_RS92_checkValidCalibration(instance, CALIB_KILLTIMER)) {
+        if (instance->killTimer != (uint16_t)-1) {
+            snprintf(sKillTimer, sizeof(sKillTimer), "%d", instance->killTimer);
+        }
+    }
+
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,0,%.3f,,,,%s,%s,%.1f,%.1f,%s,%s,,,,,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%s,0,%.3f,,,,%s,%s,%.1f,%.1f,%s,%s,,,,,%.1f,%.1f,%d,%d,%s",
                         instance->hashName,
                         instance->rxFrequencyMHz,   /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
@@ -216,11 +225,13 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
                         sPressure,                  /* Pressure [hPa] */
                         SYS_getFrameRssi(sys),
                         offset,                     /* RX frequency offset [kHz] */
-                        instance->gps.visibleSats
+                        instance->gps.visibleSats,
+                        instance->frameCounter,     /* Current frame number */
+                        sKillTimer                  /* Kill timer (frame) */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,0,%.3f,%d,%.5lf,%.5lf,%s,%s,%.1f,%.1f,%s,%s,,,,%.2f,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%s,0,%.3f,%d,%.5lf,%.5lf,%s,%s,%.1f,%.1f,%s,%s,,,,%.2f,%.1f,%.1f,%d,%d,%s",
                         instance->hashName,
                         instance->rxFrequencyMHz,   /* Frequency [MHz] */
                         instance->gps.usedSats,
@@ -235,7 +246,9 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
                         offset,                     /* RX frequency offset [kHz] */
-                        instance->gps.visibleSats
+                        instance->gps.visibleSats,
+                        instance->frameCounter,     /* Current frame number */
+                        sKillTimer                  /* Kill timer (frame) */
                         );
     }
 

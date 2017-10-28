@@ -183,6 +183,7 @@ LPCLIB_Result _RS41_processConfigBlock (
 /* Check if the calibration block contains valid data for a given purpose */
 #define CALIB_FREQUENCY             0x0000000000000001ll
 #define CALIB_PRESSURE              0x000007E000000000ll
+#define CALIB_KILLTIMER             0x0000000000000004ll
 
 bool _RS41_checkValidCalibration(RS41_InstanceData *instance, uint64_t purpose);
 

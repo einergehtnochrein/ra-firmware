@@ -161,6 +161,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     int length = 0;
     float offset;
     char sPressure[10];
+    char sKillTimer[6];
 
     offset = 0;
 
@@ -170,6 +171,14 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         snprintf(sPressure, sizeof(sPressure), "%.1f", instance->metro.pressure);
     }
 
+    /* Kill timer (if active) */
+    sKillTimer[0] = 0;
+    if (_RS41_checkValidCalibration(instance, CALIB_KILLTIMER)) {
+        if (instance->killTimer != (uint16_t)-1) {
+            snprintf(sKillTimer, sizeof(sKillTimer), "%d", instance->killTimer);
+        }
+    }
+
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
     double longitude = instance->gps.observerLLA.lon;
@@ -177,7 +186,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         latitude *= 180.0 / M_PI;
         longitude *= 180.0 / M_PI;
 
-        length = sprintf((char *)s, "%s,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,%s,,,,,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%s,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,%s,,,,,%.1f,%.1f,%d,%d,%s",
                         instance->hashName,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         latitude,  /* Latitude [degrees] */
@@ -189,16 +198,20 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         sPressure,                              /* Pressure sensor [hPa] */
                         SYS_getFrameRssi(sys),
                         offset,    /* RX frequency offset [kHz] */
-                        instance->gps.visibleSats               /* # satellites */
+                        instance->gps.visibleSats,              /* # satellites */
+                        instance->frameCounter,                 /* Current frame number */
+                        sKillTimer                              /* Kill timer (frame) */
                         );
     }
     else if (instance->encrypted) {
-        length = sprintf((char *)s, "%s,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%s,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s",
                         instance->hashName,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         SYS_getFrameRssi(sys),
                         offset,    /* RX frequency offset [kHz] */
-                        instance->gps.visibleSats               /* # satellites */
+                        instance->gps.visibleSats,              /* # satellites */
+                        instance->frameCounter,                 /* Current frame number */
+                        sKillTimer                              /* Kill timer (frame) */
                         );
     }
 
