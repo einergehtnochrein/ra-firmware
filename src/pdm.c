@@ -40,13 +40,18 @@ LPCLIB_DefineRegBit(DMIC_CHANEN_EN_CH0,             0,  1);
 LPCLIB_DefineRegBit(DMIC_CHANEN_EN_CH1,             1,  1);
 
 
+#define PDM_SAMPLES_PER_BUFFER              256
+#define PDM_N_BUFFERS                       3
+
 static struct _PDM_Context {
     PDM_Callback callback;
 
-    int32_t audioBuffer[2][256];
+    int32_t audioBuffer[PDM_N_BUFFERS][PDM_SAMPLES_PER_BUFFER];
     int activeBufferIndex;
     int completedBufferIndex;
     int bufferWrIndex;
+
+    float dcOffset;
 } pdmContext;
 
 
@@ -94,7 +99,8 @@ void PDM_run (PDM_Handle handle, int decimationRatio, PDM_Callback callback)
 LPC_DMIC->FIFOCTRL0 = 0x00080007;   // Trigger level = 9
     LPC_DMIC->PDMSRCCFG0 = 0x0001;   // falling edge sampling
     LPC_DMIC->DCCTRL0 = 0
-            | (2 << 0)                      /* 78 Hz */
+//            | (2 << 0)                      /* 78 Hz */
+    | (0 << 0)                      /* No DC filter */
             | (4 << 4)                      /* 21.5 bits --> 17.5 bits */
             | (1 << 8)                      /* Saturation on (16 bits) */
             ;
@@ -136,19 +142,33 @@ void PDM_close (PDM_Handle *pHandle)
 }
 
 
+/* Get DC offset (Ra2 only) */
+float PDM_getDcOffset (PDM_Handle handle)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return NAN;
+    }
+
+    return handle->dcOffset;
+}
+
 
 void DMIC_IRQHandler (void)
 {
     PDM_Handle handle = &pdmContext;
     int i;
     uint32_t status;
+    int readBuffer4dc;
 
     status = LPC_DMIC->FIFOSTAT0;
 
     if (status & 1) {
+        /* DC averaging is over one buffer length */
+        readBuffer4dc = (handle->activeBufferIndex + PDM_N_BUFFERS - 1) % PDM_N_BUFFERS;
+
         /* Get samples from FIFO */
         for (i = 0; i < 8; i++) {  //TODO
-            if (handle->bufferWrIndex < 256) {
+            if (handle->bufferWrIndex < PDM_SAMPLES_PER_BUFFER) {
                 /* The FIFO entries contain signed 24-bit values in [23:0].
                  * Only [15:0] are relevant since we use the saturation feature of the DC filter.
                  * Bits [31:25] always read as 0. FIFO data is therefore shifted left by 8 bits
@@ -157,15 +177,20 @@ void DMIC_IRQHandler (void)
                 handle->audioBuffer[handle->activeBufferIndex][handle->bufferWrIndex] =
                     (int32_t)(LPC_DMIC->FIFODATA0 << 8) / 256;
 
+                /* DC filter (moving average of last PDM_SAMPLES_PER_BUFFER samples */
+                float f = handle->audioBuffer[handle->activeBufferIndex][handle->bufferWrIndex]
+                        - handle->audioBuffer[readBuffer4dc][handle->bufferWrIndex];
+                handle->dcOffset = handle->dcOffset - f / PDM_SAMPLES_PER_BUFFER;
+//    DC[n] = DC[n-1] - (1/N)*(x[n-N] + x[n])
             }
             ++handle->bufferWrIndex;
         }
 
-        if (handle->bufferWrIndex >= 256) {
+        if (handle->bufferWrIndex >= PDM_SAMPLES_PER_BUFFER) {
             handle->bufferWrIndex = 0;
 
             handle->completedBufferIndex = handle->activeBufferIndex;
-            handle->activeBufferIndex = (handle->activeBufferIndex + 1) % 2;
+            handle->activeBufferIndex = (handle->activeBufferIndex + 1) % PDM_N_BUFFERS;
 
             /* Trigger deferred handling (IRQ with lower priority) */
             NVIC_SetPendingIRQ(IRQ38_IRQn);
@@ -183,7 +208,7 @@ void IRQ38_IRQHandler (void)
     PDM_Handle handle = &pdmContext;
 
     if (handle->callback) {
-        handle->callback(handle->audioBuffer[handle->completedBufferIndex], 256);
+        handle->callback(handle->audioBuffer[handle->completedBufferIndex], PDM_SAMPLES_PER_BUFFER);
     }
 }
 
