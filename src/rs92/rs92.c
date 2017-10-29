@@ -214,7 +214,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,0,%.3f,,,,%s,%s,%.1f,%.1f,%s,%s,,,,,%.1f,%.1f,%d,%d,%s",
+        length = sprintf((char *)s, "%s,0,%.3f,,,,%s,%s,%.1f,%.1f,%s,%s,,,,,%.1f,%.1f,%d,%d,%s,",
                         instance->hashName,
                         instance->rxFrequencyMHz,   /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
@@ -231,7 +231,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,0,%.3f,%d,%.5lf,%.5lf,%s,%s,%.1f,%.1f,%s,%s,,,,%.2f,%.1f,%.1f,%d,%d,%s",
+        length = sprintf((char *)s, "%s,0,%.3f,%d,%.5lf,%.5lf,%s,%s,%.1f,%.1f,%s,%s,,,,%.2f,%.1f,%.1f,%d,%d,%s,",
                         instance->hashName,
                         instance->rxFrequencyMHz,   /* Frequency [MHz] */
                         instance->gps.usedSats,

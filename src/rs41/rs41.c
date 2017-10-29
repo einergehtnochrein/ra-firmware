@@ -186,7 +186,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         latitude *= 180.0 / M_PI;
         longitude *= 180.0 / M_PI;
 
-        length = sprintf((char *)s, "%s,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,%s,,,,,%.1f,%.1f,%d,%d,%s",
+        length = sprintf((char *)s, "%s,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,%s,,,,,%.1f,%.1f,%d,%d,%s,",
                         instance->hashName,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         latitude,  /* Latitude [degrees] */
@@ -204,7 +204,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         );
     }
     else if (instance->encrypted) {
-        length = sprintf((char *)s, "%s,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s",
+        length = sprintf((char *)s, "%s,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,",
                         instance->hashName,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         SYS_getFrameRssi(sys),
