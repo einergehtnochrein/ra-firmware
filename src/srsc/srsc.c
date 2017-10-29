@@ -123,7 +123,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,,,,%.1f,%s",
+        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,,,,%.1f,%s,,,,%.3f",
                         instance->config.name,
                         instance->config.isC50 ? "9" : "5",
                         f,         /* Frequency [MHz] */
@@ -133,11 +133,12 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
                         instance->config.hasO3 ? "1" : "",
                         SYS_getFrameRssi(sys),
-                        sOffset                             /* RX signal offset [kHz] */
+                        sOffset,                            /* RX signal offset [kHz] */
+                        instance->config.batteryVoltage     /* Battery voltage [V] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,%s,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,,,%.2f,%.1f,%s,%d",
+        length = sprintf((char *)s, "%s,%s,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,,,%.2f,%.1f,%s,%d,,,%.3f",
                         instance->config.name,
                         instance->config.isC50 ? "9" : "5",
                         f,                                  /* Frequency [MHz] */
@@ -152,7 +153,8 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
                         sOffset,                            /* RX signal offset [kHz] */
-                        instance->gps.usedSats
+                        instance->gps.usedSats,
+                        instance->config.batteryVoltage     /* Battery voltage [V] */
                         );
     }
 
