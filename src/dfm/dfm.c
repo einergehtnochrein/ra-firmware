@@ -192,7 +192,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     /* Battery voltage [V] */
     sVbat[0] = 0;
     if (!isnan(instance->metro.batteryVoltage)) {
-//        snprintf(sVbat, sizeof(sVbat), "%.3f", instance->metro.batteryVoltage);
+        snprintf(sVbat, sizeof(sVbat), "%.3f", instance->metro.batteryVoltage);
     }
 
     /* DFM type indicator */
