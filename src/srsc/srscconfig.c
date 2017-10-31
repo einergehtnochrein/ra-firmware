@@ -17,8 +17,8 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
     SRSC_InstanceData *p;
     SRSC_InstanceData *instance;
 
-    /* Check if we already have the calibration data. Count the number of sondes
-     * while traversing the list.
+    /* Check if we already know a sonde on that frequency.
+     * Count the number of sondes while traversing the list.
      */
     int numSondes = 0;
     p = instanceList;
@@ -32,8 +32,9 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
         p = p->next;
     }
 
-    /* If we have reached the maximum number of sondes that we want to track in parallel,
-     * do a garbage collection now: Identify the least recently used entry and reuse it.
+    /* Sonde not yet in list. If we have reached the maximum number of sondes
+     * that we want to track in parallel, do a garbage collection now:
+     * Identify the least recently used entry and delete it.
      */
     if (numSondes >= SRSC_MAX_SONDES) {
         uint32_t oldest = (uint32_t)-1;
@@ -48,16 +49,22 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
 
             p = p->next;
         }
+
+        /* Remove entry */
+        _SRSC_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (SRSC_InstanceData *)malloc(sizeof(SRSC_InstanceData));
-    }
+
+    /* We need a new instance */
+    instance = (SRSC_InstanceData *)malloc(sizeof(SRSC_InstanceData));
 
     if (instance) {
         /* Prepare structure */
         memset(instance, 0, sizeof(SRSC_InstanceData));
         instance->rxFrequencyMHz = frequencyMHz;
+        instance->gps.observerLLA.lat = NAN;
+        instance->gps.observerLLA.lon = NAN;
+        instance->gps.observerLLA.alt = NAN;
+        instance->gps.climbRate = NAN;
 
         /* Insert into list */
         p = instanceList;
@@ -126,10 +133,14 @@ LPCLIB_Result _SRSC_processConfigFrame (
 
                             instance->confDetect.nDetections = 0;
 
-                            instance->config.isC50 = false;
                             if ((instance->config.sondeType == 228) ||
                                 (instance->config.sondeType == 229)) {
+                                instance->config.isC34 = false;
                                 instance->config.isC50 = true;
+                            }
+                            else {
+                                instance->config.isC50 = false;
+                                instance->config.isC34 = true;
                             }
 
                             instance->config.hasO3 = false;
@@ -206,8 +217,8 @@ LPCLIB_Result _SRSC_processConfigFrame (
                 case SRSC_FRAME_CONFIG_108:
                     instance->config.info108 = data;
                     break;
-                case SRSC_FRAME_CONFIG_110:
-                    instance->config.info110 = data;
+                case SRSC_FRAME_CONFIG_VBAT:
+                    instance->config.batteryVoltage = data / 1000.0f;
                     break;
                 case SRSC_FRAME_CONFIG_111:
                     instance->config.info111 = data;

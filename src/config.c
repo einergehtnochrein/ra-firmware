@@ -75,3 +75,11 @@ void CONFIG_open (void)
     }
 }
 
+/************** Access functions **************/
+
+float CONFIG_getGeoidHeight (void)
+{
+    //TODO
+    return -49.0f;
+}
+

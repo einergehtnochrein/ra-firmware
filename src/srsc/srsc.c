@@ -14,6 +14,8 @@
 #include "srscprivate.h"
 
 
+#define REPORT_INTERVAL                     (3000/10)
+
 
 /** Context */
 typedef struct SRSC_Context {
@@ -21,6 +23,8 @@ typedef struct SRSC_Context {
 
     SRSC_InstanceData *instance;
     float rxFrequencyHz;
+    float rxOffset;
+    uint32_t timeOfLastReport;
 
 #if SEMIHOSTING
     FILE *fpLog;
@@ -58,12 +62,30 @@ static bool _SRSC_doParityCheck (uint8_t *buffer, uint8_t length)
 //TODO
 LPCLIB_Result SRSC_open (SRSC_Handle *pHandle)
 {
-    *pHandle = &_srsc;
+    SRSC_Handle handle = &_srsc;
+
+    *pHandle = handle;
+
+    handle->rxOffset = NAN;
     SRSC_DSP_initAudio();
 
 #if 0 //#if SEMIHOSTING
-    _srsc.fpLog = fopen("srsc.txt", "w");
+    handle->fpLog = fopen("srsc.txt", "w");
 #endif
+
+    return LPCLIB_SUCCESS;
+}
+
+
+
+/* Inform decoder about RX offset */
+LPCLIB_Result SRSC_setRxOffset (SRSC_Handle handle, float rxOffset)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    handle->rxOffset = rxOffset;
 
     return LPCLIB_SUCCESS;
 }
@@ -75,8 +97,11 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 {
     char s[120];
     char sAltitude[20];
+    char sOffset[8];
     int length = 0;
     float f;
+    uint32_t special;
+    char sSpecial[8];
 
     /* Get frequency */
     f = instance->config.frequencyKhz / 1000.0f;
@@ -95,24 +120,43 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
         sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt);
     }
 
+    /* Frequency offset */
+    sOffset[0] = 0;
+    if (!isnan(instance->rxOffset)) {
+        snprintf(sOffset, sizeof(sOffset), "%.2f", instance->rxOffset / 1e3f);
+    }
+
+    /* Sonde type */
+    special = 0;
+    if (instance->config.hasO3) {
+        special += 1;
+    }
+    if (instance->config.isC34) {
+        special += 4;
+    }
+    if (instance->config.isC50) {
+        special += 8;
+    }
+    snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
+
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,,,,%.1f,",
+        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,,,,%.1f,%s,,,,%.3f",
                         instance->config.name,
-                        instance->config.isC50 ? "9" : "5",
                         f,         /* Frequency [MHz] */
                         sAltitude, /* Altitude [m] */
                         instance->gps.climbRate,            /* Climb rate [m/s] */
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
-                        instance->config.hasO3 ? "1" : "",
-                        SYS_getFrameRssi(sys)
+                        sSpecial,
+                        SYS_getFrameRssi(sys),
+                        sOffset,                            /* RX signal offset [kHz] */
+                        instance->config.batteryVoltage     /* Battery voltage [V] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,%s,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,,,%.2f,%.1f,,%d",
+        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,,,%.2f,%.1f,%s,%d,,,%.3f",
                         instance->config.name,
-                        instance->config.isC50 ? "9" : "5",
                         f,                                  /* Frequency [MHz] */
                         instance->gps.usedSats,
                         latitude,                           /* Latitude [degrees] */
@@ -121,10 +165,12 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         instance->gps.climbRate,            /* Climb rate [m/s] */
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
-                        instance->config.hasO3 ? "1" : "",
+                        sSpecial,
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
-                        instance->gps.usedSats
+                        sOffset,                            /* RX signal offset [kHz] */
+                        instance->gps.usedSats,
+                        instance->config.batteryVoltage     /* Battery voltage [V] */
                         );
     }
 
@@ -151,25 +197,33 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
 
             /* Always call config handler first to obtain an instance */
             if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz) == LPCLIB_SUCCESS) {
+                handle->instance->rxOffset = handle->rxOffset;
+
                 if (SRSC_isGpsType(handle->packet.type)) {
                     _SRSC_processGpsFrame(&handle->packet, &handle->instance->gps);
                 }
             /* Remember RX frequency (difference to nominal sonde frequency will be reported as frequency offset) */
 //            handle->rxFrequencyHz = rxFrequencyHz;
 
-                /* If there is a complete position update, send it out (once sonde type is known) */
-                if (handle->instance->gps.updateFlags == 7) {
-                    handle->instance->gps.updateFlags = 0;
-                    if (handle->instance->detectorState >= SRSC_DETECTOR_FIND_NAME) {
-                        _SRSC_sendKiss(handle->instance);
+                /* Send updated information to host. Either immediately if there is a new position,
+                 * or after a minimum interval.
+                 */
+                if ((handle->instance->gps.updateFlags == 7) ||
+                    (os_time - handle->timeOfLastReport > REPORT_INTERVAL)) {
 
-                        LPCLIB_Event event;
-                        LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
-                        event.opcode = APP_EVENT_HEARD_SONDE;
-                        event.block = SONDE_DECODER_C34_C50;
-                        event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
-                        SYS_handleEvent(event);
+                    handle->timeOfLastReport = os_time;
+                    if (handle->instance->gps.updateFlags == 7) {
+                        handle->instance->gps.updateFlags = 0;
                     }
+
+                    _SRSC_sendKiss(handle->instance);
+
+                    LPCLIB_Event event;
+                    LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
+                    event.opcode = APP_EVENT_HEARD_SONDE;
+                    event.block = SONDE_DECODER_C34_C50;
+                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                    SYS_handleEvent(event);
                 }
             }
         }

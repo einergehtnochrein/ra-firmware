@@ -15,4 +15,7 @@ void PDM_close (PDM_Handle *pHandle);
  */
 void PDM_initUser (void);
 
+/* Get DC offset (Ra2 only) */
+float PDM_getDcOffset (PDM_Handle handle);
+
 #endif

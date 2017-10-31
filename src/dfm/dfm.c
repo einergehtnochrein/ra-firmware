@@ -9,6 +9,7 @@
 
 #include "lpclib.h"
 #include "bsp.h"
+#include "config.h"
 #include "sys.h"
 #include "dfm.h"
 #include "dfmprivate.h"
@@ -164,8 +165,9 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     char sAltitude[20];
     char sClimbRate[20];
     char sGroundSpeed[20];
-    char *sType;
-    char *sSpecial;
+    char sVbat[8];
+    uint32_t special;
+    char sSpecial[8];
     int length = 0;
     float f, offset;
 
@@ -184,26 +186,34 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     /* Print altitude string first (empty for an invalid altitude) */
     sAltitude[0] = 0;
     if (!isnan(instance->gps.observerLLA.alt)) {
-        sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt);
+        sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt + CONFIG_getGeoidHeight());
+    }
+
+    /* Battery voltage [V] */
+    sVbat[0] = 0;
+    if (!isnan(instance->metro.batteryVoltage)) {
+        snprintf(sVbat, sizeof(sVbat), "%.3f", instance->metro.batteryVoltage);
     }
 
     /* DFM type indicator */
-    sType = "3";
-    sSpecial = "";
+    special = 0;
     if (instance->platform == SONDE_DFM09) {
-        sType = "4";
         if (instance->gps.inBurkinaFaso) {
-            sSpecial = "4";
+            special += 4;
+        }
+        else {
+            special += 8;
         }
     }
     else {
         if (instance->config.isPS15) {
-            sSpecial = "8";
+            special += 32;
         }
         if (instance->config.isDFM06) {
-            sSpecial = "16";
+            special += 16;
         }
     }
+    snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
 
     /* Climb rate and ground speed may not be available (Burkina Faso version) */
     sClimbRate[0] = 0;
@@ -217,9 +227,8 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%s,%.1f,%s,,,%s,,,,%.1f,%.1f,0",
+        length = sprintf((char *)s, "%s,2,%.3f,,,,%s,%s,%.1f,%s,,,%s,,,,%.1f,%.1f,,,,",
                         instance->name,
-                        sType,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
@@ -231,9 +240,8 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,%s,%.3f,,%.5lf,%.5lf,%s,%s,%.1f,%s,,,%s,,,%.2f,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%s,2,%.3f,,%.5lf,%.5lf,%s,%s,%.1f,%s,,,%s,,,%.2f,%.1f,%.1f,%d,,,%s",
                         instance->name,
-                        sType,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
                         longitude,                  /* Longitude [degrees] */
@@ -245,7 +253,8 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
                         offset,                     /* RX frequency offset [kHz] */
-                        instance->gps.usedSats
+                        instance->gps.usedSats,
+                        sVbat                       /* Battery voltage [V] */
                         );
     }
 

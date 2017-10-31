@@ -330,7 +330,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
                             | (2u << 21)
                             | (11u << 17)
                             | (645u << 5)
-                            | (1u << 4)
+//AFC off!  TODO                            | (1u << 4)
                             ); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
             ADF7021_write(radio, ADF7021_REGISTER_15, 0
                             | (2u << 17)        /* CLKOUT pin carries CDR CLK */
@@ -400,7 +400,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
                             | (2u << 21)
                             | (11u << 17)
                             | (645u << 5)
-                            | (1u << 4)
+//AFC off                            | (1u << 4)
                             ); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
             ADF7021_write(radio, ADF7021_REGISTER_15, 0
                             | (2u << 17)        /* CLKOUT pin carries CDR CLK */
@@ -408,10 +408,13 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
                             | (9u << 4)         /* Enable REG14 modes */
                             );
             ADF7021_write(radio, ADF7021_REGISTER_14, 0
-    //                        | (0 << 21)         /* Test DAC gain = 0 dB */
-    | (6 << 21)         /* Test DAC gain = 24 dB */
-    //                        | (0 << 5)          /* Test DAC offset (0...65535) */
-    | (32767 << 5)          /* Test DAC offset (0...65535) */
+                            | (4 << 21)         /* Test DAC gain = ? dB */
+#if (BOARD_RA == 1)
+                            | (12098 << 5)      /* Test DAC offset (0...65535) */
+#endif
+#if (BOARD_RA == 2)
+                            | (8192 << 5)       /* Test DAC offset (0...65535) */
+#endif
                             | (1 << 4)          /* Enable Test DAC */
                             );
 
@@ -1331,6 +1334,12 @@ handle->lastInPacketRssi = rssi;
 
                         rate = 0;
                     }
+
+#if (BOARD_RA == 2)
+                    //TODO
+                    /* Get frequency offset from PDM DC bias (only AFSK modes) */
+                    SRSC_setRxOffset(handle->srsc, PDM_getDcOffset(handle->pdm) / 1.32f); //TODO factor
+#endif
                 }
                 break;
 

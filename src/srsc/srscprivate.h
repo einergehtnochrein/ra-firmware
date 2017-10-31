@@ -36,7 +36,7 @@ typedef enum {
     SRSC_FRAME_CONFIG_106 = 106,
     SRSC_FRAME_CONFIG_107 = 107,
     SRSC_FRAME_CONFIG_108 = 108,
-    SRSC_FRAME_CONFIG_110 = 110,
+    SRSC_FRAME_CONFIG_VBAT = 110,
     SRSC_FRAME_CONFIG_111 = 111,
     SRSC_FRAME_CONFIG_115 = 115,
     SRSC_FRAME_CONFIG_116 = 116,
@@ -83,6 +83,7 @@ typedef struct {
     bool sondeNameKnown;
     uint16_t frameCounter;
     uint32_t frequencyKhz;
+    bool isC34;
     bool isC50;
     bool hasO3;
 
@@ -92,7 +93,7 @@ typedef struct {
     uint32_t info106;
     uint32_t info107;
     uint32_t info108;
-    uint32_t info110;
+    float batteryVoltage;                   /* Battery voltage [V] */
     uint32_t info111;
     uint32_t info115;
     uint32_t info116;
@@ -138,6 +139,7 @@ typedef struct _SRSC_InstanceData {
     struct _SRSC_InstanceData *next;
     char name[20];
     float rxFrequencyMHz;
+    float rxOffset;
 
     SRSC_DetectorState detectorState;
     uint32_t lastUpdated;
