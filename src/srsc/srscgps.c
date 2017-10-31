@@ -118,6 +118,7 @@ LPCLIB_Result _SRSC_processGpsFrame (
     if (cookedGps->usedSats == 0) {
         cookedGps->observerLLA.lat = NAN;
         cookedGps->observerLLA.lon = NAN;
+        cookedGps->observerLLA.alt = NAN;
     }
     else {
         GPS_convertLLA2ECEF(&cookedGps->observerLLA, &cookedGps->observerECEF);

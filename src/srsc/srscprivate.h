@@ -83,6 +83,7 @@ typedef struct {
     bool sondeNameKnown;
     uint16_t frameCounter;
     uint32_t frequencyKhz;
+    bool isC34;
     bool isC50;
     bool hasO3;
 

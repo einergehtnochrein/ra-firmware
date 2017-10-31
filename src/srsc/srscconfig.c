@@ -61,6 +61,10 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
         /* Prepare structure */
         memset(instance, 0, sizeof(SRSC_InstanceData));
         instance->rxFrequencyMHz = frequencyMHz;
+        instance->gps.observerLLA.lat = NAN;
+        instance->gps.observerLLA.lon = NAN;
+        instance->gps.observerLLA.alt = NAN;
+        instance->gps.climbRate = NAN;
 
         /* Insert into list */
         p = instanceList;
@@ -129,10 +133,14 @@ LPCLIB_Result _SRSC_processConfigFrame (
 
                             instance->confDetect.nDetections = 0;
 
-                            instance->config.isC50 = false;
                             if ((instance->config.sondeType == 228) ||
                                 (instance->config.sondeType == 229)) {
+                                instance->config.isC34 = false;
                                 instance->config.isC50 = true;
+                            }
+                            else {
+                                instance->config.isC50 = false;
+                                instance->config.isC34 = true;
                             }
 
                             instance->config.hasO3 = false;
