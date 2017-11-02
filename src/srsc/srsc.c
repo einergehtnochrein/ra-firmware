@@ -95,7 +95,7 @@ LPCLIB_Result SRSC_setRxOffset (SRSC_Handle handle, float rxOffset)
 /* Send position report */
 static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 {
-    char s[120];
+    char s[140];
     char sAltitude[20];
     char sOffset[8];
     int length = 0;
@@ -141,7 +141,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,,,,%.1f,%s,,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,%.3f,,,%.1f,%s,,,,%.3f",
                         instance->config.name,
                         f,         /* Frequency [MHz] */
                         sAltitude, /* Altitude [m] */
@@ -149,13 +149,14 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
                         sSpecial,
+                        instance->config.rfPwrDetect,       /* RF power detector [V] */
                         SYS_getFrameRssi(sys),
                         sOffset,                            /* RX signal offset [kHz] */
                         instance->config.batteryVoltage     /* Battery voltage [V] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,,,%.2f,%.1f,%s,%d,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,%.3f,,%.2f,%.1f,%s,%d,,,%.3f",
                         instance->config.name,
                         f,                                  /* Frequency [MHz] */
                         instance->gps.usedSats,
@@ -166,6 +167,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
                         sSpecial,
+                        instance->config.rfPwrDetect,       /* RF power detector [V] */
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
                         sOffset,                            /* RX signal offset [kHz] */

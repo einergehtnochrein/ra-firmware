@@ -37,7 +37,7 @@ typedef enum {
     SRSC_FRAME_CONFIG_107 = 107,
     SRSC_FRAME_CONFIG_108 = 108,
     SRSC_FRAME_CONFIG_VBAT = 110,
-    SRSC_FRAME_CONFIG_111 = 111,
+    SRSC_FRAME_CONFIG_RFPWRDETECT = 111,
     SRSC_FRAME_CONFIG_115 = 115,
     SRSC_FRAME_CONFIG_116 = 116,
     SRSC_FRAME_CONFIG_119 = 119,
@@ -94,7 +94,7 @@ typedef struct {
     uint32_t info107;
     uint32_t info108;
     float batteryVoltage;                   /* Battery voltage [V] */
-    uint32_t info111;
+    float rfPwrDetect;
     uint32_t info115;
     uint32_t info116;
     uint32_t info119;

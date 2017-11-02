@@ -220,8 +220,8 @@ LPCLIB_Result _SRSC_processConfigFrame (
                 case SRSC_FRAME_CONFIG_VBAT:
                     instance->config.batteryVoltage = data / 1000.0f;
                     break;
-                case SRSC_FRAME_CONFIG_111:
-                    instance->config.info111 = data;
+                case SRSC_FRAME_CONFIG_RFPWRDETECT:
+                    instance->config.rfPwrDetect = data / 1000.0f;
                     break;
                 case SRSC_FRAME_CONFIG_115:
                     instance->config.info115 = data;
