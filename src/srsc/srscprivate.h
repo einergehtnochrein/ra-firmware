@@ -17,7 +17,14 @@
 
 
 typedef enum {
-    SRSC_FRAME_METRO_HUMIDITY = 1,
+    SRSC_FRAME_METRO_TEMPERATURE_REFBLOCK = 2,
+    SRSC_FRAME_METRO_TEMPERATURE = 3,
+    SRSC_FRAME_METRO_TEMPERATURE_HUSENSOR = 4,
+    SRSC_FRAME_METRO_TEMPERATURE_CHAMBER = 5,
+    SRSC_FRAME_METRO_TEMPERATURE_O3INLET = 6,
+    SRSC_FRAME_METRO_CURRENT_O3CELL = 7,
+
+    SRSC_FRAME_METRO_HUMIDITY = 16,
 
     SRSC_FRAME_GPS_DATE = 20,
     SRSC_FRAME_GPS_TIME = 21,
@@ -71,8 +78,32 @@ typedef __PACKED(union {
 
 
 typedef struct {
-    float temperature;                          /* Temperature [°C] */
-    float humidity;                             /* Humidity [%] */
+    union {
+        float values[20];
+
+        struct {
+            float voltageCU;                            /* Voltage at CU mode [µV] */
+            float voltageR2;                            /* Voltage at R2 mode [µV] */
+            float temperatureRefBlock;                  /* Temperature in reference metal block [°C] */
+            float temperature;                          /* Temperature [°C] */
+            float temperatureHuSensor;                  /* Temperature next to humidity sensor [°C] */
+            float temperatureChamber;                   /* Temperature in separate chamber [°C] */
+            float temperatureO3Inlet;                   /* Temperature air inlet ECC ozone sensor [°C] */
+            float currentO3Cell;                        /* Cell current of ECC ozone sensor [µA] */
+            float __reserved8__;
+            float __reserved9__;
+            float __reserved10__;
+            float __reserved11__;
+            float __reserved12__;
+            float __reserved13__;
+            float __reserved14__;
+            float __reserved15__;
+            float humidity;                             /* Humidity [%] */
+            float __reserved17__;
+            float __reserved18__;
+            float __reserved19__;
+        };
+    };
 } SRSC_CookedMetrology;
 
 

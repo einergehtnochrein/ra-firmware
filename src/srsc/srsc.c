@@ -98,6 +98,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     char s[140];
     char sAltitude[20];
     char sOffset[8];
+    char sTemperature[8];
     int length = 0;
     float f;
     uint32_t special;
@@ -105,6 +106,12 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Get frequency */
     f = instance->config.frequencyKhz / 1000.0f;
+
+    /* Sensors */
+    sTemperature[0] = 0;
+    if (!isnan(instance->metro.temperature)) {
+        snprintf(sTemperature, sizeof(sTemperature), "%.1f", instance->metro.temperature);
+    }
 
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
@@ -141,13 +148,14 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,%.3f,,,%.1f,%s,,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,%.1f,%.1f,%s,,%s,%.3f,,,%.1f,%s,,,,%.3f",
                         instance->config.name,
                         f,         /* Frequency [MHz] */
                         sAltitude, /* Altitude [m] */
                         instance->gps.climbRate,            /* Climb rate [m/s] */
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
+                        sTemperature,
                         sSpecial,
                         instance->config.rfPwrDetect,       /* RF power detector [V] */
                         SYS_getFrameRssi(sys),
@@ -156,7 +164,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,%.3f,,%.2f,%.1f,%s,%d,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,%s,,%s,%.3f,,%.2f,%.1f,%s,%d,,,%.3f",
                         instance->config.name,
                         f,                                  /* Frequency [MHz] */
                         instance->gps.usedSats,
@@ -166,6 +174,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         instance->gps.climbRate,            /* Climb rate [m/s] */
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
+                        sTemperature,
                         sSpecial,
                         instance->config.rfPwrDetect,       /* RF power detector [V] */
                         instance->gps.hdop,
