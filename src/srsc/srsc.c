@@ -198,6 +198,16 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
         if (_SRSC_doParityCheck(buffer, length)) {
             memcpy(&handle->packet, buffer, sizeof(handle->packet));
 
+            /* Log */
+            if (handle->instance->detectorState == SRSC_DETECTOR_READY) {
+                char log[40];
+                snprintf(log, sizeof(log), "%s,1,%d,%08lX",
+                            handle->instance->name,
+                            handle->packet.type,
+                            handle->packet.d_bigendian);
+                SYS_send2Host(HOST_CHANNEL_INFO, log);
+            }
+
 #if 0 //#if SEMIHOSTING
             fprintf(handle->fpLog, "00FF %02X %04lX %02X\n",
                     handle->packet.type,
