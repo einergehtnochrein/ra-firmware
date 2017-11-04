@@ -127,7 +127,7 @@ LPCLIB_Result _SRSC_processConfigFrame (
                     if (instance->confDetect.sondeType == instance->confDetect.prevSondeType) {
                         ++instance->confDetect.nDetections;
 
-                        if (instance->confDetect.nDetections >= 3) {
+                        if (instance->confDetect.nDetections >= 2) {
                             instance->config.sondeType = instance->confDetect.sondeType;
                             instance->detectorState = SRSC_DETECTOR_FIND_NAME;
 
@@ -167,7 +167,7 @@ LPCLIB_Result _SRSC_processConfigFrame (
                     if (instance->confDetect.sondeNumber == instance->confDetect.prevSondeNumber) {
                         ++instance->confDetect.nDetections;
 
-                        if (instance->confDetect.nDetections >= 3) {
+                        if (instance->confDetect.nDetections >= 2) {
                             instance->config.sondeNumber = instance->confDetect.sondeNumber;
                             instance->detectorState = SRSC_DETECTOR_READY;
 
