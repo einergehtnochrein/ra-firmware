@@ -210,6 +210,11 @@ LPCLIB_Result M10_removeFromList (M10_Handle handle, float rxFrequencyMHz)
     M10_InstanceData *instance = NULL;
     while (_M10_iterateInstance(&instance)) {
         if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+            /* Remove reference from context if this is the current sonde */
+            if (instance == handle->instance) {
+                handle->instance = NULL;
+            }
+            /* Remove sonde */
             _M10_deleteInstance(instance);
             break;
         }

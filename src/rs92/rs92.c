@@ -418,6 +418,11 @@ LPCLIB_Result RS92_removeFromList (RS92_Handle handle, float rxFrequencyMHz)
     RS92_InstanceData *instance = NULL;
     while (_RS92_iterateInstance(&instance)) {
         if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+            /* Remove reference from context if this is the current sonde */
+            if (instance == handle->instance) {
+                handle->instance = NULL;
+            }
+            /* Remove sonde */
             _RS92_deleteInstance(instance);
             break;
         }

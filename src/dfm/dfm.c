@@ -342,6 +342,11 @@ LPCLIB_Result DFM_removeFromList (DFM_Handle handle, float rxFrequencyMHz)
     DFM_InstanceData *instance = NULL;
     while (_DFM_iterateInstance(&instance)) {
         if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+            /* Remove reference from context if this is the current sonde */
+            if (instance == handle->instance) {
+                handle->instance = NULL;
+            }
+            /* Remove sonde */
             _DFM_deleteInstance(instance);
             break;
         }

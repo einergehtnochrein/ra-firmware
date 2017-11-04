@@ -269,6 +269,11 @@ LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, float rxFrequencyMHz)
     SRSC_InstanceData *instance = NULL;
     while (_SRSC_iterateInstance(&instance)) {
         if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+            /* Remove reference from context if this is the current sonde */
+            if (instance == handle->instance) {
+                handle->instance = NULL;
+            }
+            /* Remove sonde */
             _SRSC_deleteInstance(instance);
             break;
         }
