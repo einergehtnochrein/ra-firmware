@@ -1012,7 +1012,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                     case 4:     sondeType = SONDE_DFM09; break;
                                     case 5:     sondeType = SONDE_C34; break;
                                     case 6:     sondeType = SONDE_IMET_RSB; break;
-                                    case 9:     sondeType = SONDE_C50; break;
+                                    case 8:     sondeType = SONDE_C50; break;
                                 }
                                 switch (sondeType) {
                                     case SONDE_M10:

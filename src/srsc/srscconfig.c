@@ -65,6 +65,10 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
         instance->gps.observerLLA.lon = NAN;
         instance->gps.observerLLA.alt = NAN;
         instance->gps.climbRate = NAN;
+        int i;
+        for (i = 0; i < 20; i++) {
+            instance->metro.values[i] = NAN;
+        }
 
         /* Insert into list */
         p = instanceList;
@@ -85,10 +89,6 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
 
     return instance;
 }
-
-
-
-float c50metro[20];
 
 
 /* Process the config/calib block. */
@@ -127,7 +127,7 @@ LPCLIB_Result _SRSC_processConfigFrame (
                     if (instance->confDetect.sondeType == instance->confDetect.prevSondeType) {
                         ++instance->confDetect.nDetections;
 
-                        if (instance->confDetect.nDetections >= 3) {
+                        if (instance->confDetect.nDetections >= 2) {
                             instance->config.sondeType = instance->confDetect.sondeType;
                             instance->detectorState = SRSC_DETECTOR_FIND_NAME;
 
@@ -167,7 +167,7 @@ LPCLIB_Result _SRSC_processConfigFrame (
                     if (instance->confDetect.sondeNumber == instance->confDetect.prevSondeNumber) {
                         ++instance->confDetect.nDetections;
 
-                        if (instance->confDetect.nDetections >= 3) {
+                        if (instance->confDetect.nDetections >= 2) {
                             instance->config.sondeNumber = instance->confDetect.sondeNumber;
                             instance->detectorState = SRSC_DETECTOR_READY;
 
@@ -190,66 +190,64 @@ LPCLIB_Result _SRSC_processConfigFrame (
             break;
 
         case SRSC_DETECTOR_READY:
-            switch (rawConfig->type) {
-                case SRSC_FRAME_CONFIG_TYPE:
-                    /* Ignore once sonde type is fixed */
-                    break;
-
-                case SRSC_FRAME_CONFIG_NAME:
-                    /* Ignore once sonde name is fixed */
-                    break;
-
-                case SRSC_FRAME_CONFIG_103:
-                    instance->config.info103 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_104:
-                    instance->config.info104 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_105:
-                    instance->config.info105 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_106:
-                    instance->config.info106 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_107:
-                    instance->config.info107 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_108:
-                    instance->config.info108 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_VBAT:
-                    instance->config.batteryVoltage = data / 1000.0f;
-                    break;
-                case SRSC_FRAME_CONFIG_111:
-                    instance->config.info111 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_115:
-                    instance->config.info115 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_116:
-                    instance->config.info116 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_119:
-                    instance->config.info119 = data;
-                    break;
-                case SRSC_FRAME_CONFIG_120:
-                    instance->config.info120 = data;
-                    break;
-        #if 0
-
-                case DFM_SUBFRAME_CONFIG_HUMIDITY:
-                    /* ADC value of humidity channel */
-        //            calib->adcHumidityRaw = i32;
-                    break;
-        #endif
-
-                default:
-                    if (rawConfig->type < 20) {
-                        c50metro[rawConfig->type] = ((float*)&data)[0];
-                    }
-                    break;
-            }
+            /* */
             break;
+    }
+
+    /* Once type is known we can collect the measurement results */
+    if (instance->detectorState >= SRSC_DETECTOR_FIND_NAME) {
+        switch (rawConfig->type) {
+            case SRSC_FRAME_CONFIG_TYPE:
+                /* Ignore once sonde type is fixed */
+                break;
+
+            case SRSC_FRAME_CONFIG_NAME:
+                /* Ignore once sonde name is fixed */
+                break;
+
+            case SRSC_FRAME_CONFIG_103:
+                instance->config.info103 = data;
+                break;
+            case SRSC_FRAME_CONFIG_104:
+                instance->config.info104 = data;
+                break;
+            case SRSC_FRAME_CONFIG_105:
+                instance->config.info105 = data;
+                break;
+            case SRSC_FRAME_CONFIG_106:
+                instance->config.info106 = data;
+                break;
+            case SRSC_FRAME_CONFIG_107:
+                instance->config.info107 = data;
+                break;
+            case SRSC_FRAME_CONFIG_108:
+                instance->config.info108 = data;
+                break;
+            case SRSC_FRAME_CONFIG_VBAT:
+                instance->config.batteryVoltage = data / 1000.0f;
+                break;
+            case SRSC_FRAME_CONFIG_RFPWRDETECT:
+                instance->config.rfPwrDetect = data / 1000.0f;
+                break;
+            case SRSC_FRAME_CONFIG_115:
+                instance->config.info115 = data;
+                break;
+            case SRSC_FRAME_CONFIG_116:
+                instance->config.info116 = data;
+                break;
+            case SRSC_FRAME_CONFIG_119:
+                instance->config.info119 = data;
+                break;
+            case SRSC_FRAME_CONFIG_120:
+                instance->config.info120 = data;
+                break;
+
+            default:
+                if (rawConfig->type < 20) {
+                    instance->metro.values[rawConfig->type] = ((float*)&data)[0];
+                }
+                break;
+        }
     }
 
     if (instance) {

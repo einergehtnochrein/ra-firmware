@@ -42,6 +42,7 @@ float SYS_getFrameOffsetKhz (SYS_Handle handle);
 
 #define HOST_CHANNEL_PING           0
 #define HOST_CHANNEL_KISS           1
+#define HOST_CHANNEL_INFO           2
 #define HOST_CHANNEL_GUI            3
 #define HOST_CHANNEL_EPHEMUPDATE    4
 #define HOST_CHANNEL_FIRMWAREUPDATE 9

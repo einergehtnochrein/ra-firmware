@@ -95,9 +95,10 @@ LPCLIB_Result SRSC_setRxOffset (SRSC_Handle handle, float rxOffset)
 /* Send position report */
 static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 {
-    char s[120];
+    char s[140];
     char sAltitude[20];
     char sOffset[8];
+    char sTemperature[8];
     int length = 0;
     float f;
     uint32_t special;
@@ -105,6 +106,12 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Get frequency */
     f = instance->config.frequencyKhz / 1000.0f;
+
+    /* Sensors */
+    sTemperature[0] = 0;
+    if (!isnan(instance->metro.temperature)) {
+        snprintf(sTemperature, sizeof(sTemperature), "%.1f", instance->metro.temperature);
+    }
 
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
@@ -141,21 +148,23 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,%.1f,%.1f,,,%s,,,,%.1f,%s,,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,%.1f,%.1f,%s,,%s,%.3f,,,%.1f,%s,,,,%.3f",
                         instance->config.name,
                         f,         /* Frequency [MHz] */
                         sAltitude, /* Altitude [m] */
                         instance->gps.climbRate,            /* Climb rate [m/s] */
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
+                        sTemperature,
                         sSpecial,
+                        instance->config.rfPwrDetect,       /* RF power detector [V] */
                         SYS_getFrameRssi(sys),
                         sOffset,                            /* RX signal offset [kHz] */
                         instance->config.batteryVoltage     /* Battery voltage [V] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,,,%s,,,%.2f,%.1f,%s,%d,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,%s,,%s,%.3f,,%.2f,%.1f,%s,%d,,,%.3f",
                         instance->config.name,
                         f,                                  /* Frequency [MHz] */
                         instance->gps.usedSats,
@@ -165,7 +174,9 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         instance->gps.climbRate,            /* Climb rate [m/s] */
                         0.0f,                               /* Direction [°] */
                         instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
+                        sTemperature,
                         sSpecial,
+                        instance->config.rfPwrDetect,       /* RF power detector [V] */
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
                         sOffset,                            /* RX signal offset [kHz] */
@@ -186,6 +197,16 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
     if (length == 7) {
         if (_SRSC_doParityCheck(buffer, length)) {
             memcpy(&handle->packet, buffer, sizeof(handle->packet));
+
+            /* Log */
+            if (handle->instance->detectorState == SRSC_DETECTOR_READY) {
+                char log[40];
+                snprintf(log, sizeof(log), "%s,1,%d,%08lX",
+                            handle->instance->name,
+                            handle->packet.type,
+                            handle->packet.d_bigendian);
+                SYS_send2Host(HOST_CHANNEL_INFO, log);
+            }
 
 #if 0 //#if SEMIHOSTING
             fprintf(handle->fpLog, "00FF %02X %04lX %02X\n",
@@ -258,6 +279,11 @@ LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, float rxFrequencyMHz)
     SRSC_InstanceData *instance = NULL;
     while (_SRSC_iterateInstance(&instance)) {
         if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+            /* Remove reference from context if this is the current sonde */
+            if (instance == handle->instance) {
+                handle->instance = NULL;
+            }
+            /* Remove sonde */
             _SRSC_deleteInstance(instance);
             break;
         }
