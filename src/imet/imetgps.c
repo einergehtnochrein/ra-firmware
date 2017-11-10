@@ -24,16 +24,15 @@ LPCLIB_Result _IMET_processGpsFrame (
     cookedGps->observerLLA.lat = M_PI * (rawGps->latitude / 180.0f);
     cookedGps->observerLLA.lon = M_PI * (rawGps->longitude / 180.0f);
     cookedGps->observerLLA.alt = rawGps->altitude;
+    cookedGps->observerLLA.climbRate = NAN;
+    cookedGps->observerLLA.velocity = NAN;
+    cookedGps->observerLLA.direction = NAN;
     GPS_convertLLA2ECEF(&cookedGps->observerLLA, &cookedGps->observerECEF);
 
     cookedGps->usedSats = rawGps->numSats;
     cookedGps->utc.hour = rawGps->hour;
     cookedGps->utc.minute = rawGps->minute;
     cookedGps->utc.second = rawGps->second;
-
-    cookedGps->climbRate = NAN;
-    cookedGps->groundSpeed = NAN;
-    cookedGps->direction = NAN;
 
     cookedGps->updated = true;
 
@@ -52,6 +51,14 @@ LPCLIB_Result _IMET_processGpsxFrame (
     cookedGps->observerLLA.lat = M_PI * (rawGps->latitude / 180.0f);
     cookedGps->observerLLA.lon = M_PI * (rawGps->longitude / 180.0f);
     cookedGps->observerLLA.alt = rawGps->altitude;
+    cookedGps->observerLLA.climbRate = rawGps->verticalVelocity;
+    float ve = rawGps->eastVelocity;
+    float vn = rawGps->northVelocity;
+    cookedGps->observerLLA.velocity = sqrtf(ve * ve + vn * vn);
+    cookedGps->observerLLA.direction = atan2f(ve, vn);
+    if (cookedGps->observerLLA.direction <= 0) {
+        cookedGps->observerLLA.direction += 2.0f * M_PI;
+    }
     GPS_convertLLA2ECEF(&cookedGps->observerLLA, &cookedGps->observerECEF);
 
     cookedGps->usedSats = rawGps->numSats;
@@ -59,11 +66,6 @@ LPCLIB_Result _IMET_processGpsxFrame (
     cookedGps->utc.minute = rawGps->minute;
     cookedGps->utc.second = rawGps->second;
 
-    cookedGps->climbRate = rawGps->verticalVelocity;
-    float evel = rawGps->eastVelocity;
-    float nvel = rawGps->northVelocity;
-    cookedGps->groundSpeed = sqrtf(evel * evel + nvel * nvel);
-    cookedGps->direction = atan2f(evel, nvel) * (180.0f / M_PI);
 
     cookedGps->updated = true;
 

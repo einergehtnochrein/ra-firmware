@@ -72,6 +72,8 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
     char s[120];
     char sAltitude[20];
     char sClimbRate[16];
+    char sVelocity[8];
+    char sDirection[8];
     char *sType;
     int length = 0;
     float f, offset;
@@ -99,26 +101,33 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
 
     /* Don't send climb rate if it is undefined */
     sClimbRate[0] = 0;
-    if (!isnan(instance->gps.climbRate)) {
-        sprintf(sClimbRate, "%.1f", instance->gps.climbRate);
+    if (!isnan(instance->gps.observerLLA.climbRate)) {
+        sprintf(sClimbRate, "%.1f", instance->gps.observerLLA.climbRate);
+    }
+
+    sVelocity[0] = 0;
+    if (!isnan(instance->gps.observerLLA.velocity)) {
+        snprintf(sVelocity, sizeof(sVelocity), "%.1f", instance->gps.observerLLA.velocity * 3.6f);
+    }
+    sDirection[0] = 0;
+    if (!isnan(instance->gps.observerLLA.direction)) {
+        snprintf(sDirection, sizeof(sDirection), "%.1f", instance->gps.observerLLA.direction * (180.0f / M_PI));
     }
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%s,%.1f,%.1f,,,,,,,%.1f,%.1f,0",
+        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%s,,,,,,,,,%.1f,%.1f,0",
                         instance->name,
                         sType,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
-                        0.0f,                       /* Direction [°] */
- 0.0f,//                       instance->gps.groundSpeed,  /* Horizontal speed [km/h] */
                         SYS_getFrameRssi(sys),
                         offset                      /* RX frequency offset [kHz] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,%s,%.3f,,%.5lf,%.5lf,%s,%s,%.1f,%.1f,,,,,,,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%s,%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,,,,,,,%.1f,%.1f,%d",
                         instance->name,
                         sType,
                         f,                          /* Frequency [MHz] */
@@ -126,8 +135,8 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         longitude,                  /* Longitude [degrees] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
-                        0.0f,                       /* Direction [°] */
- 0.0f,//                       instance->gps.groundSpeed,  /* Horizontal speed [km/h] */
+                        sDirection,
+                        sVelocity,
                         SYS_getFrameRssi(sys),
                         offset,                     /* RX frequency offset [kHz] */
                         instance->gps.usedSats
