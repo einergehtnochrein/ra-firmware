@@ -45,14 +45,28 @@ typedef enum {
 } SONDE_Type;
 
 
+/* Decoder: Group of sondes that can be decoded the same way */
 typedef enum {
-    SONDE_DECODER_RS41_RS92 = 0,
-    SONDE_DECODER_DFM,
-    SONDE_DECODER_C34_C50,
-    SONDE_DECODER_IMET,
-    SONDE_DECODER_MODEM,
-    _SONDE_DECODER_UNDEFINED_,
+    SONDE_DECODER_RS41 = 0,
+    SONDE_DECODER_RS92 = 1,
+    SONDE_DECODER_DFM = 2,
+    SONDE_DECODER_C34_C50 = 3,
+    SONDE_DECODER_IMET = 4,
+    SONDE_DECODER_MODEM = 5,
+    _SONDE_DECODER_UNDEFINED_ = -1,
 } SONDE_Decoder;
+
+
+/* Detector: Types of sondes the receiver can detect in parallel */
+typedef enum {
+    SONDE_DETECTOR_RS41_RS92 = 0,
+    SONDE_DETECTOR_DFM = 1,
+    SONDE_DETECTOR_C34_C50 = 2,
+    SONDE_DETECTOR_IMET = 3,
+    SONDE_DETECTOR_MODEM = 4,
+    SONDE_DETECTOR_RS41_RS92_DFM = 5,
+    _SONDE_DETECTOR_UNDEFINED_ = -1,
+} SONDE_Detector;
 
 
 

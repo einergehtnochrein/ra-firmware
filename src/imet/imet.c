@@ -169,7 +169,6 @@ LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t leng
 
     if (length >= 3) {
         if (_IMET_doParityCheck(p, length)) {
-printf("* %02X\r\n",frameType);
             /* Get/create an instance */
             handle->instance = _IMET_getInstanceDataStructure(rxFrequencyHz);
             if (handle->instance) {
@@ -192,7 +191,7 @@ printf("* %02X\r\n",frameType);
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DECODER_IMET;
+                    event.block = SONDE_DETECTOR_IMET;
                     event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
                     SYS_handleEvent(event);
                 }

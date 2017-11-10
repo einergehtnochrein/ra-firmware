@@ -125,7 +125,7 @@ struct SYS_Context {
     LPCLIB_Callback callback;                           /**< Callback for system events */
 
     SONDE_Type sondeType;
-    SONDE_Decoder sondeDecoder;
+    SONDE_Detector sondeDetector;
     uint32_t currentFrequencyHz;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
@@ -275,19 +275,27 @@ static void _SYS_setRadioFrequency (SYS_Handle handle, uint32_t frequencyHz)
 
 
 
+/* Get current RX frequency */
+uint32_t SYS_getCurrentFrequencyHz (SYS_Handle handle)
+{
+    return handle->currentFrequencyHz;
+}
+
+
+
 /* Enable the receiver, select a frequency and a sonde decoder type.
  */
-LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_Decoder decoder)
+LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE_Detector detector)
 {
-    if ((decoder != handle->sondeDecoder) || (frequencyHz != handle->currentFrequencyHz)) {
+    if ((detector != handle->sondeDetector) || (frequencyHz != handle->currentFrequencyHz)) {
         PDM_stop(handle->pdm);
 
-        handle->sondeDecoder = decoder;
+        handle->sondeDetector = detector;
 
         ADF7021_calibrateIF(radio, 1);  //TODO coarse/fine
 
-        switch (decoder) {
-        case SONDE_DECODER_C34_C50:
+        switch (detector) {
+        case SONDE_DETECTOR_C34_C50:
             ADF7021_write(radio, ADF7021_REGISTER_0, 0
                             | (1u << 28)        /* UART/SPI mode */
                             | (1u << 27)        /* Receive mode */
@@ -357,7 +365,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
 
-        case SONDE_DECODER_IMET:
+        case SONDE_DETECTOR_IMET:
             ADF7021_write(radio, ADF7021_REGISTER_0, 0
                             | (1u << 28)        /* UART/SPI mode */
                             | (1u << 27)        /* Receive mode */
@@ -427,7 +435,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
 
-        case SONDE_DECODER_DFM:
+        case SONDE_DETECTOR_DFM:
             ADF7021_write(radio, ADF7021_REGISTER_0,  (1u << 28) | (1u << 27)); /* UART/SPI mode (see also register 15), RX */
             ADF7021_write(radio, ADF7021_REGISTER_14, (0 << 30) | (0 << 27) | (0 << 25) | (0 << 21) | (0 << 5) | (0 << 4)); /* ED_PEAK_RESPONSE=0, ED_LEAK_FACTOR=0 */
             ADF7021_write(radio, ADF7021_REGISTER_15, (7u << 17) | (9u << 4)); /* CLKOUT=TxRxCLK, Rx_TEST_MODES=9 */
@@ -462,7 +470,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
             LPC_MAILBOX->IRQ0SET = (1u << 1); //TODO
             break;
 
-        case SONDE_DECODER_RS41_RS92:
+        case SONDE_DETECTOR_RS41_RS92:
             ADF7021_write(radio, ADF7021_REGISTER_0, 0
                             | (1u << 28)
                             | (1u << 27)
@@ -526,7 +534,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
             LPC_MAILBOX->IRQ0SET = (1u << 0); //TODO
             break;
 
-        case SONDE_DECODER_MODEM:
+        case SONDE_DETECTOR_MODEM:
             ADF7021_write(radio, ADF7021_REGISTER_0, 0
                             | (1u << 28)
                             | (1u << 27)
@@ -690,9 +698,9 @@ static void SYS_sleep (SYS_Handle handle)
     osDelay(10);
 
     /* Restore radio mode */
-    SONDE_Decoder decoder = handle->sondeDecoder;
-    handle->sondeDecoder = _SONDE_DECODER_UNDEFINED_;
-    SYS_enableDecoder(handle, handle->currentFrequencyHz, decoder);
+    SONDE_Detector detector = handle->sondeDetector;
+    handle->sondeDetector = _SONDE_DETECTOR_UNDEFINED_;
+    SYS_enableDetector(handle, handle->currentFrequencyHz, detector);
 }
 
 
@@ -908,18 +916,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     /* Send status */
                     _SYS_reportRadioFrequency(handle);
                     SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualMode(scanner) ? "2,1" : "2,0");
-                    char *type = 0;
-                    switch (SCANNER_getManualSondeDecoder(scanner)) {
-                        case SONDE_DECODER_RS41_RS92:   type = "5,0"; break;
-                        case SONDE_DECODER_DFM:         type = "5,1"; break;
-                        case SONDE_DECODER_C34_C50:     type = "5,2"; break;
-                        case SONDE_DECODER_IMET:        type = "5,3"; break;
-                        case SONDE_DECODER_MODEM:       type = "5,4"; break;
-                        default: break;
-                    }
-                    if (type) {
-                        SYS_send2Host(HOST_CHANNEL_GUI, type);
-                    }
+                    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+                    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+                    SYS_send2Host(HOST_CHANNEL_GUI, s);
                     SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualAttenuator(scanner) ? "6,1" : "6,0");
 
                     //TODO send only if ping parameter asks for it
@@ -954,21 +953,22 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             }
             break;
 
-        case 3:     /* Set manual sonde type */
+        case 3:     /* Set manual sonde detector */
             {
                 int selector;
-                SONDE_Decoder decoder;
+                SONDE_Detector detector;
 
                 if (sscanf(cl, "#%*d,%d", &selector) == 1) {
-                    decoder = SONDE_DECODER_RS41_RS92;
+                    detector = SONDE_DETECTOR_RS41_RS92;
                     switch (selector) {
-                        case 0:     decoder = SONDE_DECODER_RS41_RS92; break;
-                        case 1:     decoder = SONDE_DECODER_DFM; break;
-                        case 2:     decoder = SONDE_DECODER_C34_C50; break;
-                        case 3:     decoder = SONDE_DECODER_IMET; break;
-                        case 4:     decoder = SONDE_DECODER_MODEM; break;
+                        case 0:     detector = SONDE_DETECTOR_RS41_RS92; break;
+                        case 1:     detector = SONDE_DETECTOR_DFM; break;
+                        case 2:     detector = SONDE_DETECTOR_C34_C50; break;
+                        case 3:     detector = SONDE_DETECTOR_IMET; break;
+                        case 4:     detector = SONDE_DETECTOR_MODEM; break;
+                        case 5:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                     }
-                    SCANNER_setManualSondeDecoder(scanner, decoder);
+                    SCANNER_setManualSondeDetector(scanner, detector);
                 }
             }
             break;
@@ -1001,35 +1001,23 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     if (list == 1) {        /* Sonde lists in decoders */
                         if (action == 0) {  /* Remove an entry */
                             float frequencyMHz;
-                            int typeCode;
-                            if (sscanf(cl, "#%*d,%*d,%*d,%f,%d", &frequencyMHz, &typeCode) == 2) {
-                                SONDE_Type sondeType = SONDE_UNDEFINED;
-                                switch (typeCode) {
-                                    case 0:     sondeType = SONDE_RS92; break;
-                                    case 1:     sondeType = SONDE_RS41; break;
-                                    case 2:     sondeType = SONDE_PS15; break;
-                                    case 3:     sondeType = SONDE_DFM06; break;
-                                    case 4:     sondeType = SONDE_DFM09; break;
-                                    case 5:     sondeType = SONDE_C34; break;
-                                    case 6:     sondeType = SONDE_IMET_RSB; break;
-                                    case 8:     sondeType = SONDE_C50; break;
-                                }
-                                switch (sondeType) {
-                                    case SONDE_M10:
+                            int decoderCode;
+                            if (sscanf(cl, "#%*d,%*d,%*d,%f,%d", &frequencyMHz, &decoderCode) == 2) {
+                                SONDE_Decoder decoder = (SONDE_Decoder)decoderCode;
+                                switch (decoder) {
+                                    case SONDE_DECODER_MODEM:
                                         M10_removeFromList(handle->m10, frequencyMHz);
                                         break;
-                                    case SONDE_RS41:
+                                    case SONDE_DECODER_RS41:
                                         RS41_removeFromList(handle->rs41, frequencyMHz);
                                         break;
-                                    case SONDE_RS92:
+                                    case SONDE_DECODER_RS92:
                                         RS92_removeFromList(handle->rs92, frequencyMHz);
                                         break;
-                                    case SONDE_DFM06:
-                                    case SONDE_DFM09:
+                                    case SONDE_DECODER_DFM:
                                         DFM_removeFromList(handle->dfm, frequencyMHz);
                                         break;
-                                    case SONDE_C34:
-                                    case SONDE_C50:
+                                    case SONDE_DECODER_C34_C50:
                                         SRSC_removeFromList(handle->srsc, frequencyMHz);
                                         break;
                                     default:

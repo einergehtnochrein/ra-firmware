@@ -300,7 +300,7 @@ if(1){//                if (handle->instance->config.sondeNameKnown) {
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DECODER_DFM;
+                    event.block = SONDE_DETECTOR_DFM;
                     event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
                     SYS_handleEvent(event);
 

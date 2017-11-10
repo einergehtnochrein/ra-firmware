@@ -67,7 +67,7 @@ enum {
 typedef struct _SCANNER_Item {
     struct _SCANNER_Item *next;
     uint32_t frequencyHz;
-    SONDE_Decoder decoder;
+    SONDE_Detector detector;
     uint32_t lastHeard;
 } SCANNER_Item;
 
@@ -82,7 +82,7 @@ struct SCANNER_Context {
     SCANNER_Item *scanCurrent;                          /* Current item in scan list */
 
     uint32_t manualFrequencyHz;                         /* Frequency for manual operation */
-    SONDE_Decoder manualSondeDecoder;
+    SONDE_Detector manualSondeDetector;
     bool manualAttenuator;
 
     int preferredIndex;
@@ -95,7 +95,7 @@ struct SCANNER_Context {
 
 
 /* Find the next QRG and sonde type to listen to. */
-static bool _SCANNER_getNextQrg (SONDE_Decoder *sondeDecoder, uint32_t *frequencyHz, uint32_t *durationMs)
+static bool _SCANNER_getNextQrg (SONDE_Detector *sondeDetector, uint32_t *frequencyHz, uint32_t *durationMs)
 {
     SCANNER_Handle handle = &scannerContext;
     bool result = true;
@@ -107,7 +107,7 @@ static bool _SCANNER_getNextQrg (SONDE_Decoder *sondeDecoder, uint32_t *frequenc
             break;
 
         case SCANNER_MODE_MANUAL:
-            *sondeDecoder = handle->manualSondeDecoder;
+            *sondeDetector = handle->manualSondeDetector;
             *frequencyHz = handle->manualFrequencyHz;
             *durationMs = 0xFFFFFFFF;
             break;
@@ -120,7 +120,7 @@ static bool _SCANNER_getNextQrg (SONDE_Decoder *sondeDecoder, uint32_t *frequenc
                 handle->scanCurrent = handle->scanList;
             }
             if (handle->scanCurrent) {
-                *sondeDecoder = handle->scanCurrent->decoder;
+                *sondeDetector = handle->scanCurrent->detector;
                 *frequencyHz = handle->scanCurrent->frequencyHz;
                 *durationMs = 2200;
 
@@ -132,7 +132,7 @@ static bool _SCANNER_getNextQrg (SONDE_Decoder *sondeDecoder, uint32_t *frequenc
             break;
 
         case SCANNER_MODE_SEARCH:
-            *sondeDecoder = SONDE_DECODER_RS41_RS92;
+            *sondeDetector = SONDE_DETECTOR_RS41_RS92;
             *frequencyHz = 402900000;
             *durationMs = 2200;
 
@@ -247,30 +247,30 @@ void SCANNER_setManualFrequency (SCANNER_Handle handle, uint32_t frequencyHz)
 }
 
 
-void SCANNER_setManualSondeDecoder (SCANNER_Handle handle, SONDE_Decoder sondeDecoder)
+void SCANNER_setManualSondeDetector (SCANNER_Handle handle, SONDE_Detector sondeDetector)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
         return;
     }
 
-    handle->manualSondeDecoder = sondeDecoder;
+    handle->manualSondeDetector = sondeDetector;
 
     /* Force checking for new frequency/type settings */
     handle->scanTickTimeout = true;
 }
 
 
-SONDE_Decoder SCANNER_getManualSondeDecoder (SCANNER_Handle handle)
+SONDE_Detector SCANNER_getManualSondeDetector (SCANNER_Handle handle)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
         return SONDE_UNDEFINED;
     }
 
-    return handle->manualSondeDecoder;
+    return handle->manualSondeDetector;
 }
 
 
-void SCANNER_addListenFrequency (SCANNER_Handle handle, float frequencyMHz, SONDE_Decoder sondeDecoder)
+void SCANNER_addListenFrequency (SCANNER_Handle handle, float frequencyMHz, SONDE_Detector sondeDetector)
 {
     SCANNER_Item *lastItem;
     SCANNER_Item *item;
@@ -284,7 +284,7 @@ void SCANNER_addListenFrequency (SCANNER_Handle handle, float frequencyMHz, SOND
     found = false;
     item = handle->scanList;
     while (item && !found) {
-        if ((item->frequencyHz == frequencyHz) && (item->decoder == sondeDecoder)) {
+        if ((item->frequencyHz == frequencyHz) && (item->detector == sondeDetector)) {
             found = true;
             item->lastHeard = os_time;          /* Mark as updated */
         }
@@ -297,7 +297,7 @@ void SCANNER_addListenFrequency (SCANNER_Handle handle, float frequencyMHz, SOND
         item = (SCANNER_Item *)calloc(1, sizeof(SCANNER_Item));
         if (item) {
             item->frequencyHz = lrintf(frequencyMHz * 1e6f);
-            item->decoder = sondeDecoder;
+            item->detector = sondeDetector;
             item->lastHeard = os_time;
 
             /* Find out where to add this entry */
@@ -357,7 +357,7 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
     scannerContext.queue = osMailCreate(osMailQ(scannerQueueDef), NULL);
 
     handle->manualFrequencyHz = 405100000;
-    handle->manualSondeDecoder = SONDE_DECODER_RS41_RS92;
+    handle->manualSondeDetector = SONDE_DETECTOR_RS41_RS92;
 //handle->mode = SCANNER_MODE_SEARCH;
 handle->mode = SCANNER_MODE_MANUAL;
 
@@ -372,11 +372,14 @@ handle->mode = SCANNER_MODE_MANUAL;
             osTimerStop(handle->scanTick);
             handle->scanTickTimeout = false;
 
-            SONDE_Decoder sondeDecoder = SONDE_DECODER_RS41_RS92;
+            SONDE_Detector sondeDetector = SONDE_DETECTOR_RS41_RS92;
             uint32_t frequencyHz = 0;
             uint32_t durationMs = 1;
-            if (_SCANNER_getNextQrg(&sondeDecoder, &frequencyHz, &durationMs)) {
-                SYS_enableDecoder(sys, frequencyHz, sondeDecoder);
+            if (_SCANNER_getNextQrg(&sondeDetector, &frequencyHz, &durationMs)) {
+                SYS_enableDetector(sys, frequencyHz, sondeDetector);
+                if (handle->mode == SCANNER_MODE_MANUAL) {
+                    handle->manualFrequencyHz = SYS_getCurrentFrequencyHz(sys);
+                }
 //durationMs = 0xFFFFFFFF;
                 osTimerStart(handle->scanTick, durationMs);
 printf("scanner @ %ld\r\n", frequencyHz);

@@ -381,7 +381,7 @@ if(1){//                    if (handle->instance->gps.valid) {
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DECODER_RS41_RS92;
+                    event.block = SONDE_DETECTOR_RS41_RS92;
                     event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
                     SYS_handleEvent(event);
                 }

@@ -30,7 +30,9 @@ void SYS_installCallback (struct SYS_ConfigCallback configCallback);
 typedef struct SYS_Context *SYS_Handle;
 
 LPCLIB_Result SYS_open (SYS_Handle *pHandle);
-LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_Decoder decoder);
+LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE_Detector detector);
+
+uint32_t SYS_getCurrentFrequencyHz (SYS_Handle handle);
 
 void SYS_setAttenuator (SYS_Handle handle, bool enable);
 

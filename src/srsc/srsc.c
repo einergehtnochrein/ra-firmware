@@ -242,7 +242,7 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DECODER_C34_C50;
+                    event.block = SONDE_DETECTOR_C34_C50;
                     event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
                     SYS_handleEvent(event);
                 }
