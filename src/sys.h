@@ -47,6 +47,7 @@ float SYS_getFrameOffsetKhz (SYS_Handle handle);
 #define HOST_CHANNEL_INFO           2
 #define HOST_CHANNEL_GUI            3
 #define HOST_CHANNEL_EPHEMUPDATE    4
+#define HOST_CHANNEL_SWITCHES       7
 #define HOST_CHANNEL_FIRMWAREUPDATE 9
 
 LPCLIB_Result SYS_send2Host (int channel, const char *message);

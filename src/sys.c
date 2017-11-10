@@ -942,17 +942,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             }
             break;
 
-        case 2:     /* Set manual mode */
-            {
-                int mode;
-
-                if (sscanf(cl, "#%*d,%d", &mode) == 1) {
-                    SCANNER_setManualMode(scanner, mode);
-                    osTimerStart(handle->rssiTick, 20);
-                }
-            }
-            break;
-
         case 3:     /* Set manual sonde detector */
             {
                 int selector;
@@ -975,16 +964,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
 
         case HOST_CHANNEL_EPHEMUPDATE:
             EPHEMUPDATE_processCommand(euTask, cl);
-            break;
-
-        case 5:     /* Attenuator control */
-            {
-                int att;
-
-                if (sscanf(cl, "#%*d,%d", &att) == 1) {
-                    SCANNER_setManualAttenuator(scanner, att);
-                }
-            }
             break;
 
         case 6:     /* Scanner list control */ //TODO
@@ -1027,6 +1006,28 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                 SCANNER_removeListenFrequency(scanner, frequencyMHz);
                             }
                         }
+                    }
+                }
+            }
+            break;
+
+        case HOST_CHANNEL_SWITCHES:
+            {
+                int command;
+                int enableValue;
+                bool enable;
+
+                if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
+                    enable = (enableValue != 0);
+                    switch (command) {
+                        case 1:
+                            SCANNER_setManualAttenuator(scanner, enable);
+                            break;
+
+                        case 3:
+                            SCANNER_setManualMode(scanner, enable);
+                            osTimerStart(handle->rssiTick, 20);
+                            break;
                     }
                 }
             }
