@@ -182,22 +182,26 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
     double longitude = instance->gps.observerLLA.lon;
+    float direction = instance->gps.observerLLA.direction;
+    float velocity = instance->gps.observerLLA.velocity;
     if (!isnan(latitude) && !isnan(longitude)) {
         latitude *= 180.0 / M_PI;
         longitude *= 180.0 / M_PI;
+        direction *= 180.0 / M_PI;
+        velocity *= 3.6f;
 
         length = sprintf((char *)s, "%s,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,%s,,,,,%.1f,%.1f,%d,%d,%s,",
                         instance->hashName,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
-                        latitude,  /* Latitude [degrees] */
-                        longitude, /* Longitude [degrees] */
+                        latitude,                               /* Latitude [degrees] */
+                        longitude,                              /* Longitude [degrees] */
                         instance->gps.observerLLA.alt,          /* Altitude [m] */
                         instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
-                        0.0f,      /* Direction [°] */
-                        0.0f,      /* Horizontal speed [km/h] */
+                        direction,                              /* Direction [°] */
+                        velocity,                               /* Horizontal speed [km/h] */
                         sPressure,                              /* Pressure sensor [hPa] */
                         SYS_getFrameRssi(sys),
-                        offset,    /* RX frequency offset [kHz] */
+                        offset,                                 /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
                         sKillTimer                              /* Kill timer (frame) */
