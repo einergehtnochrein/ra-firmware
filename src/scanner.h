@@ -13,6 +13,8 @@ void SCANNER_setManualMode (SCANNER_Handle handle, bool enable);
 bool SCANNER_getManualMode (SCANNER_Handle handle);
 void SCANNER_setManualAttenuator (SCANNER_Handle handle, bool enable);
 bool SCANNER_getManualAttenuator (SCANNER_Handle handle);
+void SCANNER_setScannerMode (SCANNER_Handle handle, bool enable);
+bool SCANNER_getScannerMode (SCANNER_Handle handle);
 void SCANNER_setManualFrequency (SCANNER_Handle handle, uint32_t frequencyHz);
 void SCANNER_setManualSondeDetector (SCANNER_Handle handle, SONDE_Detector sondeDetector);
 SONDE_Detector SCANNER_getManualSondeDetector (SCANNER_Handle handle);

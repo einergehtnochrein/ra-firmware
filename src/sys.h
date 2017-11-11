@@ -34,6 +34,9 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
 
 uint32_t SYS_getCurrentFrequencyHz (SYS_Handle handle);
 
+/* Read a new RSSI value in dBm. */
+LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi);
+
 void SYS_setAttenuator (SYS_Handle handle, bool enable);
 
 /* Return last RSSI measurement in an RX frame */
@@ -47,6 +50,7 @@ float SYS_getFrameOffsetKhz (SYS_Handle handle);
 #define HOST_CHANNEL_INFO           2
 #define HOST_CHANNEL_GUI            3
 #define HOST_CHANNEL_EPHEMUPDATE    4
+#define HOST_CHANNEL_SPECTRUM       5
 #define HOST_CHANNEL_SWITCHES       7
 #define HOST_CHANNEL_FIRMWAREUPDATE 9
 

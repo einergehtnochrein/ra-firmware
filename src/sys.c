@@ -705,6 +705,33 @@ static void SYS_sleep (SYS_Handle handle)
 }
 
 
+
+/* Read a new RSSI value in dBm. */
+LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi)
+{
+    (void)handle;
+
+    int32_t rawRssiTenthDb;
+
+    /* Get a new RSSI value from radio (value comes as integer in tenth of a dB */
+    ADF7021_readRSSI(radio, &rawRssiTenthDb);
+    float level = rawRssiTenthDb / 10.0f;
+
+    /* Correct for LNA gain */
+    if (GPIO_readBit(GPIO_LNA_GAIN) == 1) {
+        level -= 16.0f;
+    }
+    else {
+        level += 13.0f;
+    }
+
+    *rssi = level;
+
+    return LPCLIB_SUCCESS;
+}
+
+
+
 /* Read a new RSSI value and filter it. Return filtered RSSI in dBm. */
 static float _SYS_getFilteredRssi (SYS_Handle handle)
 {
@@ -989,6 +1016,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
                     SYS_send2Host(HOST_CHANNEL_GUI, s);
                     SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualAttenuator(scanner) ? "6,1" : "6,0");
+                    SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getScannerMode(scanner) ? "7,1" : "7,0");
 
                     //TODO send only if ping parameter asks for it
                     RS41_resendLastPositions(handle->rs41);
@@ -1091,6 +1119,10 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     switch (command) {
                         case 1:
                             SCANNER_setManualAttenuator(scanner, enable);
+                            break;
+
+                        case 2:
+                            SCANNER_setScannerMode(scanner, enable);
                             break;
 
                         case 3:

@@ -27,6 +27,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "lpclib.h"
 #include "bsp.h"
@@ -43,7 +44,6 @@ typedef enum {
     SCANNER_MODE_OFF = 0,
     SCANNER_MODE_MANUAL,                        /* Manually controlled continuous operation on a single frequency */
     SCANNER_MODE_LIST,                          /* Walk through list of discrete frequencies */
-    SCANNER_MODE_SEARCH,                        /* Band scan */
 } SCANNER_Mode;
 
 
@@ -84,14 +84,79 @@ struct SCANNER_Context {
     uint32_t manualFrequencyHz;                         /* Frequency for manual operation */
     SONDE_Detector manualSondeDetector;
     bool manualAttenuator;
+    bool scanner;
 
     int preferredIndex;
 
     SCANNER_Mode mode;
     osTimerId scanTick;
     bool scanTickTimeout;
+
+    uint32_t spectrumFrequency;
 } scannerContext;
 
+
+
+
+static void _SCANNER_getSpectrum (void)
+{
+    SCANNER_Handle handle = &scannerContext;
+    const int N = 10;
+    const int OVER = 100;
+    const uint32_t grid = 10000;
+    int i;
+    int n;
+    int o;
+    float level[OVER];
+    float avgLevel;
+    char s[20 + 4*N];
+
+    /* Prepare result string (start frequency) */
+    sprintf(s, "%.3f,%.3f", handle->spectrumFrequency / 1e6f, grid / 1e6f);
+
+    for (n = 0; n < N; n++) {
+        /* Adjust next RX frequency */
+        if ((handle->spectrumFrequency < 400005000) || (handle->spectrumFrequency > 406095000)) {
+            handle->spectrumFrequency = 400005000;
+        }
+ 
+        /* Set radio frequency */
+        if (ADF7021_setPLL(radio, handle->spectrumFrequency - 100000) == LPCLIB_SUCCESS) {
+            /* Measure channel power */
+            avgLevel = 0;
+            for (i = 0; i < OVER; i++) {
+                SYS_readRssi(sys, &level[i]);
+                avgLevel += level[i];
+            }
+            avgLevel /= OVER;
+
+            o = 0;
+            float denoised = 0;
+            for (i = 0; i < OVER; i++) {
+                if (fabs(level[i] - avgLevel) < 4.0f) {
+                    denoised += level[i];
+                    ++o;
+                }
+            }
+            if (o > 0) {
+                denoised /= o;
+            }
+            else {
+                denoised = -140.0f;
+            }
+            sprintf(&s[strlen(s)], ",%.0f", (denoised + 140.0f) * 10.0f);
+        }
+        else {
+            strcat(s, ",");
+        }
+
+        /* Next frequency */
+        handle->spectrumFrequency += grid;
+    }
+ 
+    /* Send result */
+    SYS_send2Host(HOST_CHANNEL_SPECTRUM, s);
+}
 
 
 /* Find the next QRG and sonde type to listen to. */
@@ -101,43 +166,41 @@ static bool _SCANNER_getNextQrg (SONDE_Detector *sondeDetector, uint32_t *freque
     bool result = true;
 
 
-    switch (handle->mode) {
-        case SCANNER_MODE_OFF:
-            ; /* no action */
-            break;
+    if (handle->scanner) {
+        *durationMs = 1;
+        _SCANNER_getSpectrum();
+    }
+    else {
+        switch (handle->mode) {
+            case SCANNER_MODE_OFF:
+                ; /* no action */
+                break;
 
-        case SCANNER_MODE_MANUAL:
-            *sondeDetector = handle->manualSondeDetector;
-            *frequencyHz = handle->manualFrequencyHz;
-            *durationMs = 0xFFFFFFFF;
-            break;
+            case SCANNER_MODE_MANUAL:
+                *sondeDetector = handle->manualSondeDetector;
+                *frequencyHz = handle->manualFrequencyHz;
+                *durationMs = 1000;
+                break;
 
-        case SCANNER_MODE_LIST:
-            /* Are we at the end of the active sondes list?
-             * Go to start of list or select next scan frequency (if band scan enabled) //TODO
-             */
-            if (!handle->scanCurrent) {
-                handle->scanCurrent = handle->scanList;
-            }
-            if (handle->scanCurrent) {
-                *sondeDetector = handle->scanCurrent->detector;
-                *frequencyHz = handle->scanCurrent->frequencyHz;
-                *durationMs = 2200;
+            case SCANNER_MODE_LIST:
+                /* Are we at the end of the active sondes list?
+                * Go to start of list or select next scan frequency (if band scan enabled) //TODO
+                */
+                if (!handle->scanCurrent) {
+                    handle->scanCurrent = handle->scanList;
+                }
+                if (handle->scanCurrent) {
+                    *sondeDetector = handle->scanCurrent->detector;
+                    *frequencyHz = handle->scanCurrent->frequencyHz;
+                    *durationMs = 2200;
 
-                handle->scanCurrent = handle->scanCurrent->next;
-            }
-            else {
-                result = false;
-            }
-            break;
-
-        case SCANNER_MODE_SEARCH:
-            *sondeDetector = SONDE_DETECTOR_RS41_RS92;
-            *frequencyHz = 402900000;
-            *durationMs = 2200;
-
-            handle->mode = SCANNER_MODE_LIST;   /* Back to list mode afterwards */
-            break;
+                    handle->scanCurrent = handle->scanCurrent->next;
+                }
+                else {
+                    result = false;
+                }
+                break;
+        }
     }
 
     return result;
@@ -231,6 +294,26 @@ bool SCANNER_getManualAttenuator (SCANNER_Handle handle)
     }
 
     return handle->manualAttenuator;
+}
+
+
+void SCANNER_setScannerMode (SCANNER_Handle handle, bool enable)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return;
+    }
+
+    handle->scanner = enable;
+}
+
+
+bool SCANNER_getScannerMode (SCANNER_Handle handle)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return false;
+    }
+
+    return handle->scanner;
 }
 
 
@@ -377,7 +460,7 @@ handle->mode = SCANNER_MODE_MANUAL;
             uint32_t durationMs = 1;
             if (_SCANNER_getNextQrg(&sondeDetector, &frequencyHz, &durationMs)) {
                 SYS_enableDetector(sys, frequencyHz, sondeDetector);
-                if (handle->mode == SCANNER_MODE_MANUAL) {
+                if ((handle->mode == SCANNER_MODE_MANUAL) && !handle->scanner) {
                     handle->manualFrequencyHz = SYS_getCurrentFrequencyHz(sys);
                 }
 //durationMs = 0xFFFFFFFF;
