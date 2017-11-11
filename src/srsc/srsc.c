@@ -109,8 +109,8 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Sensors */
     sTemperature[0] = 0;
-    if (!isnan(instance->metro.temperature)) {
-        snprintf(sTemperature, sizeof(sTemperature), "%.1f", instance->metro.temperature);
+    if (!isnan(instance->metro.temperatureAir)) {
+        snprintf(sTemperature, sizeof(sTemperature), "%.1f", instance->metro.temperatureAir);
     }
 
     /* Convert lat/lon from radian to decimal degrees */
