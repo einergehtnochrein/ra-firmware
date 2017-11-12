@@ -719,10 +719,10 @@ LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi)
 
     /* Correct for LNA gain */
     if (GPIO_readBit(GPIO_LNA_GAIN) == 1) {
-        level -= 16.0f;
+        level += config_g->rssiCorrectionLnaOn;
     }
     else {
-        level += 13.0f;
+        level += config_g->rssiCorrectionLnaOff;
     }
 
     *rssi = level;
