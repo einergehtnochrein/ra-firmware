@@ -129,6 +129,7 @@ struct SYS_Context {
     uint32_t currentFrequencyHz;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
+    float vbat;
 
     char commandLine[COMMAND_LINE_SIZE];
 
@@ -750,6 +751,74 @@ static float _SYS_getFilteredRssi (SYS_Handle handle)
 }
 
 
+/* Measure the battery voltage */
+//TODO in the future use an ADC driver...
+static float _SYS_measureVbat (SYS_Handle handle)
+{
+    (void)handle;
+    float vbat = NAN;
+
+#if (BOARD_RA == 2)
+    uint32_t vbatAdcDat;
+
+    /* Enable voltage divider for VBAT */
+    GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 0);
+
+    CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_ADC0);
+    CLKPWR_unitPowerUp(CLKPWR_UNIT_ADC0);
+    CLKPWR_unitPowerUp(CLKPWR_UNIT_VDDA);
+    CLKPWR_unitPowerUp(CLKPWR_UNIT_VREFP);
+
+    //TODO need at least 10µs delay here before ADC can be enabled */
+    volatile int delay = SystemCoreClock / 100000;
+    while (delay--);
+
+    LPC_ADC0->STARTUP = 0
+        | (1 << 0)                          /* Enable */
+        ;
+    LPC_ADC0->CALIB = 0
+        | (1 << 0)                          /* Start a calibration */
+        ;
+    while (LPC_ADC0->CALIB & (1 << 0))      /* Wait until calibration is over */
+        ;
+    LPC_ADC0->CTRL = 0
+        | ((2-1) << 0)                      /* Divide system clock by 2 (--> ADC clock = 24 MHz */
+        | (0 << 1)                          /* Synchronous mode */
+        | (3 << 9)                          /* 12-bit resolution */
+        | (0 << 11)                         /* Use calibration result */
+        | (7 << 12)                         /* Maximum sample time (9.5 ADC clocks) */
+        ;
+
+    LPC_ADC0->SEQA_CTRL &= ~(1u << 31);     /* Seq A: Disable */
+    LPC_ADC0->SEQB_CTRL &= ~(1u << 31);     /* Seq B: Disable */
+    LPC_ADC0->SEQA_CTRL = (LPC_ADC0->SEQA_CTRL & ~((0x3F << 12) | (0xFFF << 0)))
+        | (1 << 8)                          /* Seq A: Select channel 8 */
+        | (3 << 12)                         /* Seq A: Trigger source 3 (unused source) */
+        ;
+    LPC_ADC0->SEQA_CTRL |= (1u << 18);      /* Seq A: Positive edge trigger */
+    LPC_ADC0->SEQA_CTRL |= (1u << 31);      /* Seq A: Enable */
+    LPC_ADC0->SEQA_CTRL |= (1u << 26);      /* Seq A: Start single sequence */
+
+    do {
+        vbatAdcDat = LPC_ADC0->DAT8;
+    } while (!(vbatAdcDat & (1u << 31)));   /* Wait until there is a valid result */
+
+    /* Convert to real battery voltage */
+    vbat = (float)(vbatAdcDat & 0xFFFF) / 65536.0f * 3.0f * 2;
+
+    CLKPWR_unitPowerDown(CLKPWR_UNIT_VREFP);
+    CLKPWR_unitPowerDown(CLKPWR_UNIT_VDDA);
+    CLKPWR_unitPowerDown(CLKPWR_UNIT_ADC0);
+    CLKPWR_disableClock(CLKPWR_CLOCKSWITCH_ADC0);
+
+    /* Disable voltage divider for VBAT */
+    GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 1);
+#endif
+
+    return vbat;
+}
+
+
 /* Control the attenuator (LNA) */
 void SYS_setAttenuator (SYS_Handle handle, bool enable)
 {
@@ -1329,6 +1398,7 @@ handle->lastInPacketRssi = rssi;
                     /* Get frequency offset from PDM DC bias (only AFSK modes) */
                     SRSC_setRxOffset(handle->srsc, PDM_getDcOffset(handle->pdm) / 1.32f); //TODO factor
 #endif
+handle->vbat = _SYS_measureVbat(handle);
                 }
                 break;
 
