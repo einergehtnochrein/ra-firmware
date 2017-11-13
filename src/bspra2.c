@@ -83,7 +83,7 @@ void BSP_init (void)
     GPIO_setDirBit(GPIO_ADF7021_SLE, ENABLE);
     GPIO_setDirBit(GPIO_ENABLE_VDDA, ENABLE);
     GPIO_setDirBit(GPIO_LNA_GAIN, ENABLE);
-    GPIO_setDirBit(GPIO_CONSTANT_LOW, ENABLE);
+    GPIO_setDirBit(GPIO_VBAT_ADC_ENABLE, ENABLE);
 
     GPIO_writeBit(GPIO_BLE_RESET, 0);
     GPIO_writeBit(GPIO_BLE_AUTORUN, 0);
@@ -92,7 +92,7 @@ void BSP_init (void)
     GPIO_writeBit(GPIO_LNA_GAIN, 0);
     GPIO_writeBit(GPIO_ADF7021_CE, 0);
     GPIO_writeBit(GPIO_ADF7021_SLE, 0);
-    GPIO_writeBit(GPIO_CONSTANT_LOW, 0);
+    GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 0);
 
 #if LPCLIB_DMA
     DMA_open(DMA0, &gpdma);
@@ -131,7 +131,12 @@ static void BSP_initPins (void)
 {
     IOCON_open();
 
-    IOCON_configurePinDefault(PIN_P0_0,  PIN_FUNCTION_0, PIN_PULL_NONE);        /* GPIO_0_0     VBAT_ADC_ENABLE */
+    IOCON_configurePin(PIN_P0_0,  IOCON_makeConfigD(PIN_FUNCTION_0,             /* GPIO_0_0     VBAT_ADC_ENABLE */
+                                                    PIN_PULL_NONE,
+                                                    PIN_INPUT_NOT_INVERTED,
+                                                    PIN_SLEWRATE_NORMAL,
+                                                    PIN_FILTER_OFF,
+                                                    PIN_OPENDRAIN_ON));
     IOCON_configurePinDefault(PIN_P0_2,  PIN_FUNCTION_0, PIN_PULL_REPEATER);    /* GPIO_0_2     BLE_MODESEL */
     IOCON_configurePinDefault(PIN_P0_6,  PIN_FUNCTION_0, PIN_PULL_NONE);        /* GPIO_0_6     ENABLE_VDDA */
     IOCON_configurePinDefault(PIN_P0_7,  PIN_FUNCTION_0, PIN_PULL_UP);          /* GPIO_0_7     CHARGER_LED1 */
@@ -163,6 +168,12 @@ static void BSP_initPins (void)
          * Pin draws 300µA in analog mode!
          */
     IOCON_configurePinDefault(PIN_P1_5,  PIN_FUNCTION_0, PIN_PULL_NONE);        /* ADC0_8       VBAT_ADC */
+    IOCON_configurePin(PIN_P1_5, IOCON_makeConfigA(PIN_FUNCTION_0,              /* ADC0_8       VBAT_ADC */
+                                                   PIN_PULL_NONE,
+                                                   PIN_INPUT_NOT_INVERTED,
+                                                   PIN_ADMODE_ANALOG,
+                                                   PIN_FILTER_OFF,
+                                                   PIN_OPENDRAIN_OFF));
     IOCON_configurePinDefault(PIN_P1_6,  PIN_FUNCTION_2, PIN_PULL_NONE);        /* FC7_SCK      SCLK_C */
     IOCON_configurePinDefault(PIN_P1_7,  PIN_FUNCTION_2, PIN_PULL_REPEATER);    /* FC7_MOSI     MOSI_C */
     IOCON_configurePinDefault(PIN_P1_8,  PIN_FUNCTION_2, PIN_PULL_REPEATER);    /* FC7_MISO     MISO_C */
