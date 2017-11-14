@@ -269,9 +269,6 @@ static void _SYS_setRadioFrequency (SYS_Handle handle, uint32_t frequencyHz)
     ADF7021_setPLL(radio, frequencyHz - 100000);
 
     handle->currentFrequencyHz = frequencyHz;
-
-    // Inform host
-    _SYS_reportRadioFrequency(handle);
 }
 
 
@@ -324,6 +321,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
                             );
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (2u << 30)        /* IF_FILTER_BW = 18.5 kHz */
@@ -394,6 +392,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
                             );
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (2u << 30)        /* IF_FILTER_BW = 18.5 kHz */
@@ -466,6 +465,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
             ADF7021_write(radio, ADF7021_REGISTER_4,  (1u << 30) | (4u << 20) | (342u << 10) | (0u << 8) | (0u << 7) | (1u << 4)); /* IF=13.5kHz, 2FSK correlator */
 #endif
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             ADF7021_write(radio, ADF7021_REGISTER_10, (20u << 24) | (2u << 21) | (11u << 17) | (645u << 5) | (1u << 4)); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
 
             LPC_MAILBOX->IRQ0SET = (1u << 1); //TODO
@@ -515,6 +515,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             );
 #endif
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (1u << 30)    //0=9.5k, 1=13.5k, 2=18.5k
@@ -579,6 +580,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             );
 #endif
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (2u << 30)    //0=9.5k, 1=13.5k, 2=18.5k
@@ -645,6 +647,8 @@ static void SYS_sleep (SYS_Handle handle)
 {
     uint32_t OldSystemCoreClock;
 
+
+    SCANNER_setScannerMode(scanner, false);
 
     handle->sleeping = true;
 
@@ -1413,16 +1417,35 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
             case SYS_OPCODE_GET_RSSI:
                 {
                     static int rate;
-                    float rssi = _SYS_getFilteredRssi(handle);
+                    static bool lastScannerMode;
 
-                    if (++rate >= 2) {
-                        char s[30];
-                        sprintf(s, "3,%.1f", rssi);
-                        SYS_send2Host(HOST_CHANNEL_GUI, s);
+                    if (SCANNER_getScannerMode(scanner) != lastScannerMode) {
+                        lastScannerMode = SCANNER_getScannerMode(scanner);
+                        rate = 0;
+                    }
+
+                    /* Send RSSI only when not in scanner mode */
+                    if (!SCANNER_getScannerMode(scanner)) {
+                        if (++rate >= 2) {
+                            float rssi = _SYS_getFilteredRssi(handle);
+                            char s[30];
+                            sprintf(s, "3,%.1f", rssi);
+                            SYS_send2Host(HOST_CHANNEL_GUI, s);
 //TODO need to store this near the end of the frame
 handle->lastInPacketRssi = rssi;
 
-                        rate = 0;
+                            rate = 0;
+                        }
+                    }
+                    else {
+                        /* Send dummy value at a low rate to ensure S-meter shows minimum */
+                        if (rate == 0) {
+                            SYS_send2Host(HOST_CHANNEL_GUI, "3,");
+                        }
+
+                        if (++rate >= 100) {
+                            rate = 0;
+                        }
                     }
 
 #if (BOARD_RA == 2)

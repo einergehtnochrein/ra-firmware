@@ -166,41 +166,35 @@ static bool _SCANNER_getNextQrg (SONDE_Detector *sondeDetector, uint32_t *freque
     bool result = true;
 
 
-    if (handle->scanner) {
-        *durationMs = 1;
-        _SCANNER_getSpectrum();
-    }
-    else {
-        switch (handle->mode) {
-            case SCANNER_MODE_OFF:
-                ; /* no action */
-                break;
+    switch (handle->mode) {
+        case SCANNER_MODE_OFF:
+            ; /* no action */
+            break;
 
-            case SCANNER_MODE_MANUAL:
-                *sondeDetector = handle->manualSondeDetector;
-                *frequencyHz = handle->manualFrequencyHz;
-                *durationMs = 1000;
-                break;
+        case SCANNER_MODE_MANUAL:
+            *sondeDetector = handle->manualSondeDetector;
+            *frequencyHz = handle->manualFrequencyHz;
+            *durationMs = 1000;
+            break;
 
-            case SCANNER_MODE_LIST:
-                /* Are we at the end of the active sondes list?
-                * Go to start of list or select next scan frequency (if band scan enabled) //TODO
-                */
-                if (!handle->scanCurrent) {
-                    handle->scanCurrent = handle->scanList;
-                }
-                if (handle->scanCurrent) {
-                    *sondeDetector = handle->scanCurrent->detector;
-                    *frequencyHz = handle->scanCurrent->frequencyHz;
-                    *durationMs = 2200;
+        case SCANNER_MODE_LIST:
+            /* Are we at the end of the active sondes list?
+            * Go to start of list or select next scan frequency (if band scan enabled) //TODO
+            */
+            if (!handle->scanCurrent) {
+                handle->scanCurrent = handle->scanList;
+            }
+            if (handle->scanCurrent) {
+                *sondeDetector = handle->scanCurrent->detector;
+                *frequencyHz = handle->scanCurrent->frequencyHz;
+                *durationMs = 2200;
 
-                    handle->scanCurrent = handle->scanCurrent->next;
-                }
-                else {
-                    result = false;
-                }
-                break;
-        }
+                handle->scanCurrent = handle->scanCurrent->next;
+            }
+            else {
+                result = false;
+            }
+            break;
     }
 
     return result;
@@ -455,17 +449,25 @@ handle->mode = SCANNER_MODE_MANUAL;
             osTimerStop(handle->scanTick);
             handle->scanTickTimeout = false;
 
-            SONDE_Detector sondeDetector = SONDE_DETECTOR_RS41_RS92;
-            uint32_t frequencyHz = 0;
-            uint32_t durationMs = 1;
-            if (_SCANNER_getNextQrg(&sondeDetector, &frequencyHz, &durationMs)) {
-                SYS_enableDetector(sys, frequencyHz, sondeDetector);
-                if ((handle->mode == SCANNER_MODE_MANUAL) && !handle->scanner) {
-                    handle->manualFrequencyHz = SYS_getCurrentFrequencyHz(sys);
-                }
+            if (handle->scanner) {
+                _SCANNER_getSpectrum();
+//                osTimerStart(handle->scanTick, 10);
+                handle->scanTickTimeout = true;
+                PT_YIELD(&handle->pt);
+            }
+            else {
+                SONDE_Detector sondeDetector = SONDE_DETECTOR_RS41_RS92;
+                uint32_t frequencyHz = 0;
+                uint32_t durationMs = 1;
+                if (_SCANNER_getNextQrg(&sondeDetector, &frequencyHz, &durationMs)) {
+                    SYS_enableDetector(sys, frequencyHz, sondeDetector);
+                    if ((handle->mode == SCANNER_MODE_MANUAL) && !handle->scanner) {
+                        handle->manualFrequencyHz = SYS_getCurrentFrequencyHz(sys);
+                    }
 //durationMs = 0xFFFFFFFF;
-                osTimerStart(handle->scanTick, durationMs);
+                    osTimerStart(handle->scanTick, durationMs);
 printf("scanner @ %ld\r\n", frequencyHz);
+                }
             }
         }
     }
