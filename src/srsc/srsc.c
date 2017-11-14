@@ -109,8 +109,8 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Sensors */
     sTemperature[0] = 0;
-    if (!isnan(instance->metro.temperature)) {
-        snprintf(sTemperature, sizeof(sTemperature), "%.1f", instance->metro.temperature);
+    if (!isnan(instance->metro.temperatureAir)) {
+        snprintf(sTemperature, sizeof(sTemperature), "%.1f", instance->metro.temperatureAir);
     }
 
     /* Convert lat/lon from radian to decimal degrees */
@@ -148,13 +148,11 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,%.1f,%.1f,%s,,%s,%.3f,,,%.1f,%s,,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,,,%s,,%s,%.3f,,,%.1f,%s,,,,%.3f",
                         instance->config.name,
                         f,         /* Frequency [MHz] */
                         sAltitude, /* Altitude [m] */
                         instance->gps.climbRate,            /* Climb rate [m/s] */
-                        0.0f,                               /* Direction [°] */
-                        instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
                         sTemperature,
                         sSpecial,
                         instance->config.rfPwrDetect,       /* RF power detector [V] */
@@ -164,7 +162,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,%.1f,%.1f,%s,,%s,%.3f,,%.2f,%.1f,%s,%d,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,,%.2f,%.1f,%s,%d,,,%.3f",
                         instance->config.name,
                         f,                                  /* Frequency [MHz] */
                         instance->gps.usedSats,
@@ -172,8 +170,6 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         longitude,                          /* Longitude [degrees] */
                         sAltitude,                          /* Altitude [m] */
                         instance->gps.climbRate,            /* Climb rate [m/s] */
-                        0.0f,                               /* Direction [°] */
-                        instance->gps.groundSpeed,          /* Horizontal speed [km/h] */
                         sTemperature,
                         sSpecial,
                         instance->config.rfPwrDetect,       /* RF power detector [V] */
@@ -242,7 +238,7 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DECODER_C34_C50;
+                    event.block = SONDE_DETECTOR_C34_C50;
                     event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
                     SYS_handleEvent(event);
                 }

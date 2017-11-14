@@ -31,8 +31,8 @@ typedef enum {
     SRSC_FRAME_GPS_LATITUDE = 22,
     SRSC_FRAME_GPS_LONGITUDE = 23,
     SRSC_FRAME_GPS_ALTITUDE = 24,
-    SRSC_FRAME_GPS_SPEED = 25,
-    SRSC_FRAME_GPS_TRACKMADEGOOD = 26,
+    SRSC_FRAME_GPS_25 = 25,
+    SRSC_FRAME_GPS_26 = 26,
     SRSC_FRAME_GPS_QUALITY = 27,
 
     SRSC_FRAME_CONFIG_NAME = 100,
@@ -85,7 +85,7 @@ typedef struct {
             float voltageCU;                            /* Voltage at CU mode [µV] */
             float voltageR2;                            /* Voltage at R2 mode [µV] */
             float temperatureRefBlock;                  /* Temperature in reference metal block [°C] */
-            float temperature;                          /* Temperature [°C] */
+            float temperatureAir;                       /* Temperature outside [°C] */
             float temperatureHuSensor;                  /* Temperature next to humidity sensor [°C] */
             float temperatureChamber;                   /* Temperature in separate chamber [°C] */
             float temperatureO3Inlet;                   /* Temperature air inlet ECC ozone sensor [°C] */
@@ -138,8 +138,6 @@ typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     float climbRate;
-    float groundSpeed;
-    float direction;
     struct {
         uint16_t year;
         uint8_t month;

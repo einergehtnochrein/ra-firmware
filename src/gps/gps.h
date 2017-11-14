@@ -48,12 +48,15 @@ typedef struct ECEF_Coordinate {
 } ECEF_Coordinate;
 
 
+
 /* LLA coordinate (Latitude, Longitude, Altitude) */
 typedef struct LLA_Coordinate {
     double      lat;
     double      lon;
     double      alt;
     float       climbRate;
+    float       velocity;
+    float       direction;
 } LLA_Coordinate;
 
 

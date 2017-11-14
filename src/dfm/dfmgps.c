@@ -35,7 +35,7 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance)
     if ((d >= -90.0) && (d <= 90.0)) {
         instance->gps.observerLLA.lat = d;
         i16 = instance->gpsDetect.fragment[2].i16;
-        instance->gps.groundSpeed = (double)i16 / 100.0 * 3.6;
+        instance->gps.observerLLA.velocity = (float)i16 / 100.0f;
 
         d = (double)instance->gpsDetect.fragment[3].i32;
         instance->gps.observerLLA.lon = (d / 1e7) * (M_PI / 180.0);
@@ -43,7 +43,7 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance)
         if (dir >= 360*100) {
             dir = 360*100-1;
         }
-        instance->gps.direction = (float)dir / 100.0f;
+        instance->gps.observerLLA.direction = (float)dir / 100.0f * (M_PI / 180.0f);
         d = (double)instance->gpsDetect.fragment[4].i32;
         instance->gps.observerLLA.alt = d / 100.0;
         f = (float)instance->gpsDetect.fragment[4].i16;
@@ -140,11 +140,10 @@ static void _DFM_processGpsBurkinaFaso (DFM_InstanceData *instance)
     d = ((double)instance->gpsDetect.fragment[1].i32 / 1e7) * (M_PI / 180.0);
     if ((d >= -90.0) && (d <= 90.0)) {
         instance->gps.observerLLA.lat = d;
-        instance->gps.groundSpeed = NAN;
-
         d = (double)instance->gpsDetect.fragment[2].i32;
         instance->gps.observerLLA.lon = (d / 1e7) * (M_PI / 180.0);
-        instance->gps.direction = 0;
+        instance->gps.observerLLA.velocity = NAN;
+        instance->gps.observerLLA.direction = NAN;
         d = (double)instance->gpsDetect.fragment[3].i32;
         instance->gps.observerLLA.alt = d / 100.0;
         instance->gps.climbRate = NAN;

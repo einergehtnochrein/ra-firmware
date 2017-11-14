@@ -5,6 +5,17 @@
 
 #include "adf7021.h"
 
+/* Readbacks */
+typedef enum ADF7021_Readback {
+    ADF7021_READBACK_AFC = 0,
+    ADF7021_READBACK_RSSI = 4,
+    ADF7021_READBACK_BATTERY = 5,
+    ADF7021_READBACK_TEMPERATURE = 6,
+    ADF7021_READBACK_EXTPIN = 7,
+    ADF7021_READBACK_FILTERCAL = 8,
+    ADF7021_READBACK_SILICONREV = 12,
+} ADF7021_Readback;
+
 
 /** Local device context. */
 typedef struct ADF7021_Context {
@@ -67,7 +78,7 @@ LPCLIB_Result ADF7021_write (ADF7021_Handle handle,
 
 
 /* Raw 16-bit read from ADF7021 */
-static LPCLIB_Result _ADF7021_read (ADF7021_Handle handle, uint32_t *data)
+static LPCLIB_Result _ADF7021_read (ADF7021_Handle handle, ADF7021_Readback readback, uint32_t *data)
 {
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5410X
     (void) handle;
@@ -78,6 +89,18 @@ static LPCLIB_Result _ADF7021_read (ADF7021_Handle handle, uint32_t *data)
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
     volatile uint32_t *txdatReg = &handle->spi->FIFOWR;
 #endif
+
+    /* Configure readback (register 7) */
+    *txdatReg = 0
+            | (((1u << 8) | (readback << 4) | 7) & 0xFFFF)  /* Enable readback */
+            | (((1u << handle->ssel) ^ 0x0F) << 16) /* Activate SLE (=0) */
+            | (1u << 20)                    /* End of transfer */
+            | (1u << 21)                    /* End of frame */
+            | (1u << 22)                    /* Ignore RX */
+            | ((9 - 1) << 24)               /* Send 9 bits (Reg 7 is a short register!) */
+            ;
+    while (!(handle->spi->STAT & (1u << 8)))        /* Wait until master becomes idle */ //TODO
+        ;
 
     *txdatReg = 0
             | (0 << 0)                      /* MOSI=0 */
@@ -224,7 +247,6 @@ static const int _ADF7021_rssiGainCorrection[16] = {
 /* Read RSSI information */
 LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
 {
-    uint32_t regval;
     uint32_t rawdata = 0;
 
     if (handle == LPCLIB_INVALID_HANDLE) {
@@ -236,14 +258,10 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
     }
     *rssi = -1740;
 
-    regval = (1u << 8) | (1u << 6) | (0u << 4);     /* Enable readback, ADC=RSSI */
+    if (_ADF7021_read(handle, ADF7021_READBACK_RSSI, &rawdata) == LPCLIB_SUCCESS) {
+        *rssi = -1300 + (((int)rawdata & 0x7F) + _ADF7021_rssiGainCorrection[(rawdata >> 7) & 0x0F]) * 5;
 
-    if (ADF7021_write(handle, ADF7021_REGISTER_READBACK_SETUP, regval) == LPCLIB_SUCCESS) {
-        if (_ADF7021_read(handle, &rawdata) == LPCLIB_SUCCESS) {
-            *rssi = -1300 + (((int)rawdata & 0x7F) + _ADF7021_rssiGainCorrection[(rawdata >> 7) & 0x0F]) * 5;
-
-            return LPCLIB_SUCCESS;
-        }
+        return LPCLIB_SUCCESS;
     }
 
     return LPCLIB_ERROR;
@@ -254,7 +272,6 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
 /* Read frequency offset */
 LPCLIB_Result ADF7021_readOffset (ADF7021_Handle handle, int32_t *offset)
 {
-    uint32_t regval;
     uint32_t rawdata = 0;
 
     if (handle == LPCLIB_INVALID_HANDLE) {
@@ -266,16 +283,12 @@ LPCLIB_Result ADF7021_readOffset (ADF7021_Handle handle, int32_t *offset)
     }
     *offset = 0;
 
-    regval = (1u << 8) | (0 << 6);          /* Enable readback, AFC Word */
-
-    if (ADF7021_write(handle, ADF7021_REGISTER_READBACK_SETUP, regval) == LPCLIB_SUCCESS) {
-        if (_ADF7021_read(handle, &rawdata) == LPCLIB_SUCCESS) {
-            //TODO must determine DEMOD_CLOCK
+    if (_ADF7021_read(handle, ADF7021_READBACK_AFC, &rawdata) == LPCLIB_SUCCESS) {
+        //TODO must determine DEMOD_CLOCK
 //            *offset = ((int64_t)rawdata * 203125ll) / 16384ll - 100000;
         *offset = rawdata;
 
-            return LPCLIB_SUCCESS;
-        }
+        return LPCLIB_SUCCESS;
     }
 
     return LPCLIB_ERROR;

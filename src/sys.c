@@ -125,10 +125,11 @@ struct SYS_Context {
     LPCLIB_Callback callback;                           /**< Callback for system events */
 
     SONDE_Type sondeType;
-    SONDE_Decoder sondeDecoder;
+    SONDE_Detector sondeDetector;
     uint32_t currentFrequencyHz;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
+    float vbat;
 
     char commandLine[COMMAND_LINE_SIZE];
 
@@ -268,26 +269,31 @@ static void _SYS_setRadioFrequency (SYS_Handle handle, uint32_t frequencyHz)
     ADF7021_setPLL(radio, frequencyHz - 100000);
 
     handle->currentFrequencyHz = frequencyHz;
+}
 
-    // Inform host
-    _SYS_reportRadioFrequency(handle);
+
+
+/* Get current RX frequency */
+uint32_t SYS_getCurrentFrequencyHz (SYS_Handle handle)
+{
+    return handle->currentFrequencyHz;
 }
 
 
 
 /* Enable the receiver, select a frequency and a sonde decoder type.
  */
-LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_Decoder decoder)
+LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE_Detector detector)
 {
-    if ((decoder != handle->sondeDecoder) || (frequencyHz != handle->currentFrequencyHz)) {
+    if ((detector != handle->sondeDetector) || (frequencyHz != handle->currentFrequencyHz)) {
         PDM_stop(handle->pdm);
 
-        handle->sondeDecoder = decoder;
+        handle->sondeDetector = detector;
 
         ADF7021_calibrateIF(radio, 1);  //TODO coarse/fine
 
-        switch (decoder) {
-        case SONDE_DECODER_C34_C50:
+        switch (detector) {
+        case SONDE_DETECTOR_C34_C50:
             ADF7021_write(radio, ADF7021_REGISTER_0, 0
                             | (1u << 28)        /* UART/SPI mode */
                             | (1u << 27)        /* Receive mode */
@@ -315,6 +321,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
                             | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
                             );
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (2u << 30)        /* IF_FILTER_BW = 18.5 kHz */
@@ -357,7 +364,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
 
-        case SONDE_DECODER_IMET:
+        case SONDE_DETECTOR_IMET:
             ADF7021_write(radio, ADF7021_REGISTER_0, 0
                             | (1u << 28)        /* UART/SPI mode */
                             | (1u << 27)        /* Receive mode */
@@ -385,6 +392,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
                             | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
                             );
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (2u << 30)        /* IF_FILTER_BW = 18.5 kHz */
@@ -427,7 +435,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
 
-        case SONDE_DECODER_DFM:
+        case SONDE_DETECTOR_DFM:
             ADF7021_write(radio, ADF7021_REGISTER_0,  (1u << 28) | (1u << 27)); /* UART/SPI mode (see also register 15), RX */
             ADF7021_write(radio, ADF7021_REGISTER_14, (0 << 30) | (0 << 27) | (0 << 25) | (0 << 21) | (0 << 5) | (0 << 4)); /* ED_PEAK_RESPONSE=0, ED_LEAK_FACTOR=0 */
             ADF7021_write(radio, ADF7021_REGISTER_15, (7u << 17) | (9u << 4)); /* CLKOUT=TxRxCLK, Rx_TEST_MODES=9 */
@@ -457,12 +465,13 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
             ADF7021_write(radio, ADF7021_REGISTER_4,  (1u << 30) | (4u << 20) | (342u << 10) | (0u << 8) | (0u << 7) | (1u << 4)); /* IF=13.5kHz, 2FSK correlator */
 #endif
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             ADF7021_write(radio, ADF7021_REGISTER_10, (20u << 24) | (2u << 21) | (11u << 17) | (645u << 5) | (1u << 4)); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
 
             LPC_MAILBOX->IRQ0SET = (1u << 1); //TODO
             break;
 
-        case SONDE_DECODER_RS41_RS92:
+        case SONDE_DETECTOR_RS41_RS92:
             ADF7021_write(radio, ADF7021_REGISTER_0, 0
                             | (1u << 28)
                             | (1u << 27)
@@ -506,6 +515,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
                             );
 #endif
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (1u << 30)    //0=9.5k, 1=13.5k, 2=18.5k
@@ -526,7 +536,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
             LPC_MAILBOX->IRQ0SET = (1u << 0); //TODO
             break;
 
-        case SONDE_DECODER_MODEM:
+        case SONDE_DETECTOR_MODEM:
             ADF7021_write(radio, ADF7021_REGISTER_0, 0
                             | (1u << 28)
                             | (1u << 27)
@@ -570,6 +580,7 @@ LPCLIB_Result SYS_enableDecoder (SYS_Handle handle, uint32_t frequencyHz, SONDE_
                             );
 #endif
             _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (2u << 30)    //0=9.5k, 1=13.5k, 2=18.5k
@@ -637,6 +648,8 @@ static void SYS_sleep (SYS_Handle handle)
     uint32_t OldSystemCoreClock;
 
 
+    SCANNER_setScannerMode(scanner, false);
+
     handle->sleeping = true;
 
     /* Enable BLE RXD line interrupt (allow pending interrupt to happen now) */
@@ -690,10 +703,37 @@ static void SYS_sleep (SYS_Handle handle)
     osDelay(10);
 
     /* Restore radio mode */
-    SONDE_Decoder decoder = handle->sondeDecoder;
-    handle->sondeDecoder = _SONDE_DECODER_UNDEFINED_;
-    SYS_enableDecoder(handle, handle->currentFrequencyHz, decoder);
+    SONDE_Detector detector = handle->sondeDetector;
+    handle->sondeDetector = _SONDE_DETECTOR_UNDEFINED_;
+    SYS_enableDetector(handle, handle->currentFrequencyHz, detector);
 }
+
+
+
+/* Read a new RSSI value in dBm. */
+LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi)
+{
+    (void)handle;
+
+    int32_t rawRssiTenthDb;
+
+    /* Get a new RSSI value from radio (value comes as integer in tenth of a dB */
+    ADF7021_readRSSI(radio, &rawRssiTenthDb);
+    float level = rawRssiTenthDb / 10.0f;
+
+    /* Correct for LNA gain */
+    if (GPIO_readBit(GPIO_LNA_GAIN) == 1) {
+        level += config_g->rssiCorrectionLnaOn;
+    }
+    else {
+        level += config_g->rssiCorrectionLnaOff;
+    }
+
+    *rssi = level;
+
+    return LPCLIB_SUCCESS;
+}
+
 
 
 /* Read a new RSSI value and filter it. Return filtered RSSI in dBm. */
@@ -739,6 +779,74 @@ static float _SYS_getFilteredRssi (SYS_Handle handle)
     }
 
     return adjustedLevel;
+}
+
+
+/* Measure the battery voltage */
+//TODO in the future use an ADC driver...
+static float _SYS_measureVbat (SYS_Handle handle)
+{
+    (void)handle;
+    float vbat = NAN;
+
+#if (BOARD_RA == 2)
+    uint32_t vbatAdcDat;
+
+    /* Enable voltage divider for VBAT */
+    GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 0);
+
+    CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_ADC0);
+    CLKPWR_unitPowerUp(CLKPWR_UNIT_ADC0);
+    CLKPWR_unitPowerUp(CLKPWR_UNIT_VDDA);
+    CLKPWR_unitPowerUp(CLKPWR_UNIT_VREFP);
+
+    //TODO need at least 10µs delay here before ADC can be enabled */
+    volatile int delay = SystemCoreClock / 100000;
+    while (delay--);
+
+    LPC_ADC0->STARTUP = 0
+        | (1 << 0)                          /* Enable */
+        ;
+    LPC_ADC0->CALIB = 0
+        | (1 << 0)                          /* Start a calibration */
+        ;
+    while (LPC_ADC0->CALIB & (1 << 0))      /* Wait until calibration is over */
+        ;
+    LPC_ADC0->CTRL = 0
+        | ((2-1) << 0)                      /* Divide system clock by 2 (--> ADC clock = 24 MHz */
+        | (0 << 1)                          /* Synchronous mode */
+        | (3 << 9)                          /* 12-bit resolution */
+        | (0 << 11)                         /* Use calibration result */
+        | (7 << 12)                         /* Maximum sample time (9.5 ADC clocks) */
+        ;
+
+    LPC_ADC0->SEQA_CTRL &= ~(1u << 31);     /* Seq A: Disable */
+    LPC_ADC0->SEQB_CTRL &= ~(1u << 31);     /* Seq B: Disable */
+    LPC_ADC0->SEQA_CTRL = (LPC_ADC0->SEQA_CTRL & ~((0x3F << 12) | (0xFFF << 0)))
+        | (1 << 8)                          /* Seq A: Select channel 8 */
+        | (3 << 12)                         /* Seq A: Trigger source 3 (unused source) */
+        ;
+    LPC_ADC0->SEQA_CTRL |= (1u << 18);      /* Seq A: Positive edge trigger */
+    LPC_ADC0->SEQA_CTRL |= (1u << 31);      /* Seq A: Enable */
+    LPC_ADC0->SEQA_CTRL |= (1u << 26);      /* Seq A: Start single sequence */
+
+    do {
+        vbatAdcDat = LPC_ADC0->DAT8;
+    } while (!(vbatAdcDat & (1u << 31)));   /* Wait until there is a valid result */
+
+    /* Convert to real battery voltage */
+    vbat = (float)(vbatAdcDat & 0xFFFF) / 65536.0f * 3.0f * 2;
+
+    CLKPWR_unitPowerDown(CLKPWR_UNIT_VREFP);
+    CLKPWR_unitPowerDown(CLKPWR_UNIT_VDDA);
+    CLKPWR_unitPowerDown(CLKPWR_UNIT_ADC0);
+    CLKPWR_disableClock(CLKPWR_CLOCKSWITCH_ADC0);
+
+    /* Disable voltage divider for VBAT */
+    GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 1);
+#endif
+
+    return vbat;
 }
 
 
@@ -908,19 +1016,11 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     /* Send status */
                     _SYS_reportRadioFrequency(handle);
                     SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualMode(scanner) ? "2,1" : "2,0");
-                    char *type = 0;
-                    switch (SCANNER_getManualSondeDecoder(scanner)) {
-                        case SONDE_DECODER_RS41_RS92:   type = "5,0"; break;
-                        case SONDE_DECODER_DFM:         type = "5,1"; break;
-                        case SONDE_DECODER_C34_C50:     type = "5,2"; break;
-                        case SONDE_DECODER_IMET:        type = "5,3"; break;
-                        case SONDE_DECODER_MODEM:       type = "5,4"; break;
-                        default: break;
-                    }
-                    if (type) {
-                        SYS_send2Host(HOST_CHANNEL_GUI, type);
-                    }
+                    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+                    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+                    SYS_send2Host(HOST_CHANNEL_GUI, s);
                     SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualAttenuator(scanner) ? "6,1" : "6,0");
+                    SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getScannerMode(scanner) ? "7,1" : "7,0");
 
                     //TODO send only if ping parameter asks for it
                     RS41_resendLastPositions(handle->rs41);
@@ -943,48 +1043,28 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             }
             break;
 
-        case 2:     /* Set manual mode */
-            {
-                int mode;
-
-                if (sscanf(cl, "#%*d,%d", &mode) == 1) {
-                    SCANNER_setManualMode(scanner, mode);
-                    osTimerStart(handle->rssiTick, 20);
-                }
-            }
-            break;
-
-        case 3:     /* Set manual sonde type */
+        case 3:     /* Set manual sonde detector */
             {
                 int selector;
-                SONDE_Decoder decoder;
+                SONDE_Detector detector;
 
                 if (sscanf(cl, "#%*d,%d", &selector) == 1) {
-                    decoder = SONDE_DECODER_RS41_RS92;
+                    detector = SONDE_DETECTOR_RS41_RS92;
                     switch (selector) {
-                        case 0:     decoder = SONDE_DECODER_RS41_RS92; break;
-                        case 1:     decoder = SONDE_DECODER_DFM; break;
-                        case 2:     decoder = SONDE_DECODER_C34_C50; break;
-                        case 3:     decoder = SONDE_DECODER_IMET; break;
-                        case 4:     decoder = SONDE_DECODER_MODEM; break;
+                        case 0:     detector = SONDE_DETECTOR_RS41_RS92; break;
+                        case 1:     detector = SONDE_DETECTOR_DFM; break;
+                        case 2:     detector = SONDE_DETECTOR_C34_C50; break;
+                        case 3:     detector = SONDE_DETECTOR_IMET; break;
+                        case 4:     detector = SONDE_DETECTOR_MODEM; break;
+                        case 5:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                     }
-                    SCANNER_setManualSondeDecoder(scanner, decoder);
+                    SCANNER_setManualSondeDetector(scanner, detector);
                 }
             }
             break;
 
         case HOST_CHANNEL_EPHEMUPDATE:
             EPHEMUPDATE_processCommand(euTask, cl);
-            break;
-
-        case 5:     /* Attenuator control */
-            {
-                int att;
-
-                if (sscanf(cl, "#%*d,%d", &att) == 1) {
-                    SCANNER_setManualAttenuator(scanner, att);
-                }
-            }
             break;
 
         case 6:     /* Scanner list control */ //TODO
@@ -1001,35 +1081,23 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     if (list == 1) {        /* Sonde lists in decoders */
                         if (action == 0) {  /* Remove an entry */
                             float frequencyMHz;
-                            int typeCode;
-                            if (sscanf(cl, "#%*d,%*d,%*d,%f,%d", &frequencyMHz, &typeCode) == 2) {
-                                SONDE_Type sondeType = SONDE_UNDEFINED;
-                                switch (typeCode) {
-                                    case 0:     sondeType = SONDE_RS92; break;
-                                    case 1:     sondeType = SONDE_RS41; break;
-                                    case 2:     sondeType = SONDE_PS15; break;
-                                    case 3:     sondeType = SONDE_DFM06; break;
-                                    case 4:     sondeType = SONDE_DFM09; break;
-                                    case 5:     sondeType = SONDE_C34; break;
-                                    case 6:     sondeType = SONDE_IMET_RSB; break;
-                                    case 8:     sondeType = SONDE_C50; break;
-                                }
-                                switch (sondeType) {
-                                    case SONDE_M10:
+                            int decoderCode;
+                            if (sscanf(cl, "#%*d,%*d,%*d,%f,%d", &frequencyMHz, &decoderCode) == 2) {
+                                SONDE_Decoder decoder = (SONDE_Decoder)decoderCode;
+                                switch (decoder) {
+                                    case SONDE_DECODER_MODEM:
                                         M10_removeFromList(handle->m10, frequencyMHz);
                                         break;
-                                    case SONDE_RS41:
+                                    case SONDE_DECODER_RS41:
                                         RS41_removeFromList(handle->rs41, frequencyMHz);
                                         break;
-                                    case SONDE_RS92:
+                                    case SONDE_DECODER_RS92:
                                         RS92_removeFromList(handle->rs92, frequencyMHz);
                                         break;
-                                    case SONDE_DFM06:
-                                    case SONDE_DFM09:
+                                    case SONDE_DECODER_DFM:
                                         DFM_removeFromList(handle->dfm, frequencyMHz);
                                         break;
-                                    case SONDE_C34:
-                                    case SONDE_C50:
+                                    case SONDE_DECODER_C34_C50:
                                         SRSC_removeFromList(handle->srsc, frequencyMHz);
                                         break;
                                     default:
@@ -1039,6 +1107,32 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                 SCANNER_removeListenFrequency(scanner, frequencyMHz);
                             }
                         }
+                    }
+                }
+            }
+            break;
+
+        case HOST_CHANNEL_SWITCHES:
+            {
+                int command;
+                int enableValue;
+                bool enable;
+
+                if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
+                    enable = (enableValue != 0);
+                    switch (command) {
+                        case 1:
+                            SCANNER_setManualAttenuator(scanner, enable);
+                            break;
+
+                        case 2:
+                            SCANNER_setScannerMode(scanner, enable);
+                            break;
+
+                        case 3:
+                            SCANNER_setManualMode(scanner, enable);
+                            osTimerStart(handle->rssiTick, 20);
+                            break;
                     }
                 }
             }
@@ -1323,16 +1417,35 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
             case SYS_OPCODE_GET_RSSI:
                 {
                     static int rate;
-                    float rssi = _SYS_getFilteredRssi(handle);
+                    static bool lastScannerMode;
 
-                    if (++rate >= 2) {
-                        char s[30];
-                        sprintf(s, "3,%.1f", rssi);
-                        SYS_send2Host(HOST_CHANNEL_GUI, s);
+                    if (SCANNER_getScannerMode(scanner) != lastScannerMode) {
+                        lastScannerMode = SCANNER_getScannerMode(scanner);
+                        rate = 0;
+                    }
+
+                    /* Send RSSI only when not in scanner mode */
+                    if (!SCANNER_getScannerMode(scanner)) {
+                        if (++rate >= 2) {
+                            float rssi = _SYS_getFilteredRssi(handle);
+                            char s[30];
+                            sprintf(s, "3,%.1f", rssi);
+                            SYS_send2Host(HOST_CHANNEL_GUI, s);
 //TODO need to store this near the end of the frame
 handle->lastInPacketRssi = rssi;
 
-                        rate = 0;
+                            rate = 0;
+                        }
+                    }
+                    else {
+                        /* Send dummy value at a low rate to ensure S-meter shows minimum */
+                        if (rate == 0) {
+                            SYS_send2Host(HOST_CHANNEL_GUI, "3,");
+                        }
+
+                        if (++rate >= 100) {
+                            rate = 0;
+                        }
                     }
 
 #if (BOARD_RA == 2)
@@ -1340,6 +1453,7 @@ handle->lastInPacketRssi = rssi;
                     /* Get frequency offset from PDM DC bias (only AFSK modes) */
                     SRSC_setRxOffset(handle->srsc, PDM_getDcOffset(handle->pdm) / 1.32f); //TODO factor
 #endif
+handle->vbat = _SYS_measureVbat(handle);
                 }
                 break;
 

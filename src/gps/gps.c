@@ -70,6 +70,20 @@ void GPS_convertECEF2LLA (
     float fy = ecef->vy * cosf(lla->lat) * sinf(lla->lon);
     float fz = ecef->vz * sinf(lla->lat);
     lla->climbRate = fx + fy + fz;
+
+    float ve =
+        ecef->vx * (-sin(lla->lon))
+      + ecef->vy * cos(lla->lon);
+    float vn =
+        ecef->vx * (-cos(lla->lon) * sin(lla->lat))
+      + ecef->vy * (-sin(lla->lon) * sin(lla->lat))
+      + ecef->vz * cos(lla->lat);
+
+    lla->velocity = sqrtf(ve * ve + vn * vn);
+    lla->direction = atan2f(ve, vn);    /* North = 0° */
+    if (lla->direction <= 0) {
+        lla->direction += 2.0f * M_PI;
+    }
 }
 
 

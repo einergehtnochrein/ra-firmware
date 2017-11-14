@@ -13,6 +13,10 @@
 
 
 
+static uint32_t _srscDebug25;
+static uint32_t _srscDebug26;
+
+
 LPCLIB_Result _SRSC_processGpsFrame (
         const SRSC_Packet *rawGps,
         SRSC_CookedGps *cookedGps)
@@ -100,6 +104,13 @@ LPCLIB_Result _SRSC_processGpsFrame (
                     }
                 }
             }
+            break;
+
+        case SRSC_FRAME_GPS_25:
+            _srscDebug25 = data;
+            break;
+        case SRSC_FRAME_GPS_26:
+            _srscDebug26 = data;
             break;
 
         case SRSC_FRAME_GPS_QUALITY:

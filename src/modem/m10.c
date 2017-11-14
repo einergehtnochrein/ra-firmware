@@ -132,15 +132,13 @@ static void _M10_sendKiss (M10_InstanceData *instance)
         latitude *= 180.0 / M_PI;
         longitude *= 180.0 / M_PI;
 
-        length = sprintf((char *)s, "%s,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%s,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,,,,,,,,,%.1f,%.1f,%d",
                         instance->hashName,
                         instance->rxFrequencyMHz,              /* Nominal sonde frequency [MHz] */
                         latitude,  /* Latitude [degrees] */
                         longitude, /* Longitude [degrees] */
                         instance->gps.observerLLA.alt,         /* Altitude [m] */
                         instance->gps.observerLLA.climbRate,   /* Climb rate [m/s] */
-                        0.0f,      /* Direction [°] */
-                        0.0f,      /* Horizontal speed [km/h] */
                         SYS_getFrameRssi(sys),
                         offset,    /* RX frequency offset [kHz] */
                         0          /* # satellites */

@@ -164,7 +164,8 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     char s[120];
     char sAltitude[20];
     char sClimbRate[20];
-    char sGroundSpeed[20];
+    char sVelocity[8];
+    char sDirection[8];
     char sVbat[8];
     uint32_t special;
     char sSpecial[8];
@@ -220,35 +221,37 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     if (!isnan(instance->gps.climbRate)) {
         sprintf(sClimbRate, "%.1f", instance->gps.climbRate);
     }
-    sGroundSpeed[0] = 0;
-    if (!isnan(instance->gps.groundSpeed)) {
-        sprintf(sGroundSpeed, "%.1f", instance->gps.groundSpeed);
+    sVelocity[0] = 0;
+    if (!isnan(instance->gps.observerLLA.velocity)) {
+        snprintf(sVelocity, sizeof(sVelocity), "%.1f", instance->gps.observerLLA.velocity * 3.6f);
+    }
+    sDirection[0] = 0;
+    if (!isnan(instance->gps.observerLLA.direction)) {
+        snprintf(sDirection, sizeof(sDirection), "%.1f", instance->gps.observerLLA.direction);
     }
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,2,%.3f,,,,%s,%s,%.1f,%s,,,%s,,,,%.1f,%.1f,,,,",
+        length = sprintf((char *)s, "%s,2,%.3f,,,,%s,%s,,,,,%s,,,,%.1f,%.1f,,,,",
                         instance->name,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
-                        0.0f,                       /* Direction [°] */
-                        sGroundSpeed,               /* Horizontal speed [km/h] */
                         sSpecial,
                         SYS_getFrameRssi(sys),
                         offset                      /* RX frequency offset [kHz] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,2,%.3f,,%.5lf,%.5lf,%s,%s,%.1f,%s,,,%s,,,%.2f,%.1f,%.1f,%d,,,%s",
+        length = sprintf((char *)s, "%s,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,,,%s,,,%.2f,%.1f,%.1f,%d,,,%s",
                         instance->name,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
                         longitude,                  /* Longitude [degrees] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
-                        0.0f,                       /* Direction [°] */
-                        sGroundSpeed,               /* Horizontal speed [km/h] */
+                        sDirection,                 /* Direction [°] */
+                        sVelocity,                  /* Horizontal speed [km/h] */
                         sSpecial,
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
@@ -300,7 +303,7 @@ if(1){//                if (handle->instance->config.sondeNameKnown) {
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DECODER_DFM;
+                    event.block = SONDE_DETECTOR_DFM;
                     event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
                     SYS_handleEvent(event);
 

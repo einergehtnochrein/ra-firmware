@@ -14,9 +14,6 @@
 #define GPIO_ENABLE_VDDA                    GPIO_0_6
 #define GPIO_LNA_GAIN                       GPIO_1_9
 #define GPIO_VBAT_ADC_ENABLE                GPIO_0_0
-#define GPIO_SSEL_D                         GPIO_0_23
-#define PIN_SSEL_D                          PIN_P0_23
-#define GPIO_CONSTANT_LOW                   GPIO_0_24
 
 
 /* Sample rate for DSP processing (e.g. AFSK modem) */

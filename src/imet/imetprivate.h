@@ -90,9 +90,6 @@ typedef struct {
 typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
-    float climbRate;
-    float groundSpeed;
-    float direction;
     struct {
         uint8_t day;
         uint8_t hour;
