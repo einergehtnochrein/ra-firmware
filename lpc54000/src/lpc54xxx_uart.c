@@ -621,6 +621,12 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
             break;
 #endif
 
+        case UART_OPCODE_SET_HARDWARE_HANDSHAKE:
+            uart->CFG = (uart->CFG & ~UART_CFG_CTSEN_Msk)
+                    | (pConfig->hardwareHandshake ? UART_CFG_CTSEN_Msk : 0)
+                    ;
+            break;
+
         case UART_OPCODE_INVALID:
         default:
             /* ignore */
