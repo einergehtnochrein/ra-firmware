@@ -116,8 +116,9 @@ static void _SCANNER_getSpectrum (void)
 
     for (n = 0; n < N; n++) {
         /* Adjust next RX frequency */
-        if ((handle->spectrumFrequency < 400005000) || (handle->spectrumFrequency > 406095000)) {
-            handle->spectrumFrequency = 400005000;
+        if ((handle->spectrumFrequency < 400000000) || (handle->spectrumFrequency >= 406100000)) {
+            handle->spectrumFrequency = 400000000;
+            break;
         }
  
         /* Set radio frequency */
