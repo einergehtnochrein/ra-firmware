@@ -1125,6 +1125,10 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
 
                         case 2:
                             SCANNER_setScannerMode(scanner, enable);
+                            if (enable) {
+                                handle->currentFrequencyHz = 0;
+                                _SYS_reportRadioFrequency(handle);
+                            }
                             break;
 
                         case 3:
