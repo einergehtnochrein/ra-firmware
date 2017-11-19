@@ -614,6 +614,12 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
     int checksum = 0;
     int i;
 
+    //TODO
+    /* Check for enough room in TX FIFO */
+    if (UART_getTxFree(blePort) < (int)strlen(message) + 10) {
+        return LPCLIB_BUSY;
+    }
+
     sprintf(s, "#%d,", channel);
     for (i = 0; i < (int)strlen(s); i++) {
         checksum += s[i];
