@@ -273,6 +273,12 @@ int UART_readLine (UART_Handle handle, void *buffer, int nbytes);
 int UART_write (UART_Handle handle, const void *pBuffer, int nbytes);
 
 
+/** Determine number of free TX buffer entries
+ *  \return Number of free entries, or -1 if no TX FIFO exists.
+ */
+int UART_getTxFree (UART_Handle handle);
+
+
 /** Adjust UART operating parameters.
  *
  *  \param[in] handle Handle for UART
