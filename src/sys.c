@@ -333,12 +333,8 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (0u << 4)         /* 2FSK linear demodulator */
                             );
             ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (20u << 24)
-                            | (2u << 21)
-                            | (11u << 17)
-                            | (645u << 5)
-//AFC off!  TODO                            | (1u << 4)
-                            ); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
+                            | (0u << 4)         /* AFC off */
+                            );
             ADF7021_write(radio, ADF7021_REGISTER_15, 0
                             | (2u << 17)        /* CLKOUT pin carries CDR CLK */
                             | (0u << 11)        /* 3rd order sigma-delta, no dither */
@@ -404,12 +400,8 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (0u << 4)         /* 2FSK linear demodulator */
                             );
             ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (20u << 24)
-                            | (2u << 21)
-                            | (11u << 17)
-                            | (645u << 5)
-//AFC off                            | (1u << 4)
-                            ); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
+                            | (0u << 4)         /* AFC off */
+                            );
             ADF7021_write(radio, ADF7021_REGISTER_15, 0
                             | (2u << 17)        /* CLKOUT pin carries CDR CLK */
                             | (0u << 11)        /* 3rd order sigma-delta, no dither */
