@@ -48,6 +48,9 @@ static const UART_Config blePortConfig[] = {
             .stopbits = UART_STOPBITS_1,
             .parity = UART_PARITY_NONE,}}},
 
+    {.opcode = UART_OPCODE_SET_HARDWARE_HANDSHAKE,
+        {.hardwareHandshake = LPCLIB_YES,}},
+
     {.opcode = UART_OPCODE_SET_BAUDRATE,
         {.baudrate = 115200,}},
 
