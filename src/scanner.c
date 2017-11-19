@@ -85,6 +85,7 @@ struct SCANNER_Context {
     SONDE_Detector manualSondeDetector;
     bool manualAttenuator;
     bool scanner;
+    bool scannerNeedInit;
 
     int preferredIndex;
 
@@ -116,8 +117,9 @@ static void _SCANNER_getSpectrum (void)
 
     for (n = 0; n < N; n++) {
         /* Adjust next RX frequency */
-        if ((handle->spectrumFrequency < 400005000) || (handle->spectrumFrequency > 406095000)) {
-            handle->spectrumFrequency = 400005000;
+        if ((handle->spectrumFrequency < 400000000) || (handle->spectrumFrequency >= 406100000)) {
+            handle->spectrumFrequency = 400000000;
+            break;
         }
  
         /* Set radio frequency */
@@ -298,6 +300,7 @@ void SCANNER_setScannerMode (SCANNER_Handle handle, bool enable)
     }
 
     handle->scanner = enable;
+    handle->scannerNeedInit = enable;
 }
 
 
@@ -450,6 +453,13 @@ handle->mode = SCANNER_MODE_MANUAL;
             handle->scanTickTimeout = false;
 
             if (handle->scanner) {
+                /* One-time init for scanner mode */
+                if (handle->scannerNeedInit) {
+                    //TODO must disable AFC. SRSC detector does this...
+                    SYS_enableDetector(sys, 400000000, SONDE_DETECTOR_C34_C50);
+                    handle->scannerNeedInit = false;
+                }
+
                 _SCANNER_getSpectrum();
 //                osTimerStart(handle->scanTick, 10);
                 handle->scanTickTimeout = true;

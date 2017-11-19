@@ -227,7 +227,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     }
     sDirection[0] = 0;
     if (!isnan(instance->gps.observerLLA.direction)) {
-        snprintf(sDirection, sizeof(sDirection), "%.1f", instance->gps.observerLLA.direction);
+        snprintf(sDirection, sizeof(sDirection), "%.1f", instance->gps.observerLLA.direction * (180.0f / M_PI));
     }
 
     /* Avoid sending the position if any of the values is undefined */

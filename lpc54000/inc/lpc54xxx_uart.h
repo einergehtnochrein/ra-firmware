@@ -78,6 +78,7 @@ typedef enum UART_Opcode {
     UART_OPCODE_SET_RX_BUFFER,              /**< Specify location and size of RX buffer */
     UART_OPCODE_SET_FIFO_THRESHOLD,         /**< Set RX FIFO threshold */
     UART_OPCODE_SET_TX_BLOCKING,            /**< TX blocking mode */
+    UART_OPCODE_SET_HARDWARE_HANDSHAKE,     /**< Hardware handshake CTS (RTS) */
 } UART_Opcode;
 
 
@@ -193,6 +194,7 @@ typedef struct UART_Config {
         UART_FifoThreshold threshold;       /**< RX FIFO threshold */
         UART_BlockingMode txBlocking;       /**< TX blocking mode */
         struct UART_ConfigIrDA irda;        /**< IrDA operating mode */
+        LPCLIB_Switch hardwareHandshake;
     };
 } UART_Config;
 
@@ -271,6 +273,12 @@ int UART_readLine (UART_Handle handle, void *buffer, int nbytes);
  *  \return Number of bytes written
  */
 int UART_write (UART_Handle handle, const void *pBuffer, int nbytes);
+
+
+/** Determine number of free TX buffer entries
+ *  \return Number of free entries, or -1 if no TX FIFO exists.
+ */
+int UART_getTxFree (UART_Handle handle);
 
 
 /** Adjust UART operating parameters.

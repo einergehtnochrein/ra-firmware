@@ -410,6 +410,26 @@ int UART_readLine (UART_Handle handle, void *buffer, int nbytes)
 }
 
 
+/* Determine number of free TX buffer entries */
+int UART_getTxFree (UART_Handle handle)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return -1;
+    }
+
+    if (handle->pTxBuffer == NULL) {
+        return -1;
+    }
+
+    uint32_t rdIndex = handle->txReadIndex;
+    if (rdIndex > handle->txWriteIndex) {
+        return rdIndex - handle->txWriteIndex;
+    }
+
+    return handle->txBufferSize - 1 - (handle->txWriteIndex - rdIndex);
+}
+
+
 int UART_write (UART_Handle handle, const void *buffer, int nbytes)
 {
     int nwritten;
@@ -600,6 +620,12 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
             uart->FCR = (pConfig->threshold & 0xFF) | UART_FCR_FIFOENABLE_Msk;
             break;
 #endif
+
+        case UART_OPCODE_SET_HARDWARE_HANDSHAKE:
+            uart->CFG = (uart->CFG & ~UART_CFG_CTSEN_Msk)
+                    | (pConfig->hardwareHandshake ? UART_CFG_CTSEN_Msk : 0)
+                    ;
+            break;
 
         case UART_OPCODE_INVALID:
         default:

@@ -333,12 +333,8 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (0u << 4)         /* 2FSK linear demodulator */
                             );
             ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (20u << 24)
-                            | (2u << 21)
-                            | (11u << 17)
-                            | (645u << 5)
-//AFC off!  TODO                            | (1u << 4)
-                            ); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
+                            | (0u << 4)         /* AFC off */
+                            );
             ADF7021_write(radio, ADF7021_REGISTER_15, 0
                             | (2u << 17)        /* CLKOUT pin carries CDR CLK */
                             | (0u << 11)        /* 3rd order sigma-delta, no dither */
@@ -404,12 +400,8 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (0u << 4)         /* 2FSK linear demodulator */
                             );
             ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (20u << 24)
-                            | (2u << 21)
-                            | (11u << 17)
-                            | (645u << 5)
-//AFC off                            | (1u << 4)
-                            ); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
+                            | (0u << 4)         /* AFC off */
+                            );
             ADF7021_write(radio, ADF7021_REGISTER_15, 0
                             | (2u << 17)        /* CLKOUT pin carries CDR CLK */
                             | (0u << 11)        /* 3rd order sigma-delta, no dither */
@@ -612,7 +604,6 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
 }
 
 
-
 /* Send a message to the host.
  * Formatter adds channel ID and line feed to the message string.
  */
@@ -621,6 +612,12 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
     char s[20];
     int checksum = 0;
     int i;
+
+    //TODO
+    /* Check for enough room in TX FIFO */
+    if (UART_getTxFree(blePort) < (int)strlen(message) + 10) {
+        return LPCLIB_BUSY;
+    }
 
     sprintf(s, "#%d,", channel);
     for (i = 0; i < (int)strlen(s); i++) {
@@ -1127,6 +1124,10 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
 
                         case 2:
                             SCANNER_setScannerMode(scanner, enable);
+                            if (enable) {
+                                handle->currentFrequencyHz = 0;
+                                _SYS_reportRadioFrequency(handle);
+                            }
                             break;
 
                         case 3:
@@ -1342,70 +1343,74 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                 {
                     /* Find out which buffer to use */
                     int bufferIndex = pMessage->bufferIndex;
-                    SONDE_Type sondeType = SONDE_UNDEFINED;
-                    switch (ipc[bufferIndex].param) {
-                        case 0: sondeType = SONDE_RS92; break;
-                        case 1: sondeType = SONDE_RS41; break;
-                        case 2: sondeType = SONDE_DFM09; break;
-                        case 3: sondeType = SONDE_DFM06; break;
-                        case 4: sondeType = SONDE_M10; break;
-                    }
 
-                    /* Process buffer */
-                    if (sondeType == SONDE_M10) {
-                        M10_processBlock(
-                                handle->m10,
-                                ipc[bufferIndex].data8,
-                                _SYS_getSondeBufferLength(SONDE_M10),
-                                handle->currentFrequencyHz * 1.0f);
-
-                        /* Let scanner prepare for next frequency */
-                        SCANNER_notifyValidFrame(scanner);
-                    }
-                    else if (sondeType == SONDE_RS41) {
-                        RS41_processBlock(
-                                handle->rs41,
-                                ipc[bufferIndex].data8,
-                                _SYS_getSondeBufferLength(SONDE_RS41),
-                                handle->currentFrequencyHz * 1.0f);
-
-                        /* Let scanner prepare for next frequency */
-                        SCANNER_notifyValidFrame(scanner);
-                    }
-                    else if (sondeType == SONDE_RS92) {
-                        RS92_processBlock(
-                                handle->rs92,
-                                ipc[bufferIndex].data8,
-                                _SYS_getSondeBufferLength(SONDE_RS92),
-                                handle->currentFrequencyHz * 1.0f);
-
-                        /* Let scanner prepare for next frequency */
-                        SCANNER_notifyValidFrame(scanner);
-                    }
-                    else if (sondeType == SONDE_DFM06) {
-                        // DFM-06 uses inverted data (or inverted FSK modulation)
-                        for (n = 0; n < _SYS_getSondeBufferLength(SONDE_DFM06); n++) {
-                            ipc[bufferIndex].data8[n] ^= 0xFF;
+                    /* Ignore glitches (packets arriving while switching to/from scanner mode) */
+                    if (handle->currentFrequencyHz != 0) {
+                        SONDE_Type sondeType = SONDE_UNDEFINED;
+                        switch (ipc[bufferIndex].param) {
+                            case 0: sondeType = SONDE_RS92; break;
+                            case 1: sondeType = SONDE_RS41; break;
+                            case 2: sondeType = SONDE_DFM09; break;
+                            case 3: sondeType = SONDE_DFM06; break;
+                            case 4: sondeType = SONDE_M10; break;
                         }
-                        if (DFM_processBlock(
-                                handle->dfm,
-                                sondeType,
-                                ipc[bufferIndex].data8,
-                                _SYS_getSondeBufferLength(SONDE_DFM06),
-                                handle->currentFrequencyHz * 1.0f) == LPCLIB_SUCCESS) {
-                            /* Frame complete. Let scanner prepare for next frequency */
+
+                        /* Process buffer */
+                        if (sondeType == SONDE_M10) {
+                            M10_processBlock(
+                                    handle->m10,
+                                    ipc[bufferIndex].data8,
+                                    _SYS_getSondeBufferLength(SONDE_M10),
+                                    handle->currentFrequencyHz * 1.0f);
+
+                            /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
                         }
-                    }
-                    else if (sondeType == SONDE_DFM09) {
-                        if (DFM_processBlock(
-                                handle->dfm,
-                                sondeType,
-                                ipc[bufferIndex].data8,
-                                _SYS_getSondeBufferLength(SONDE_DFM09),
-                                handle->currentFrequencyHz * 1.0f) == LPCLIB_SUCCESS) {
-                            /* Frame complete. Let scanner prepare for next frequency */
+                        else if (sondeType == SONDE_RS41) {
+                            RS41_processBlock(
+                                    handle->rs41,
+                                    ipc[bufferIndex].data8,
+                                    _SYS_getSondeBufferLength(SONDE_RS41),
+                                    handle->currentFrequencyHz * 1.0f);
+
+                            /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
+                        }
+                        else if (sondeType == SONDE_RS92) {
+                            RS92_processBlock(
+                                    handle->rs92,
+                                    ipc[bufferIndex].data8,
+                                    _SYS_getSondeBufferLength(SONDE_RS92),
+                                    handle->currentFrequencyHz * 1.0f);
+
+                            /* Let scanner prepare for next frequency */
+                            SCANNER_notifyValidFrame(scanner);
+                        }
+                        else if (sondeType == SONDE_DFM06) {
+                            // DFM-06 uses inverted data (or inverted FSK modulation)
+                            for (n = 0; n < _SYS_getSondeBufferLength(SONDE_DFM06); n++) {
+                                ipc[bufferIndex].data8[n] ^= 0xFF;
+                            }
+                            if (DFM_processBlock(
+                                    handle->dfm,
+                                    sondeType,
+                                    ipc[bufferIndex].data8,
+                                    _SYS_getSondeBufferLength(SONDE_DFM06),
+                                    handle->currentFrequencyHz * 1.0f) == LPCLIB_SUCCESS) {
+                                /* Frame complete. Let scanner prepare for next frequency */
+                                SCANNER_notifyValidFrame(scanner);
+                            }
+                        }
+                        else if (sondeType == SONDE_DFM09) {
+                            if (DFM_processBlock(
+                                    handle->dfm,
+                                    sondeType,
+                                    ipc[bufferIndex].data8,
+                                    _SYS_getSondeBufferLength(SONDE_DFM09),
+                                    handle->currentFrequencyHz * 1.0f) == LPCLIB_SUCCESS) {
+                                /* Frame complete. Let scanner prepare for next frequency */
+                                SCANNER_notifyValidFrame(scanner);
+                            }
                         }
                     }
 
