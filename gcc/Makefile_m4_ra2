@@ -16,7 +16,7 @@ C_SRCS = \
     pdm.c \
     gps/gps.c \
     reedsolomon/reedsolomon.c \
-    dfm/dfm.c dfm/dfmconfig.c dfm/dfmgps.c \
+    dfm/dfm.c dfm/dfmconfig.c dfm/dfmgps.c dfm/dfmmetrology.c \
     rs41/rs41.c rs41/rs41calibconfig.c rs41/rs41gps.c rs41/rs41metrology.c \
     rs92/rs92.c rs92/rs92calibconfig.c rs92/rs92gps.c rs92/rs92metrology.c rs92/rinex.c rs92/observer.c \
     srsc/srsc.c srsc/srscconfig.c srsc/srscdsp.c srsc/srscgps.c \

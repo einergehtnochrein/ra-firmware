@@ -59,6 +59,13 @@ static DFM_InstanceData *_DFM_getInstanceDataStructure (float frequencyMHz)
         memset(instance, 0, sizeof(DFM_InstanceData));
         instance->rxFrequencyMHz = frequencyMHz;
         instance->detectorState = DFM_DETECTOR_FIND_NANALOG;
+        instance->metro.temperature = NAN;
+        instance->metro.humidity = NAN;
+        instance->metro.pressure = NAN;
+        instance->metro._ref3 = NAN;
+        instance->metro._ref4 = NAN;
+        instance->metro.batteryVoltage = NAN;
+        instance->metro.cpuTemperature = NAN;
 
         /* Insert into list */
         p = instanceList;
@@ -290,33 +297,10 @@ dfm_config_unknown[rawConfig->type].n++;
         break;
 
     case DFM_DETECTOR_READY:
-        if (instance->platform == SONDE_DFM06) {
-            instance->metro.batteryVoltage = NAN;
-            instance->metro.cpuTemperature = NAN;
-
-            switch (channel - (int)instance->maxConfigChannel) {
-                case DFM06_CHANNEL_CONFIG_NAME:
-                    /* Ignored once detected */
-                    break;
-            }
-        }
-        if (instance->platform == SONDE_DFM09) {
-            switch (channel - (int)instance->maxConfigChannel) {
-                case DFM09_CHANNEL_CONFIG_BATTERY_VOLTAGE:
-                    instance->metro.batteryVoltage = ((uint32_t)i32 >> 4) / 1000.0f;
-                    break;
-                case DFM09_CHANNEL_CONFIG_CPU_TEMPERATURE:
-                    instance->metro.cpuTemperature = ((uint32_t)i32 >> 4) / 100.0f - 273.16f;
-                    break;
-                case DFM09_CHANNEL_CONFIG_NAME:
-                    /* Ignored once detected */
-                    break;
-            }
-        }
+        /* process metrology */
+        result = _DFM_processMetrologyBlock(rawConfig, instance);
         break;
     }
-
-    // TODO process metrology
 
     /* Set time marker to be able to identify old records */
     instance->lastUpdated = os_time;
