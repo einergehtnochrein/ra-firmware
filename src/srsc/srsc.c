@@ -197,7 +197,7 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
             /* Log */
             if (handle->instance->detectorState == SRSC_DETECTOR_READY) {
                 char log[40];
-                snprintf(log, sizeof(log), "%s,1,%d,%08lX",
+                snprintf(log, sizeof(log), "%s,8,1,%d,%08lX",
                             handle->instance->name,
                             handle->packet.type,
                             handle->packet.d_bigendian);
