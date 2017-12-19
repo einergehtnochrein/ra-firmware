@@ -73,11 +73,18 @@ ADF7021_Handle radio;
 DMA_Handle gpdma;
 #endif
 
+GPIO_Pin GPIO_ADF7021_CE;
 
 
 void BSP_init (void)
 {
     GPIO_open();
+
+    /* Check board version. "Fix" has port pin 0.19 grounded.  */
+    GPIO_ADF7021_CE = GPIO_ADF7021_CE_org;
+    if (GPIO_readBit(GPIO_0_19) == 0) {
+        GPIO_ADF7021_CE = GPIO_ADF7021_CE_fix;
+    }
 
     GPIO_setDirBit(GPIO_BLE_MODESEL, ENABLE);
     GPIO_setDirBit(GPIO_BLE_RESET, ENABLE);

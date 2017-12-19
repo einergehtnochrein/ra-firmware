@@ -4,7 +4,8 @@
 #include "lpclib.h"
 
 /* GPIO functions */
-#define GPIO_ADF7021_CE                     GPIO_1_4
+#define GPIO_ADF7021_CE_org                 GPIO_1_4
+#define GPIO_ADF7021_CE_fix                 GPIO_0_1
 #define GPIO_ADF7021_SLE                    GPIO_1_3
 #define GPIO_BLE_AUTORUN                    GPIO_0_8
 #define GPIO_BLE_MODESEL                    GPIO_0_2
@@ -14,6 +15,8 @@
 #define GPIO_ENABLE_VDDA                    GPIO_0_6
 #define GPIO_LNA_GAIN                       GPIO_1_9
 #define GPIO_VBAT_ADC_ENABLE                GPIO_0_0
+
+extern GPIO_Pin GPIO_ADF7021_CE;
 
 
 /* Sample rate for DSP processing (e.g. AFSK modem) */
