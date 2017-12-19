@@ -22,7 +22,7 @@ typedef enum {
     RS92_SUBFRAME_CALIB_CONFIG = 'e',
     RS92_SUBFRAME_METROLOGY = 'i',
     RS92_SUBFRAME_GPS = 'g',
-    RS92_SUBFRAME_UNKNOWN = 'h',
+    RS92_SUBFRAME_AUX = 'h',
     RS92_SUBFRAME_PADDING = 0xFF,
 } RS92_SubFrameType;
 

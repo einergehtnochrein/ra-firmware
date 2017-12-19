@@ -300,13 +300,38 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
 {
     int nErrors;
 
-
     if (length > 1) {  //TODO
         /* Convert to byte array */
         _RS92_buffer2raw(handle, buffer);
 
         /* Reed-Solomon decoder */
-        if (REEDSOLOMON_process(_RS92_getDataAddress, &nErrors) == LPCLIB_SUCCESS) {
+        LPCLIB_Result result = REEDSOLOMON_process(_RS92_getDataAddress, &nErrors); 
+        if (result != LPCLIB_SUCCESS) {
+            /* Try harder. Guess some elements of the code word and try again. */
+            handle->packet.config.frameType = RS92_SUBFRAME_CALIB_CONFIG;
+            handle->packet.config.length = (sizeof(handle->packet.config) - 4) / 2;
+            handle->packet.config.name[0] = ' ';
+            handle->packet.config.name[1] = ' ';
+            if (handle->instance) {
+                int i;
+                for (i = 0; i < 8; i++) {
+                    handle->packet.config.name[2 + i] = handle->instance->hashName[i];
+                }
+            }
+            handle->packet.metrology.frameType = RS92_SUBFRAME_METROLOGY;
+            handle->packet.metrology.length = (sizeof(handle->packet.metrology) - 4) / 2;
+            handle->packet.gps.frameType = RS92_SUBFRAME_GPS;
+            handle->packet.gps.length = (sizeof(handle->packet.gps) - 4) / 2;
+            handle->packet.aux.frameType = RS92_SUBFRAME_AUX;
+            handle->packet.aux.length = (sizeof(handle->packet.aux) - 4) / 2;
+            handle->packet.unknown.frameType = RS92_SUBFRAME_PADDING;
+            handle->packet.unknown.length = 2;
+            handle->packet.unknown.nn[0] = 2;
+            handle->packet.unknown.nn[1] = 2;
+            result = REEDSOLOMON_process(_RS92_getDataAddress, &nErrors);
+        }
+
+        if (result == LPCLIB_SUCCESS) {
             /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
             handle->rxFrequencyHz = rxFrequencyHz;
 
