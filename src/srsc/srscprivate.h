@@ -17,14 +17,18 @@
 
 
 typedef enum {
+    SRSC_FRAME_METRO_VOLTAGE_CU = 0,
+    SRSC_FRAME_METRO_VOLTAGE_R2 = 1,
     SRSC_FRAME_METRO_TEMPERATURE_REFBLOCK = 2,
-    SRSC_FRAME_METRO_TEMPERATURE = 3,
+    SRSC_FRAME_METRO_TEMPERATURE_AIR = 3,
     SRSC_FRAME_METRO_TEMPERATURE_HUSENSOR = 4,
     SRSC_FRAME_METRO_TEMPERATURE_CHAMBER = 5,
     SRSC_FRAME_METRO_TEMPERATURE_O3INLET = 6,
     SRSC_FRAME_METRO_CURRENT_O3CELL = 7,
 
     SRSC_FRAME_METRO_HUMIDITY = 16,
+    SRSC_FRAME_METRO_U_SENSOR_HEATING = 17,
+    SRSC_FRAME_METRO_U_SENSOR_FREQUENCY = 18,
 
     SRSC_FRAME_GPS_DATE = 20,
     SRSC_FRAME_GPS_TIME = 21,
@@ -42,12 +46,12 @@ typedef enum {
     SRSC_FRAME_CONFIG_105 = 105,
     SRSC_FRAME_CONFIG_106 = 106,
     SRSC_FRAME_CONFIG_107 = 107,
-    SRSC_FRAME_CONFIG_108 = 108,
+    SRSC_FRAME_CONFIG_FIRMWARE_VERSION = 108,
     SRSC_FRAME_CONFIG_VBAT = 110,
     SRSC_FRAME_CONFIG_RFPWRDETECT = 111,
-    SRSC_FRAME_CONFIG_115 = 115,
-    SRSC_FRAME_CONFIG_116 = 116,
-    SRSC_FRAME_CONFIG_119 = 119,
+    SRSC_FRAME_CONFIG_STATE = 115,
+    SRSC_FRAME_CONFIG_ERROR_FLAGS = 116,
+    SRSC_FRAME_CONFIG_VDOP = 119,
     SRSC_FRAME_CONFIG_120 = 120,
 } SRSC_FrameType;
 
@@ -99,8 +103,8 @@ typedef struct {
             float __reserved14__;
             float __reserved15__;
             float humidity;                             /* Humidity [%] */
-            float __reserved17__;
-            float __reserved18__;
+            float USensorHeating;                       /* Heating for U sensor (0=off, 1=on) */
+            float USensorFrequency;                     /* Frequency of oscillator using U sensor [Hz] */
             float __reserved19__;
         };
     };
@@ -123,12 +127,12 @@ typedef struct {
     uint32_t info105;
     uint32_t info106;
     uint32_t info107;
-    uint32_t info108;
+    uint32_t firmwareVersion;
     float batteryVoltage;                   /* Battery voltage [V] */
     float rfPwrDetect;
-    uint32_t info115;
-    uint32_t info116;
-    uint32_t info119;
+    int state;
+    uint32_t errorFlags;
+    uint32_t vdop;
     uint32_t info120;
 } SRSC_CookedConfig;
 

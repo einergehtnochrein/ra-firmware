@@ -148,7 +148,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,,,%s,,%s,%.3f,,,%.1f,%s,,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,,,%s,,%s,%.3f,%.1f,,%.1f,%s,,,,%.3f",
                         instance->config.name,
                         f,         /* Frequency [MHz] */
                         sAltitude, /* Altitude [m] */
@@ -156,13 +156,14 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         sTemperature,
                         sSpecial,
                         instance->config.rfPwrDetect,       /* RF power detector [V] */
+                        instance->metro.humidity,           /* Humidity [%] */
                         SYS_getFrameRssi(sys),
                         sOffset,                            /* RX signal offset [kHz] */
                         instance->config.batteryVoltage     /* Battery voltage [V] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,,%.2f,%.1f,%s,%d,,,%.3f",
+        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%s,%d,,,%.3f",
                         instance->config.name,
                         f,                                  /* Frequency [MHz] */
                         instance->gps.usedSats,
@@ -173,6 +174,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                         sTemperature,
                         sSpecial,
                         instance->config.rfPwrDetect,       /* RF power detector [V] */
+                        instance->metro.humidity,           /* Humidity [%] */
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
                         sOffset,                            /* RX signal offset [kHz] */
@@ -183,6 +185,27 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
+    }
+
+    if (1) { //TODO must check for C50
+        length = sprintf(s, "%s,8,0,%.1f,%.1f,%.1f,%.1f,%.3f,,%ld,%ld,%d,%ld,%.2f,%d",
+                    instance->config.name,
+                    instance->metro.temperatureRefBlock,    /* Reference temperature [°C] */
+                    instance->metro.temperatureHuSensor,    /* Temperature near humidity sensor [°C] */
+                    instance->metro.temperatureChamber,
+                    instance->metro.temperatureO3Inlet,     /* Temperature of air inlet of ECC ozone sensor [°C] */
+                    instance->metro.currentO3Cell,          /* Cell current of ECC ozone sensor [µA] */
+                    lrintf(instance->metro.USensorHeating),
+                    lrintf(instance->metro.USensorFrequency),
+                    instance->config.state,
+                    instance->config.errorFlags,
+                    instance->config.vdop / 100.0f,
+                    (int)instance->config.sondeType
+                 );
+
+        if (length > 0) {
+            SYS_send2Host(HOST_CHANNEL_INFO, s);
+        }
     }
 }
 
