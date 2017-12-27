@@ -239,8 +239,8 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,%.1f,,,,",
-                        instance->name,
+        length = sprintf((char *)s, "%ld,2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,%.1f,,,,",
+                        instance->id,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
@@ -251,8 +251,8 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,%.2f,%.1f,%.1f,%d,,,%s",
-                        instance->name,
+        length = sprintf((char *)s, "%ld,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,%.2f,%.1f,%.1f,%d,,,%s",
+                        instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
                         longitude,                  /* Longitude [degrees] */
@@ -272,6 +272,15 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
+    }
+
+    length = sprintf(s, "%ld,2,0,%s",
+                instance->id,
+                instance->name
+                );
+
+    if (length > 0) {
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
     }
 }
 
@@ -400,15 +409,14 @@ LPCLIB_Result DFM_resendLastPositions (DFM_Handle handle)
 }
 
 
-/* Remove entries from heard list (select by frequency) */
-LPCLIB_Result DFM_removeFromList (DFM_Handle handle, float rxFrequencyMHz)
+/* Remove entries from heard list */
+LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id)
 {
     (void)handle;
 
-    float rxKhz = roundf(rxFrequencyMHz * 1000.0f);
     DFM_InstanceData *instance = NULL;
     while (_DFM_iterateInstance(&instance)) {
-        if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+        if (instance->id == id) {
             /* Remove reference from context if this is the current sonde */
             if (instance == handle->instance) {
                 handle->instance = NULL;

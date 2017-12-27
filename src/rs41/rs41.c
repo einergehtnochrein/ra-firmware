@@ -190,8 +190,8 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         direction *= 180.0 / M_PI;
         velocity *= 3.6f;
 
-        length = sprintf((char *)s, "%s,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,%s,,,,,%.1f,%.1f,%d,%d,%s,",
-                        instance->hashName,
+        length = sprintf((char *)s, "%ld,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,%s,,,,,%.1f,%.1f,%d,%d,%s,",
+                        instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         latitude,                               /* Latitude [degrees] */
                         longitude,                              /* Longitude [degrees] */
@@ -208,8 +208,8 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         );
     }
     else if (instance->encrypted) {
-        length = sprintf((char *)s, "%s,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,",
-                        instance->hashName,
+        length = sprintf((char *)s, "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,",
+                        instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         SYS_getFrameRssi(sys),
                         offset,    /* RX frequency offset [kHz] */
@@ -221,6 +221,15 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
+    }
+
+    length = sprintf(s, "%ld,1,0,%s",
+                instance->id,
+                instance->hashName
+                );
+
+    if (length > 0) {
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
     }
 }
 
@@ -481,15 +490,14 @@ LPCLIB_Result RS41_resendLastPositions (RS41_Handle handle)
 }
 
 
-/* Remove entries from heard list (select by frequency) */
-LPCLIB_Result RS41_removeFromList (RS41_Handle handle, float rxFrequencyMHz)
+/* Remove entries from heard list */
+LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id)
 {
     (void)handle;
 
-    float rxKhz = roundf(rxFrequencyMHz * 1000.0f);
     RS41_InstanceData *instance = NULL;
     while (_RS41_iterateInstance(&instance)) {
-        if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+        if (instance->id == id) {
             /* Remove reference from context if this is the current sonde */
             if (instance == handle->instance) {
                 handle->instance = NULL;

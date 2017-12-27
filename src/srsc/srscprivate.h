@@ -170,6 +170,7 @@ typedef struct {
  */
 typedef struct _SRSC_InstanceData {
     struct _SRSC_InstanceData *next;
+    uint32_t id;
     char name[20];
     float rxFrequencyMHz;
     float rxOffset;

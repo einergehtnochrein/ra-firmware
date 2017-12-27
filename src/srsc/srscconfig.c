@@ -1,5 +1,7 @@
 
 #include "lpclib.h"
+
+#include "app.h"
 #include "srsc.h"
 #include "srscprivate.h"
 
@@ -55,11 +57,11 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
     }
 
     /* We need a new instance */
-    instance = (SRSC_InstanceData *)malloc(sizeof(SRSC_InstanceData));
+    instance = (SRSC_InstanceData *)calloc(1, sizeof(SRSC_InstanceData));
 
     if (instance) {
         /* Prepare structure */
-        memset(instance, 0, sizeof(SRSC_InstanceData));
+        instance->id = SONDE_getNewID(sonde);
         instance->rxFrequencyMHz = frequencyMHz;
         instance->gps.observerLLA.lat = NAN;
         instance->gps.observerLLA.lon = NAN;

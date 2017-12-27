@@ -1077,31 +1077,31 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
 
                     if (list == 1) {        /* Sonde lists in decoders */
                         if (action == 0) {  /* Remove an entry */
-                            float frequencyMHz;
+                            int id;
                             int decoderCode;
-                            if (sscanf(cl, "#%*d,%*d,%*d,%f,%d", &frequencyMHz, &decoderCode) == 2) {
+                            if (sscanf(cl, "#%*d,%*d,%*d,%d,%d", &id, &decoderCode) == 2) {
                                 SONDE_Decoder decoder = (SONDE_Decoder)decoderCode;
                                 switch (decoder) {
                                     case SONDE_DECODER_MODEM:
-                                        M10_removeFromList(handle->m10, frequencyMHz);
+                                        M10_removeFromList(handle->m10, id);
                                         break;
                                     case SONDE_DECODER_RS41:
-                                        RS41_removeFromList(handle->rs41, frequencyMHz);
+                                        RS41_removeFromList(handle->rs41, id);
                                         break;
                                     case SONDE_DECODER_RS92:
-                                        RS92_removeFromList(handle->rs92, frequencyMHz);
+                                        RS92_removeFromList(handle->rs92, id);
                                         break;
                                     case SONDE_DECODER_DFM:
-                                        DFM_removeFromList(handle->dfm, frequencyMHz);
+                                        DFM_removeFromList(handle->dfm, id);
                                         break;
                                     case SONDE_DECODER_C34_C50:
-                                        SRSC_removeFromList(handle->srsc, frequencyMHz);
+                                        SRSC_removeFromList(handle->srsc, id);
                                         break;
                                     default:
                                         /* ignore */
                                         break;
                                 }
-                                SCANNER_removeListenFrequency(scanner, frequencyMHz);
+//                                SCANNER_removeListenFrequency(scanner, id);
                             }
                         }
                     }

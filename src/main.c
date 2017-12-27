@@ -17,6 +17,7 @@
 
 SYS_Handle sys;
 SCANNER_Handle scanner;
+SONDE_Handle sonde;
 EPHEMUPDATE_Handle euTask;
 
 char s[100];
@@ -55,6 +56,7 @@ int main (void)
 
     SYS_open(&sys);
     SCANNER_open(&scanner);
+    SONDE_open(&sonde);
     EPHEMUPDATE_open(&euTask);
 #if (BOARD_RA == 2)
     USBUSER_open();

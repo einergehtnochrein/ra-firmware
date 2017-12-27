@@ -122,6 +122,7 @@ typedef struct {
 
 typedef struct _RS92_InstanceData {
     struct _RS92_InstanceData *next;
+    uint32_t id;
     char hashName[20];                          /* Hashable sonde name */
     uint32_t fragmentValidFlags;                /* The 32 bits (if set) indicate validity of the corresponding fragment */
     uint32_t lastUpdated;

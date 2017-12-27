@@ -1,5 +1,6 @@
 
 #include "lpclib.h"
+#include "app.h"
 #include "rs92.h"
 #include "rs92private.h"
 
@@ -51,12 +52,12 @@ static RS92_InstanceData *_RS92_getInstanceDataStructure (const char *name)
     }
     else {
         /* We need a new calibration structure */
-        instance = (RS92_InstanceData *)malloc(sizeof(RS92_InstanceData));
+        instance = (RS92_InstanceData *)calloc(1, sizeof(RS92_InstanceData));
     }
 
     if (instance) {
         /* Prepare structure */
-        memset(instance, 0, sizeof(RS92_InstanceData));
+        instance->id = SONDE_getNewID(sonde);
         strcpy(instance->hashName, name);
 
         /* Insert into list */

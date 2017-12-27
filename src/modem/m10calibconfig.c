@@ -1,5 +1,6 @@
 
 #include "lpclib.h"
+#include "app.h"
 #include "m10.h"
 #include "m10private.h"
 
@@ -51,12 +52,12 @@ static M10_InstanceData *_M10_getInstanceDataStructure (const char *name)
     }
     else {
         /* We need a new calibration structure */
-        instance = (M10_InstanceData *)malloc(sizeof(M10_InstanceData));
+        instance = (M10_InstanceData *)calloc(1, sizeof(M10_InstanceData));
     }
 
     if (instance) {
         /* Prepare structure */
-        memset(instance, 0, sizeof(M10_InstanceData));
+        instance->id = SONDE_getNewID(sonde);
         strcpy(instance->hashName, name);
 
         /* Insert into list */

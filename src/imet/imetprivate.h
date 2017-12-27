@@ -106,6 +106,7 @@ typedef struct {
  */
 typedef struct _IMET_InstanceData {
     struct _IMET_InstanceData *next;
+    uint32_t id;
     char name[20];
     float frequency;
 

@@ -1,5 +1,6 @@
 
 #include "lpclib.h"
+#include "app.h"
 #include "imet.h"
 #include "imetprivate.h"
 
@@ -51,12 +52,12 @@ IMET_InstanceData *_IMET_getInstanceDataStructure (float frequency)
     }
     else {
         /* We need a new calibration structure */
-        instance = (IMET_InstanceData *)malloc(sizeof(IMET_InstanceData));
+        instance = (IMET_InstanceData *)calloc(1, sizeof(IMET_InstanceData));
     }
 
     if (instance) {
         /* Prepare structure */
-        memset(instance, 0, sizeof(IMET_InstanceData));
+        instance->id = SONDE_getNewID(sonde);
         instance->frequency = frequency;
         instance->config.frequencyKhz = lroundf(frequency / 1000.0);
         strcpy(instance->name, "iMet-1");

@@ -125,6 +125,7 @@ typedef struct {
  */
 typedef struct _DFM_InstanceData {
     struct _DFM_InstanceData *next;
+    uint32_t id;
     char name[20];
     float rxFrequencyMHz;
     SONDE_Type platform;

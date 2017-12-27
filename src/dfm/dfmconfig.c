@@ -1,5 +1,6 @@
 
 #include "lpclib.h"
+#include "app.h"
 #include "dfm.h"
 #include "dfmprivate.h"
 
@@ -51,12 +52,12 @@ static DFM_InstanceData *_DFM_getInstanceDataStructure (float frequencyMHz)
     }
     else {
         /* We need a new calibration structure */
-        instance = (DFM_InstanceData *)malloc(sizeof(DFM_InstanceData));
+        instance = (DFM_InstanceData *)calloc(1, sizeof(DFM_InstanceData));
     }
 
     if (instance) {
         /* Prepare structure */
-        memset(instance, 0, sizeof(DFM_InstanceData));
+        instance->id = SONDE_getNewID(sonde);
         instance->rxFrequencyMHz = frequencyMHz;
         instance->detectorState = DFM_DETECTOR_FIND_NANALOG;
         instance->metro.temperature = NAN;

@@ -119,6 +119,7 @@ typedef struct {
 /* Data that needs to be stored for every RS41 instance. */
 typedef struct _RS41_InstanceData {
     struct _RS41_InstanceData *next;
+    uint32_t id;
     char hashName[20];                          /* Hashable sonde name */
     uint64_t fragmentValidFlags;                /* The 52 bits (if set) indicate validity of the corresponding fragment */
     uint32_t lastUpdated;

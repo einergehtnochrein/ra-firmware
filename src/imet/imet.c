@@ -116,8 +116,8 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,%s,%.3f,,,,%s,%s,,,,,,,,,%.1f,%.1f,0",
-                        instance->name,
+        length = sprintf((char *)s, "%ld,%s,%.3f,,,,%s,%s,,,,,,,,,%.1f,%.1f,0",
+                        instance->id,
                         sType,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
@@ -127,8 +127,8 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,,,,,,,%.1f,%.1f,%d",
-                        instance->name,
+        length = sprintf((char *)s, "%ld,%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,,,,,,,%.1f,%.1f,%d",
+                        instance->id,
                         sType,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -145,6 +145,15 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
+    }
+
+    length = sprintf(s, "%ld,6,0,%s",
+                instance->id,
+                instance->name
+                );
+
+    if (length > 0) {
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
     }
 }
 

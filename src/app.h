@@ -36,5 +36,6 @@
 extern EPHEMUPDATE_Handle euTask;
 extern SCANNER_Handle scanner;
 extern SYS_Handle sys;
+extern SONDE_Handle sonde;
 
 #endif

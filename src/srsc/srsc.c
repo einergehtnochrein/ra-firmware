@@ -97,7 +97,6 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 {
     char s[140];
     char sAltitude[20];
-    char sOffset[8];
     char sTemperature[8];
     int length = 0;
     float f;
@@ -127,12 +126,6 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
         sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt);
     }
 
-    /* Frequency offset */
-    sOffset[0] = 0;
-    if (!isnan(instance->rxOffset)) {
-        snprintf(sOffset, sizeof(sOffset), "%.2f", instance->rxOffset / 1e3f);
-    }
-
     /* Sonde type */
     special = 0;
     if (instance->config.hasO3) {
@@ -146,50 +139,32 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
 
-    /* Avoid sending the position if any of the values is undefined */
-    if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,8,%.3f,,,,%s,%.1f,,,%s,,%s,%.3f,%.1f,,%.1f,%s,,,,%.3f",
-                        instance->config.name,
-                        f,         /* Frequency [MHz] */
-                        sAltitude, /* Altitude [m] */
-                        instance->gps.climbRate,            /* Climb rate [m/s] */
-                        sTemperature,
-                        sSpecial,
-                        instance->config.rfPwrDetect,       /* RF power detector [V] */
-                        instance->metro.humidity,           /* Humidity [%] */
-                        SYS_getFrameRssi(sys),
-                        sOffset,                            /* RX signal offset [kHz] */
-                        instance->config.batteryVoltage     /* Battery voltage [V] */
-                        );
-    }
-    else {
-        length = sprintf((char *)s, "%s,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%s,%d,,,%.3f",
-                        instance->config.name,
-                        f,                                  /* Frequency [MHz] */
-                        instance->gps.usedSats,
-                        latitude,                           /* Latitude [degrees] */
-                        longitude,                          /* Longitude [degrees] */
-                        sAltitude,                          /* Altitude [m] */
-                        instance->gps.climbRate,            /* Climb rate [m/s] */
-                        sTemperature,
-                        sSpecial,
-                        instance->config.rfPwrDetect,       /* RF power detector [V] */
-                        instance->metro.humidity,           /* Humidity [%] */
-                        instance->gps.hdop,
-                        SYS_getFrameRssi(sys),
-                        sOffset,                            /* RX signal offset [kHz] */
-                        instance->gps.usedSats,
-                        instance->config.batteryVoltage     /* Battery voltage [V] */
-                        );
-    }
-
+    length = sprintf((char *)s, "%ld,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f",
+                    instance->id,
+                    f,                                  /* Frequency [MHz] */
+                    instance->gps.usedSats,
+                    latitude,                           /* Latitude [degrees] */
+                    longitude,                          /* Longitude [degrees] */
+                    sAltitude,                          /* Altitude [m] */
+                    instance->gps.climbRate,            /* Climb rate [m/s] */
+                    sTemperature,
+                    sSpecial,
+                    instance->config.rfPwrDetect,       /* RF power detector [V] */
+                    instance->metro.humidity,           /* Humidity [%] */
+                    instance->gps.hdop,
+                    SYS_getFrameRssi(sys),
+                    instance->rxOffset / 1e3f,
+                    instance->gps.usedSats,
+                    instance->config.batteryVoltage     /* Battery voltage [V] */
+                    );
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
     if (1) { //TODO must check for C50
-        length = sprintf(s, "%s,8,0,%.1f,%.1f,%.1f,%.1f,%.3f,,%ld,%ld,%d,%ld,%.2f,%d",
-                    instance->config.name,
+        length = sprintf(s, "%ld,8,0,%s,,%.1f,%.1f,%.1f,%.1f,%.3f,,%ld,%ld,%d,%ld,%.2f,%d",
+                    instance->id,
+                    instance->name,
                     instance->metro.temperatureRefBlock,    /* Reference temperature [°C] */
                     instance->metro.temperatureHuSensor,    /* Temperature near humidity sensor [°C] */
                     instance->metro.temperatureChamber,
@@ -290,14 +265,13 @@ LPCLIB_Result SRSC_resendLastPositions (SRSC_Handle handle)
 
 
 /* Remove entries from heard list (select by frequency) */
-LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, float rxFrequencyMHz)
+LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id)
 {
     (void)handle;
 
-    float rxKhz = roundf(rxFrequencyMHz * 1000.0f);
     SRSC_InstanceData *instance = NULL;
     while (_SRSC_iterateInstance(&instance)) {
-        if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+        if (instance->id == id) {
             /* Remove reference from context if this is the current sonde */
             if (instance == handle->instance) {
                 handle->instance = NULL;
