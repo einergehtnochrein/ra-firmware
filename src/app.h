@@ -7,7 +7,7 @@
 
 #define FIRMWARE_VERSION_MAJOR              27
 #define FIRMWARE_VERSION_MINOR              0
-#define FIRMWARE_NAME                       "pre1"
+#define FIRMWARE_NAME                       "pre2"
 
 #if (BOARD_RA == 1)
 #define FIRMWARE_START_ADDRESS              0x00008000
