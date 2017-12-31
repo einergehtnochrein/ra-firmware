@@ -1,5 +1,6 @@
 
 #include "lpclib.h"
+#include "app.h"
 #include "rs41.h"
 #include "rs41private.h"
 
@@ -51,12 +52,12 @@ static RS41_InstanceData *_RS41_getInstanceDataStructure (const char *name)
     }
     else {
         /* We need a new calibration structure */
-        instance = (RS41_InstanceData *)malloc(sizeof(RS41_InstanceData));
+        instance = (RS41_InstanceData *)calloc(1, sizeof(RS41_InstanceData));
     }
 
     if (instance) {
         /* Prepare structure */
-        memset(instance, 0, sizeof(RS41_InstanceData));
+        instance->id = SONDE_getNewID(sonde);
         strcpy(instance->hashName, name);
 
         /* Insert into list */

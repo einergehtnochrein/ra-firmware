@@ -22,7 +22,7 @@ typedef enum {
     RS92_SUBFRAME_CALIB_CONFIG = 'e',
     RS92_SUBFRAME_METROLOGY = 'i',
     RS92_SUBFRAME_GPS = 'g',
-    RS92_SUBFRAME_UNKNOWN = 'h',
+    RS92_SUBFRAME_AUX = 'h',
     RS92_SUBFRAME_PADDING = 0xFF,
 } RS92_SubFrameType;
 
@@ -122,6 +122,7 @@ typedef struct {
 
 typedef struct _RS92_InstanceData {
     struct _RS92_InstanceData *next;
+    uint32_t id;
     char hashName[20];                          /* Hashable sonde name */
     uint32_t fragmentValidFlags;                /* The 32 bits (if set) indicate validity of the corresponding fragment */
     uint32_t lastUpdated;

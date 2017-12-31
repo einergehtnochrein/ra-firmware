@@ -12,11 +12,6 @@
 #include "srscprivate.h"
 
 
-
-static uint32_t _srscDebug25;
-static uint32_t _srscDebug26;
-
-
 LPCLIB_Result _SRSC_processGpsFrame (
         const SRSC_Packet *rawGps,
         SRSC_CookedGps *cookedGps)
@@ -106,18 +101,8 @@ LPCLIB_Result _SRSC_processGpsFrame (
             }
             break;
 
-        case SRSC_FRAME_GPS_25:
-            _srscDebug25 = data;
-            break;
-        case SRSC_FRAME_GPS_26:
-            _srscDebug26 = data;
-            break;
-
         case SRSC_FRAME_GPS_QUALITY:
             //TODO not confirmed, just a wild guess...
-            /* Three 16-bit fields. First appears to be a signed (here: negative) value.
-             * Second is HDOP, third is DOP (always larger than HDOP)
-             */
             cookedGps->hdop = (float)(data / 100) / 100.0f;
             cookedGps->usedSats = data % 100;
             break;

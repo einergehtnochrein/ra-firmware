@@ -71,8 +71,12 @@ typedef __PACKED(union {
 typedef struct {
     float temperature;                          /* Temperature [°C] */
     float humidity;                             /* Humidity [%] */
+    float pressure;
     float batteryVoltage;                       /* Battery voltage [V] */
     float cpuTemperature;                       /* CPU temperature [°C] */
+
+    float _ref3;
+    float _ref4;
 } DFM_CookedMetrology;
 
 
@@ -121,6 +125,7 @@ typedef struct {
  */
 typedef struct _DFM_InstanceData {
     struct _DFM_InstanceData *next;
+    uint32_t id;
     char name[20];
     float rxFrequencyMHz;
     SONDE_Type platform;
@@ -185,6 +190,11 @@ void _DFM_deleteInstance (DFM_InstanceData *instance);
  */
 LPCLIB_Result _DFM_processGpsBlock (
         const DFM_SubFrameGps *rawGps,
+        DFM_InstanceData *instance);
+
+/* Process a frame with meteorological measurements. */
+LPCLIB_Result _DFM_processMetrologyBlock (
+        const DFM_SubFrameConfig *rawConfig,
         DFM_InstanceData *instance);
 
 #endif

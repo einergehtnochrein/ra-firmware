@@ -167,10 +167,17 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     char sVelocity[8];
     char sDirection[8];
     char sVbat[8];
+    char sTemperature[8];
     uint32_t special;
     char sSpecial[8];
     int length = 0;
     float f, offset;
+
+    /* Pressure/temperature/humidity sensors */
+    sTemperature[0] = 0;
+    if (!isnan(instance->metro.temperature)) {
+        snprintf(sTemperature, sizeof(sTemperature), "%.1f", instance->metro.temperature);
+    }
 
     /* Get frequency */
     f = instance->config.frequencyKhz / 1000.0f;
@@ -232,19 +239,20 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,2,%.3f,,,,%s,%s,,,,,%s,,,,%.1f,%.1f,,,,",
-                        instance->name,
+        length = sprintf((char *)s, "%ld,2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,%.1f,,,,",
+                        instance->id,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
+                        sTemperature,               /* Temperature [°C] */
                         sSpecial,
                         SYS_getFrameRssi(sys),
                         offset                      /* RX frequency offset [kHz] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,,,%s,,,%.2f,%.1f,%.1f,%d,,,%s",
-                        instance->name,
+        length = sprintf((char *)s, "%ld,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,%.2f,%.1f,%.1f,%d,,,%s",
+                        instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
                         longitude,                  /* Longitude [degrees] */
@@ -252,6 +260,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         sClimbRate,                 /* Climb rate [m/s] */
                         sDirection,                 /* Direction [°] */
                         sVelocity,                  /* Horizontal speed [km/h] */
+                        sTemperature,               /* Temperature [°C] */
                         sSpecial,
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
@@ -263,6 +272,15 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
+    }
+
+    length = sprintf(s, "%ld,2,0,%s",
+                instance->id,
+                instance->name
+                );
+
+    if (length > 0) {
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
     }
 }
 
@@ -293,6 +311,61 @@ LPCLIB_Result DFM_processBlock (DFM_Handle handle, SONDE_Type type, void *buffer
                 _DFM_processGpsBlock(&handle->packet.gps[1].raw, handle->instance);
             }
 
+            /* Log (only if whole frame is ok) */
+            if (handle->instance->detectorState == DFM_DETECTOR_READY) {
+                char log[50];
+                uint32_t confval = 0
+                        | (handle->packet.config.h[0] << 24)
+                        | (handle->packet.config.h[1] << 20)
+                        | (handle->packet.config.h[2] << 16)
+                        | (handle->packet.config.h[3] << 12)
+                        | (handle->packet.config.h[4] <<  8)
+                        | (handle->packet.config.h[5] <<  4)
+                        | (handle->packet.config.h[6] <<  0)
+                        ;
+                uint32_t gps0val1 = 0
+                        | (handle->packet.gps[0].d1[0] << 16)
+                        | (handle->packet.gps[0].d1[1] << 12)
+                        | (handle->packet.gps[0].d1[2] <<  8)
+                        | (handle->packet.gps[0].d1[3] <<  4)
+                        | (handle->packet.gps[0].d1[4] <<  0)
+                        ;
+                uint32_t gps0val2 = 0
+                        | (handle->packet.gps[0].d1[5]  << 28)
+                        | (handle->packet.gps[0].d1[6]  << 24)
+                        | (handle->packet.gps[0].d1[7]  << 20)
+                        | (handle->packet.gps[0].d1[8]  << 16)
+                        | (handle->packet.gps[0].d1[9]  << 12)
+                        | (handle->packet.gps[0].d1[10] <<  8)
+                        | (handle->packet.gps[0].d1[11] <<  4)
+                        | (handle->packet.gps[0].d1[12] <<  0)
+                        ;
+                uint32_t gps1val1 = 0
+                        | (handle->packet.gps[1].d1[0] << 16)
+                        | (handle->packet.gps[1].d1[1] << 12)
+                        | (handle->packet.gps[1].d1[2] <<  8)
+                        | (handle->packet.gps[1].d1[3] <<  4)
+                        | (handle->packet.gps[1].d1[4] <<  0)
+                        ;
+                uint32_t gps1val2 = 0
+                        | (handle->packet.gps[1].d1[5]  << 28)
+                        | (handle->packet.gps[1].d1[6]  << 24)
+                        | (handle->packet.gps[1].d1[7]  << 20)
+                        | (handle->packet.gps[1].d1[8]  << 16)
+                        | (handle->packet.gps[1].d1[9]  << 12)
+                        | (handle->packet.gps[1].d1[10] <<  8)
+                        | (handle->packet.gps[1].d1[11] <<  4)
+                        | (handle->packet.gps[1].d1[12] <<  0)
+                        ;
+                snprintf(log, sizeof(log), "%s,2,1,%07lX%05lX%08lX%05lX%08lX",
+                            handle->instance->name,
+                            confval,
+                            gps0val1,
+                            gps0val2,
+                            gps1val1,
+                            gps1val2);
+                SYS_send2Host(HOST_CHANNEL_INFO, log);
+            }
 
             /* If there is a complete position update, send it out (once sonde name is known) */
             if (handle->instance->gps.newPosition) {
@@ -336,15 +409,14 @@ LPCLIB_Result DFM_resendLastPositions (DFM_Handle handle)
 }
 
 
-/* Remove entries from heard list (select by frequency) */
-LPCLIB_Result DFM_removeFromList (DFM_Handle handle, float rxFrequencyMHz)
+/* Remove entries from heard list */
+LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id)
 {
     (void)handle;
 
-    float rxKhz = roundf(rxFrequencyMHz * 1000.0f);
     DFM_InstanceData *instance = NULL;
     while (_DFM_iterateInstance(&instance)) {
-        if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+        if (instance->id == id) {
             /* Remove reference from context if this is the current sonde */
             if (instance == handle->instance) {
                 handle->instance = NULL;

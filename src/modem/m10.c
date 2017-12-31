@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "lpclib.h"
+#include "app.h"
 #include "bsp.h"
 #include "sys.h"
 #include "m10.h"
@@ -132,8 +133,8 @@ static void _M10_sendKiss (M10_InstanceData *instance)
         latitude *= 180.0 / M_PI;
         longitude *= 180.0 / M_PI;
 
-        length = sprintf((char *)s, "%s,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,,,,,,,,,%.1f,%.1f,%d",
-                        instance->hashName,
+        length = sprintf((char *)s, "%ld,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,,,,,,,,,%.1f,%.1f,%d",
+                        instance->id,
                         instance->rxFrequencyMHz,              /* Nominal sonde frequency [MHz] */
                         latitude,  /* Latitude [degrees] */
                         longitude, /* Longitude [degrees] */
@@ -147,6 +148,15 @@ static void _M10_sendKiss (M10_InstanceData *instance)
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
+    }
+
+    length = sprintf(s, "%ld,7,0,%s",
+                instance->id,
+                instance->hashName
+                );
+
+    if (length > 0) {
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
     }
 }
 
@@ -199,15 +209,14 @@ LPCLIB_Result M10_resendLastPositions (M10_Handle handle)
 }
 
 
-/* Remove entries from heard list (select by frequency) */
-LPCLIB_Result M10_removeFromList (M10_Handle handle, float rxFrequencyMHz)
+/* Remove entries from heard list */
+LPCLIB_Result M10_removeFromList (M10_Handle handle, uint32_t id)
 {
     (void)handle;
 
-    float rxKhz = roundf(rxFrequencyMHz * 1000.0f);
     M10_InstanceData *instance = NULL;
     while (_M10_iterateInstance(&instance)) {
-        if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+        if (instance->id == id) {
             /* Remove reference from context if this is the current sonde */
             if (instance == handle->instance) {
                 handle->instance = NULL;

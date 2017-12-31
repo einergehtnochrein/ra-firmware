@@ -119,6 +119,7 @@ typedef struct {
 /* Data that needs to be stored for every RS41 instance. */
 typedef struct _RS41_InstanceData {
     struct _RS41_InstanceData *next;
+    uint32_t id;
     char hashName[20];                          /* Hashable sonde name */
     uint64_t fragmentValidFlags;                /* The 52 bits (if set) indicate validity of the corresponding fragment */
     uint32_t lastUpdated;
@@ -141,7 +142,9 @@ typedef struct _RS41_InstanceData {
             uint8_t reserved029[0x02B-0x029];
             uint8_t burstKill;                  /* Burst kill (0=disabled, 1=enabled) */
             uint8_t reserved02C[0x03D-0x02C];
-            float f03D[64];
+            float refResistorLow;               /* Reference resistor low (750 Ohms) */
+            float refResistorHigh;              /* Reference resistor high (1100 Ohms) */
+            float f045[62];
             uint8_t reserved13D[0x152-0x13D];
             float f152;
             uint8_t u156;
@@ -182,6 +185,8 @@ LPCLIB_Result _RS41_processConfigBlock (
 
 /* Check if the calibration block contains valid data for a given purpose */
 #define CALIB_FREQUENCY             0x0000000000000001ll
+#define CALIB_TEMPERATURE1          0x0000000000000078ll
+#define CALIB_TEMPERATURE2          0x00000000000C0018ll
 #define CALIB_PRESSURE              0x000007E000000000ll
 #define CALIB_KILLTIMER             0x0000000000000004ll
 

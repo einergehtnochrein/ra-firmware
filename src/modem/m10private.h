@@ -64,6 +64,7 @@ typedef struct {
 /* Data that needs to be stored for every instance. */
 typedef struct _M10_InstanceData {
     struct _M10_InstanceData *next;
+    uint32_t id;
     char hashName[20];                          /* Hashable sonde name */
     uint32_t lastUpdated;
     float rxFrequencyMHz;

@@ -1,5 +1,7 @@
 
 #include "lpclib.h"
+
+#include "app.h"
 #include "srsc.h"
 #include "srscprivate.h"
 
@@ -55,11 +57,11 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
     }
 
     /* We need a new instance */
-    instance = (SRSC_InstanceData *)malloc(sizeof(SRSC_InstanceData));
+    instance = (SRSC_InstanceData *)calloc(1, sizeof(SRSC_InstanceData));
 
     if (instance) {
         /* Prepare structure */
-        memset(instance, 0, sizeof(SRSC_InstanceData));
+        instance->id = SONDE_getNewID(sonde);
         instance->rxFrequencyMHz = frequencyMHz;
         instance->gps.observerLLA.lat = NAN;
         instance->gps.observerLLA.lon = NAN;
@@ -220,8 +222,8 @@ LPCLIB_Result _SRSC_processConfigFrame (
             case SRSC_FRAME_CONFIG_107:
                 instance->config.info107 = data;
                 break;
-            case SRSC_FRAME_CONFIG_108:
-                instance->config.info108 = data;
+            case SRSC_FRAME_CONFIG_FIRMWARE_VERSION:
+                instance->config.firmwareVersion = data;
                 break;
             case SRSC_FRAME_CONFIG_VBAT:
                 instance->config.batteryVoltage = data / 1000.0f;
@@ -229,14 +231,14 @@ LPCLIB_Result _SRSC_processConfigFrame (
             case SRSC_FRAME_CONFIG_RFPWRDETECT:
                 instance->config.rfPwrDetect = data / 1000.0f;
                 break;
-            case SRSC_FRAME_CONFIG_115:
-                instance->config.info115 = data;
+            case SRSC_FRAME_CONFIG_STATE:
+                instance->config.state = data;
                 break;
-            case SRSC_FRAME_CONFIG_116:
-                instance->config.info116 = data;
+            case SRSC_FRAME_CONFIG_ERROR_FLAGS:
+                instance->config.errorFlags = data;
                 break;
-            case SRSC_FRAME_CONFIG_119:
-                instance->config.info119 = data;
+            case SRSC_FRAME_CONFIG_VDOP:
+                instance->config.vdop = data;
                 break;
             case SRSC_FRAME_CONFIG_120:
                 instance->config.info120 = data;

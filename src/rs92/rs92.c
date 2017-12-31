@@ -214,8 +214,8 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%s,0,%.3f,,,,%s,%s,,,%s,%s,,,,,%.1f,%.1f,%d,%d,%s,",
-                        instance->hashName,
+        length = sprintf((char *)s, "%ld,0,%.3f,,,,%s,%s,,,%s,%s,,,,,%.1f,%.1f,%d,%d,%s,",
+                        instance->id,
                         instance->rxFrequencyMHz,   /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
@@ -229,8 +229,8 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%s,0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,,,,%.2f,%.1f,%.1f,%d,%d,%s,",
-                        instance->hashName,
+        length = sprintf((char *)s, "%ld,0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,,,,%.2f,%.1f,%.1f,%d,%d,%s,",
+                        instance->id,
                         instance->rxFrequencyMHz,   /* Frequency [MHz] */
                         instance->gps.usedSats,
                         latitude,                   /* Latitude [degrees] */
@@ -250,6 +250,15 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
+    }
+
+    length = sprintf(s, "%ld,0,0,%s",
+                instance->id,
+                instance->hashName
+                );
+
+    if (length > 0) {
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
     }
 }
 
@@ -300,13 +309,38 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
 {
     int nErrors;
 
-
     if (length > 1) {  //TODO
         /* Convert to byte array */
         _RS92_buffer2raw(handle, buffer);
 
         /* Reed-Solomon decoder */
-        if (REEDSOLOMON_process(_RS92_getDataAddress, &nErrors) == LPCLIB_SUCCESS) {
+        LPCLIB_Result result = REEDSOLOMON_process(_RS92_getDataAddress, &nErrors); 
+        if (result != LPCLIB_SUCCESS) {
+            /* Try harder. Guess some elements of the code word and try again. */
+            handle->packet.config.frameType = RS92_SUBFRAME_CALIB_CONFIG;
+            handle->packet.config.length = (sizeof(handle->packet.config) - 4) / 2;
+            handle->packet.config.name[0] = ' ';
+            handle->packet.config.name[1] = ' ';
+            if (handle->instance) {
+                int i;
+                for (i = 0; i < 8; i++) {
+                    handle->packet.config.name[2 + i] = handle->instance->hashName[i];
+                }
+            }
+            handle->packet.metrology.frameType = RS92_SUBFRAME_METROLOGY;
+            handle->packet.metrology.length = (sizeof(handle->packet.metrology) - 4) / 2;
+            handle->packet.gps.frameType = RS92_SUBFRAME_GPS;
+            handle->packet.gps.length = (sizeof(handle->packet.gps) - 4) / 2;
+            handle->packet.aux.frameType = RS92_SUBFRAME_AUX;
+            handle->packet.aux.length = (sizeof(handle->packet.aux) - 4) / 2;
+            handle->packet.unknown.frameType = RS92_SUBFRAME_PADDING;
+            handle->packet.unknown.length = 2;
+            handle->packet.unknown.nn[0] = 2;
+            handle->packet.unknown.nn[1] = 2;
+            result = REEDSOLOMON_process(_RS92_getDataAddress, &nErrors);
+        }
+
+        if (result == LPCLIB_SUCCESS) {
             /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
             handle->rxFrequencyHz = rxFrequencyHz;
 
@@ -405,15 +439,14 @@ LPCLIB_Result RS92_resendLastPositions (RS92_Handle handle)
 }
 
 
-/* Remove entries from heard list (select by frequency) */
-LPCLIB_Result RS92_removeFromList (RS92_Handle handle, float rxFrequencyMHz)
+/* Remove entries from heard list */
+LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id)
 {
     (void)handle;
 
-    float rxKhz = roundf(rxFrequencyMHz * 1000.0f);
     RS92_InstanceData *instance = NULL;
     while (_RS92_iterateInstance(&instance)) {
-        if (roundf(instance->rxFrequencyMHz * 1000.0f) == rxKhz) {
+        if (instance->id == id) {
             /* Remove reference from context if this is the current sonde */
             if (instance == handle->instance) {
                 handle->instance = NULL;

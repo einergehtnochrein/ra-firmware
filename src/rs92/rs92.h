@@ -39,6 +39,6 @@ typedef uint8_t RS92_RawData[234];
 LPCLIB_Result RS92_open (RS92_Handle *pHandle);
 LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz);
 LPCLIB_Result RS92_resendLastPositions (RS92_Handle handle);
-LPCLIB_Result RS92_removeFromList (RS92_Handle handle, float rxFrequencyMHz);
+LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id);
 
 #endif

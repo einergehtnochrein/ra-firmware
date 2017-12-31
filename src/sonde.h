@@ -69,20 +69,10 @@ typedef enum {
 } SONDE_Detector;
 
 
-
 typedef struct _SONDE_Context *SONDE_Handle;
-typedef struct _SONDE_Context {
-    SONDE_Type type;                        /* Type of sonde */
-    SONDE_Decoder decoder;
-    uint32_t frequencyHz;                   /* RX frequency */
 
-    /* Common procedures */
-    LPCLIB_Result (*processBlock) (SONDE_Handle handle, void *rxBuffer, uint32_t length);
-    size_t (*getPrivateSize) (void);
-
-    /* Access to private data */
-    void *private;                          /* Data specific to each sonde type */
-} SONDE_Context;
-
+LPCLIB_Result SONDE_open (SONDE_Handle *pHandle);
+LPCLIB_Result SONDE_initID (SONDE_Handle handle, uint32_t startID);
+uint32_t SONDE_getNewID (SONDE_Handle handle);
 
 #endif

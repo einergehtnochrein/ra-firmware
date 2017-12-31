@@ -42,9 +42,49 @@ LPCLIB_Result _RS41_processMetrologyBlock (
     }
 
     //TODO
-    cookedMetro->temperature = current[0];
     cookedMetro->humidity = current[1];
-    cookedMetro->temperature2 = current[2];
+
+    /**********  Temperature sensor 1  *********/
+
+    /* Result is invalid until we have enough calibration data */
+    if (!_RS41_checkValidCalibration(instance, CALIB_TEMPERATURE1)) {
+        cookedMetro->temperature = NAN;
+    }
+    else {
+        /* Reference values for temperature are two known resistors.
+         * From that we can derive the resistance of the sensor.
+         */
+        float res = instance->refResistorLow
+            + (instance->refResistorHigh - instance->refResistorLow) * current[0];
+
+        float x = res * instance->f045[5];
+        cookedMetro->temperature = 0
+            + instance->f045[2]
+            + instance->f045[3] * x
+            + instance->f045[4] * x * x
+            ;
+    }
+
+    /**********  Temperature sensor 2  *********/
+
+    /* Result is invalid until we have enough calibration data */
+    if (!_RS41_checkValidCalibration(instance, CALIB_TEMPERATURE2)) {
+        cookedMetro->temperature2 = NAN;
+    }
+    else {
+        /* Reference values for temperature are two known resistors.
+         * From that we can derive the resistance of the sensor.
+         */
+        float res = instance->refResistorLow
+            + (instance->refResistorHigh - instance->refResistorLow) * current[2];
+
+        float x = res * instance->f045[59];
+        cookedMetro->temperature2 = 0
+            + instance->f045[56]
+            + instance->f045[57] * x
+            + instance->f045[58] * x * x
+            ;
+    }
 
     /**********  Pressure sensor  *********/
 
