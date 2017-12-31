@@ -190,7 +190,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         direction *= 180.0 / M_PI;
         velocity *= 3.6f;
 
-        length = sprintf((char *)s, "%ld,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,%s,,,,,%.1f,%.1f,%d,%d,%s,",
+        length = sprintf((char *)s, "%ld,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,,,,,%.1f,%.1f,%d,%d,%s,",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         latitude,                               /* Latitude [degrees] */
@@ -199,6 +199,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
                         direction,                              /* Direction [°] */
                         velocity,                               /* Horizontal speed [km/h] */
+                        instance->metro.temperature,            /* Temperature [°C] */
                         sPressure,                              /* Pressure sensor [hPa] */
                         SYS_getFrameRssi(sys),
                         offset,                                 /* RX frequency offset [kHz] */
@@ -223,9 +224,10 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,1,0,%s",
+    length = sprintf(s, "%ld,1,0,%s,%.1f",
                 instance->id,
-                instance->hashName
+                instance->hashName,
+                instance->metro.temperature2
                 );
 
     if (length > 0) {
