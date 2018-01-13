@@ -361,6 +361,25 @@ void USBUSER_writeAudioStereo_i32_float (const int32_t *buffer1, const float *bu
 }
 
 
+void USBUSER_writeAudioStereo_float_float (const float *buffer1, const float *buffer2, int nSamples)
+{
+    int n;
+    struct _audiomm *handle = &usbContext.audiomm;
+
+
+    for (n = 0; n < nSamples; n++) {
+        _usbAudioRingBuffer[handle->writePos][0] = 32768.0f * buffer1[n];
+        _usbAudioRingBuffer[handle->writePos][1] = 32768.0f * buffer2[n];
+
+        ++handle->writePos;
+        if (handle->writePos >= USBUSER_AUDIO_RINGBUFFER_SAMPLES_N) {
+            handle->writePos = 0;
+            handle->dmaTimestamp = TIMER_read(handle->adapter);
+        }
+    }
+}
+
+
 void USBUSER_open (void)
 {
     struct _USBContext *handle = &usbContext;

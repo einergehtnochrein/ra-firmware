@@ -76,6 +76,7 @@ void USBUSER_open (void);
 void USBUSER_worker (void);
 bool USBUSER_isConfigured (void);
 void USBUSER_writeAudioStereo_i32_float (const int32_t *buffer1, const float *buffer2, int nSamples);
+void USBUSER_writeAudioStereo_float_float (const float *buffer1, const float *buffer2, int nSamples);
 
 #endif
 
