@@ -55,7 +55,7 @@ LPCLIB_Result _RS92_processMetrologyBlock (
     if (_RS92_checkValidCalibration(instance, CALIB_TEMPERATURE)) {
         tempf = 1.0f / (instance->coeff[29].value - (float)(ref1 - t) / (float)(ref1 - ref4));
         cookedMetro->temperature =
-                        instance->coeff[23].value
+                      instance->coeff[23].value
                     + instance->coeff[24].value * tempf
                     + instance->coeff[25].value * tempf * tempf
                     + instance->coeff[26].value * tempf * tempf * tempf
@@ -129,7 +129,7 @@ LPCLIB_Result _RS92_processMetrologyBlock (
 
 #if 0
     /* Humidity TODO */
-    if (1) {
+    if (_RS92_checkValidCalibration(instance, CALIB_HUMIDITY)) {
         tempf = 1.0f / (calib->coeff[34].value - (float)(ref1 - u1) / (float)(ref1 - ref3));
         handle->cooked2.U1 = 0
                         + calib->coeff[30].value
@@ -147,11 +147,36 @@ LPCLIB_Result _RS92_processMetrologyBlock (
         handle->cooked2.U = (handle->cooked2.U2 > handle->cooked2.U1) ? handle->cooked2.U2 : handle->cooked2.U1;
     }
     else {
+        cookedMetro->humidity = NAN;
     }
 #else
 (void)u1;
 (void)u2;
 #endif
+
+    return LPCLIB_SUCCESS;
+}
+
+
+
+LPCLIB_Result _RS92_processAuxBlock (
+        const struct _RS92_AuxBlock *rawAux,
+        RS92_CookedMetrology *cookedMetro,
+        RS92_InstanceData *instance)
+{
+    if (!instance) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    /* If aux channels are unused, status=0x0303. Ozone sondes have status=0x0300. */
+    cookedMetro->hasO3 = rawAux->status == 0x0300;
+
+    /* Read otone data if available. */ //TODO
+    if (cookedMetro->hasO3) {
+        cookedMetro->currentO3Cell = NAN;
+        cookedMetro->currentO3Pump = NAN;
+        cookedMetro->temperatureO3 = NAN;
+    }
 
     return LPCLIB_SUCCESS;
 }

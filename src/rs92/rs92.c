@@ -166,6 +166,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
     char sKillTimer[6];
     int length = 0;
     float offset;
+    uint32_t special = 0;
 
     offset = 0;
 
@@ -212,41 +213,26 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         }
     }
 
-    /* Avoid sending the position if any of the values is undefined */
-    if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%ld,0,%.3f,,,,%s,%s,,,%s,%s,,,,,%.1f,%.1f,%d,%d,%s,",
-                        instance->id,
-                        instance->rxFrequencyMHz,   /* Frequency [MHz] */
-                        sAltitude,                  /* Altitude [m] */
-                        sClimbRate,                 /* Climb rate [m/s] */
-                        sTemperature,               /* Temperature [°C] */
-                        sPressure,                  /* Pressure [hPa] */
-                        SYS_getFrameRssi(sys),
-                        offset,                     /* RX frequency offset [kHz] */
-                        instance->gps.visibleSats,
-                        instance->frameCounter,     /* Current frame number */
-                        sKillTimer                  /* Kill timer (frame) */
-                        );
+    /* Info flags */
+    if (instance->metro.hasO3) {
+        special += 1;
     }
-    else {
-        length = sprintf((char *)s, "%ld,0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,,,,%.2f,%.1f,%.1f,%d,%d,%s,",
-                        instance->id,
-                        instance->rxFrequencyMHz,   /* Frequency [MHz] */
-                        instance->gps.usedSats,
-                        latitude,                   /* Latitude [degrees] */
-                        longitude,                  /* Longitude [degrees] */
-                        sAltitude,                  /* Altitude [m] */
-                        sClimbRate,                 /* Climb rate [m/s] */
-                        sTemperature,               /* Temperature [°C] */
-                        sPressure,                  /* Pressure [hPa] */
-                        instance->gps.hdop,
-                        SYS_getFrameRssi(sys),
-                        offset,                     /* RX frequency offset [kHz] */
-                        instance->gps.visibleSats,
-                        instance->frameCounter,     /* Current frame number */
-                        sKillTimer                  /* Kill timer (frame) */
-                        );
-    }
+
+    length = sprintf((char *)s, "%ld,0,%.3f,,,,%s,%s,,,%s,%s,%ld,,%.1f,,%.1f,%.1f,%d,%d,%s,",
+                    instance->id,
+                    instance->rxFrequencyMHz,   /* Frequency [MHz] */
+                    sAltitude,                  /* Altitude [m] */
+                    sClimbRate,                 /* Climb rate [m/s] */
+                    sTemperature,               /* Temperature [°C] */
+                    sPressure,                  /* Pressure [hPa] */
+                    special,                    /* Flags (Ozone, ...) */
+                    instance->metro.humidity,   /* RH [%] */
+                    SYS_getFrameRssi(sys),
+                    offset,                     /* RX frequency offset [kHz] */
+                    instance->gps.visibleSats,
+                    instance->frameCounter,     /* Current frame number */
+                    sKillTimer                  /* Kill timer (frame) */
+                    );
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
@@ -254,7 +240,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
 
     length = sprintf(s, "%ld,0,0,%s",
                 instance->id,
-                instance->hashName
+                instance->name
                 );
 
     if (length > 0) {
@@ -324,7 +310,7 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
             if (handle->instance) {
                 int i;
                 for (i = 0; i < 8; i++) {
-                    handle->packet.config.name[2 + i] = handle->instance->hashName[i];
+                    handle->packet.config.name[2 + i] = handle->instance->name[i];
                 }
             }
             handle->packet.metrology.frameType = RS92_SUBFRAME_METROLOGY;
@@ -388,6 +374,11 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
                         _RS92_processGpsBlock(&handle->packet.gps,
                                               &handle->instance->gps,
                                               handle->instance->metro.pressureAltitude);
+                    }
+
+                    /* Process the (valid) aux block. */
+                    if (handle->crcOK[3] && handle->instance) {
+                        _RS92_processAuxBlock(&handle->packet.aux, &handle->instance->metro, handle->instance);
                     }
 
                     /* Send out the results (if they make sense...) */
