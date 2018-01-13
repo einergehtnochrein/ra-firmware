@@ -105,6 +105,8 @@ typedef struct {
     float humidity;
     float pressure;
     float pressureAltitude;
+
+    bool hasO3;
 } RS41_CookedMetrology;
 
 
