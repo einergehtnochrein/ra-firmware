@@ -34,6 +34,7 @@
 
 #include "adf7021.h"
 #include "app.h"
+#include "beacon.h"
 #include "dfm.h"
 #include "imet.h"
 #include "m10.h"
@@ -115,6 +116,7 @@ struct SYS_Context {
 
     RS41_Handle rs41;
     RS92_Handle rs92;
+    BEACON_Handle beacon;
     DFM_Handle dfm;
     IMET_Handle imet;
     M10_Handle m10;
@@ -311,6 +313,7 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
         case SONDE_M10:
             length = (100+1) * 2;
             break;
+        case SONDE_BEACON:
         case SONDE_C34:
         case SONDE_C50:
         case SONDE_IMET_RSB:
@@ -436,6 +439,73 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 #if (BOARD_RA == 2)
             ADF7021_getDemodClock(radio, &demodClock);
             PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), SRSC_handleAudioCallback);
+#endif
+            LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
+            break;
+
+        case SONDE_DETECTOR_BEACON:
+            ADF7021_write(radio, ADF7021_REGISTER_0, 0
+                            | (1u << 28)        /* UART/SPI mode */
+                            | (1u << 27)        /* Receive mode */
+                            );
+            ADF7021_write(radio, ADF7021_REGISTER_1, 0
+                            | (1u << 25)        /* External L */
+                            | (3u << 19)        /* VCO bias = 0.75 mA */
+                            | (1u << 17)        /* VCO on */
+                            | (1u << 12)        /* XOSC on */
+                            | (0u << 7)         /* CLKOUT off */
+                            | (1u << 4)         /* R = 1 */
+                            );
+            osDelay(10);
+            ADF7021_write(radio, ADF7021_REGISTER_3, 0
+                            | (12u << 26)       /* AGC_CLK_DIVIDE = 12 --> AGCUpdateRate = 8,3 kHz (8 kHz) */
+                            | (130u << 18)      /* SEQ_CLK_DIVIDE = 130 --> SEQCLK = 100 kHz (100 kHz) */
+#if (BOARD_RA == 1)
+                            | (1u << 10)        /* CDR_CLK_DIVIDE = 1 --> CDRCLK = 2.1667 MHz (=DEMODCLK) */
+                            | (6u << 6)         /* DEMOD_CLK_DIVIDE = 6 --> DEMODCLK = 2.1667 MHz (2...15 MHz) */
+#endif
+#if (BOARD_RA == 2)
+                            | (1u << 10)        /* CDR_CLK_DIVIDE = 1 --> CDRCLK = 3.2 MHz (=DEMODCLK) */
+                            | (4u << 6)         /* DEMOD_CLK_DIVIDE = 4 --> DEMODCLK = 3.2 MHz (2...15 MHz) */
+#endif
+                            | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
+                            );
+            _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            // K=42
+            ADF7021_write(radio, ADF7021_REGISTER_4, 0
+                            | (0u << 30)        /* IF_FILTER_BW = 9.5 kHz */
+                            | (30u << 20)       /* POST_DEMOD_BW, assuming fcutoff = 10000 Hz */
+                                                //TODO: post demod filter seems to have half that value (5k)
+                            | (226u << 10)      /* DISCRIMINATOR_BW, assuming K = 42, fdev = 2.4 kHz */
+                            | (2u << 8)         /* INVERT DATA */
+                            | (0u << 7)         /* CROSS_PRODUCT */
+                            | (0u << 4)         /* 2FSK linear demodulator */
+                            );
+            ADF7021_write(radio, ADF7021_REGISTER_10, 0
+                            | (0u << 4)         /* AFC off */
+                            );
+            ADF7021_write(radio, ADF7021_REGISTER_15, 0
+                            | (2u << 17)        /* CLKOUT pin carries CDR CLK */
+                            | (0u << 11)        /* 3rd order sigma-delta, no dither */
+                            | (9u << 4)         /* Enable REG14 modes */
+                            );
+            ADF7021_write(radio, ADF7021_REGISTER_14, 0
+                            | (5 << 21)         /* Test DAC gain = ? dB */
+#if (BOARD_RA == 1)
+                            | (12098 << 5)      /* Test DAC offset (0...65535) */
+#endif
+#if (BOARD_RA == 2)
+                            | (8192 << 5)       /* Test DAC offset (0...65535) */
+#endif
+                            | (1 << 4)          /* Enable Test DAC */
+                            );
+
+#if (BOARD_RA == 1)
+            PDM_run(handle->pdm, 134, BEACON_handleAudioCallback);
+#endif
+#if (BOARD_RA == 2)
+            PDM_run(handle->pdm, 200, BEACON_handleAudioCallback);
 #endif
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
@@ -938,7 +1008,8 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 2:     detector = SONDE_DETECTOR_C34_C50; break;
                         case 3:     detector = SONDE_DETECTOR_IMET; break;
                         case 4:     detector = SONDE_DETECTOR_MODEM; break;
-                        case 5:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
+                        case 5:     detector = SONDE_DETECTOR_BEACON; break;
+                        case 6:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                 }
@@ -981,6 +1052,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                         break;
                                     case SONDE_DECODER_C34_C50:
                                         SRSC_removeFromList(handle->srsc, id);
+                                        break;
+                                    case SONDE_DECODER_BEACON:
+                                        BEACON_removeFromList(handle->beacon, id);
                                         break;
                                     default:
                                         /* ignore */
@@ -1167,6 +1241,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     RS41_open(&handle->rs41);
     RS92_open(&handle->rs92);
     DFM_open(&handle->dfm);
+    BEACON_open(&handle->beacon);
     SRSC_open(&handle->srsc);
     IMET_open(&handle->imet);
     M10_open(&handle->m10);

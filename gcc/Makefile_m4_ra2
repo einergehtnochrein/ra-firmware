@@ -17,6 +17,7 @@ C_SRCS = \
     gps/gps.c \
     reedsolomon/reedsolomon.c \
     sonde.c \
+    beacon/beacon.c beacon/beaconconfig.c beacon/beacondsp.c \
     dfm/dfm.c dfm/dfmconfig.c dfm/dfmgps.c dfm/dfmmetrology.c \
     rs41/rs41.c rs41/rs41calibconfig.c rs41/rs41gps.c rs41/rs41metrology.c \
     rs92/rs92.c rs92/rs92calibconfig.c rs92/rs92gps.c rs92/rs92metrology.c rs92/rinex.c rs92/observer.c \
@@ -41,6 +42,7 @@ EXE_DEPENDENCIES += \
     $(OBJDIR)/$(RINEXLIB) $(OBJDIR)/$(M0LIB)
 
 INCLUDES += \
+    -I../src/beacon \
     -I../src/dfm \
     -I../src/gps \
     -I../src/imet \
