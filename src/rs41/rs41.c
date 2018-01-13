@@ -139,6 +139,15 @@ static void _RS41_readSubFrame7D (RS41_Handle handle, RS41_SubFrame7D *p)
 
 
 
+static void _RS41_readSubFrameAux (char *p, int length, RS41_InstanceData *instance)
+{
+(void)p;
+    if (length == 21) {
+        instance->metro.hasO3 = true;
+    }
+}
+
+
 //TODO
 LPCLIB_Result RS41_open (RS41_Handle *pHandle)
 {
@@ -162,8 +171,10 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     float offset;
     char sPressure[10];
     char sKillTimer[6];
+    uint32_t special;
 
     offset = 0;
+    special = 0;
 
     /* Pressure as string */
     sPressure[0] = 0;
@@ -179,6 +190,11 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         }
     }
 
+    /* Flags */
+    if (instance->metro.hasO3) {
+        special += 1;
+    }
+
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
     double longitude = instance->gps.observerLLA.lon;
@@ -190,7 +206,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         direction *= 180.0 / M_PI;
         velocity *= 3.6f;
 
-        length = sprintf((char *)s, "%ld,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,,,,,%.1f,%.1f,%d,%d,%s,",
+        length = sprintf((char *)s, "%ld,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,,%.1f,%.1f,%d,%d,%s,",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         latitude,                               /* Latitude [degrees] */
@@ -201,6 +217,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         velocity,                               /* Horizontal speed [km/h] */
                         instance->metro.temperature,            /* Temperature [°C] */
                         sPressure,                              /* Pressure sensor [hPa] */
+                        special,
                         SYS_getFrameRssi(sys),
                         offset,                                 /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
@@ -226,7 +243,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     length = sprintf(s, "%ld,1,0,%s,%.1f",
                 instance->id,
-                instance->hashName,
+                instance->name,
                 instance->metro.temperature2
                 );
 
@@ -333,9 +350,7 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
 
             for (i = 0; i < length; i++) {
                 sprintf(str, "%02X ", ((uint8_t *)buffer)[i]);
-//                USBSerial_write(1, str, 3);
             }
-//            USBSerial_write(1, "\r\n", 2);
         }
 
         /* Read packet type (pos 48, 0F or F0) */
@@ -379,11 +394,6 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                         break;
                     case RS41_SUBFRAME_CALIB_CONFIG:
                         _RS41_processConfigBlock((RS41_SubFrameCalibConfig *)(p + 2), &handle->instance);
-/*
-                        if (handle->instance->rxFrequencyMHz == 0) {
-                            handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
-                        }
-*/
                         handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
                         break;
                     case RS41_SUBFRAME_METROLOGY:
@@ -445,6 +455,9 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                         handle->instance->gps.observerLLA.lat = NAN;
                         handle->instance->gps.observerLLA.lon = NAN;
                         handle->instance->encrypted = true;
+                        break;
+                    case RS41_SUBFRAME_AUX:
+                        _RS41_readSubFrameAux((char *)(p + 2), subFrameLength - 4, handle->instance);
                         break;
                     default:
                         /* Ignore unknown (or unhandled) frame types */

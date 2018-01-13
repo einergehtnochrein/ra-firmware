@@ -78,12 +78,11 @@ typedef __PACKED(union {
             uint16_t crc;
         }) gps; /* offset 64 */
 
-        __PACKED(struct {
+        __PACKED(struct _RS92_AuxBlock {
             RS92_SubFrameType frameType;
             uint8_t length;
             uint16_t status;
-            float aux1;
-            float aux2;
+            int16_t data[4];
             uint16_t crc;
         }) aux; /* offset 190 */
 
@@ -100,8 +99,14 @@ typedef __PACKED(union {
 
 typedef struct {
     float temperature;
+    float humidity;
     float pressure;
     float pressureAltitude;
+
+    bool hasO3;
+    float currentO3Cell;
+    float currentO3Pump;
+    float temperatureO3;
 } RS92_CookedMetrology;
 
 
@@ -123,7 +128,7 @@ typedef struct {
 typedef struct _RS92_InstanceData {
     struct _RS92_InstanceData *next;
     uint32_t id;
-    char hashName[20];                          /* Hashable sonde name */
+    char name[20];                              /* Sonde name */
     uint32_t fragmentValidFlags;                /* The 32 bits (if set) indicate validity of the corresponding fragment */
     uint32_t lastUpdated;
     float rxFrequencyMHz;
@@ -148,7 +153,7 @@ typedef struct _RS92_InstanceData {
             });
             uint16_t sizeofCoeffEntry;          /* Size in bytes of one entry in the "coeff" array */
             uint16_t sizeofCoeffArray;          /* Size in bytes of the "coeff" array */
-            char name[10];
+            char serial[10];                    /* Sonde name (serial number) */
             __PACKED(union {                    /* 2 */
                 uint8_t x16[32];
                 __PACKED(struct {
@@ -215,16 +220,19 @@ bool _RS92_iterateInstance (RS92_InstanceData **instance);
 /* Remove an instance from the chain */
 void _RS92_deleteInstance (RS92_InstanceData *instance);
 
-/* Process the metrology block.
- */
+/* Process the metrology block. */
 LPCLIB_Result _RS92_processMetrologyBlock (
         const struct _RS92_MetrologyBlock *rawMetro,
         RS92_CookedMetrology *cookedMetro,
         RS92_InstanceData *instance);
 
+/* Process the Aux block. */
+LPCLIB_Result _RS92_processAuxBlock (
+        const struct _RS92_AuxBlock *rawAux,
+        RS92_CookedMetrology *cookedMetro,
+        RS92_InstanceData *instance);
 
-/* Process the GPS block.
- */
+/* Process the GPS block. */
 LPCLIB_Result _RS92_processGpsBlock (
         const struct _RS92_GpsBlock *rawGps,
         RS92_CookedGps *cookedGps,

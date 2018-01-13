@@ -105,6 +105,8 @@ typedef struct {
     float humidity;
     float pressure;
     float pressureAltitude;
+
+    bool hasO3;
 } RS41_CookedMetrology;
 
 
@@ -120,7 +122,7 @@ typedef struct {
 typedef struct _RS41_InstanceData {
     struct _RS41_InstanceData *next;
     uint32_t id;
-    char hashName[20];                          /* Hashable sonde name */
+    char name[20];                              /* Sonde name */
     uint64_t fragmentValidFlags;                /* The 52 bits (if set) indicate validity of the corresponding fragment */
     uint32_t lastUpdated;
     float rxFrequencyMHz;
@@ -136,7 +138,7 @@ typedef struct _RS41_InstanceData {
             uint16_t reserved000;
             uint16_t frequency;                 /* TX is on 400 MHz + (frequency / 64) * 10 kHz */
             uint8_t reserved004[0x00D-0x004];
-            uint8_t name[8];                    /* Sonde ID, 8 char, not terminated */
+            uint8_t serial[8];                  /* Sonde ID, 8 char, not terminated */
             uint8_t reserved015[0x027-0x015];
             uint16_t killTimer;                 /* (probably) max frame counter before kill */
             uint8_t reserved029[0x02B-0x029];

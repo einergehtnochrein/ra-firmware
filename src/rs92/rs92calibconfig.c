@@ -24,7 +24,7 @@ static RS92_InstanceData *_RS92_getInstanceDataStructure (const char *name)
     int numSondes = 0;
     p = instanceList;
     while (p) {
-        if (!strcmp(p->hashName, name)) {
+        if (!strcmp(p->name, name)) {
             /* Found it! */
             return p;
         }
@@ -49,16 +49,25 @@ static RS92_InstanceData *_RS92_getInstanceDataStructure (const char *name)
 
             p = p->next;
         }
+
+        /* Remove entry */
+        _RS92_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (RS92_InstanceData *)calloc(1, sizeof(RS92_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (RS92_InstanceData *)calloc(1, sizeof(RS92_InstanceData));
 
     if (instance) {
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
-        strcpy(instance->hashName, name);
+        strncpy(instance->name, name, sizeof(instance->name) - 1);
+        instance->name[sizeof(instance->name) - 1] = 0;
+        instance->metro.currentO3Cell = NAN;
+        instance->metro.currentO3Pump = NAN;
+        instance->metro.humidity = NAN;
+        instance->metro.pressure = NAN;
+        instance->metro.temperature = NAN;
+        instance->metro.temperatureO3 = NAN;
 
         /* Insert into list */
         p = instanceList;
