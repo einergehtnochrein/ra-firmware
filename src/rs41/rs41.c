@@ -243,7 +243,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     length = sprintf(s, "%ld,1,0,%s,%.1f",
                 instance->id,
-                instance->hashName,
+                instance->name,
                 instance->metro.temperature2
                 );
 
@@ -350,9 +350,7 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
 
             for (i = 0; i < length; i++) {
                 sprintf(str, "%02X ", ((uint8_t *)buffer)[i]);
-//                USBSerial_write(1, str, 3);
             }
-//            USBSerial_write(1, "\r\n", 2);
         }
 
         /* Read packet type (pos 48, 0F or F0) */
@@ -396,11 +394,6 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                         break;
                     case RS41_SUBFRAME_CALIB_CONFIG:
                         _RS41_processConfigBlock((RS41_SubFrameCalibConfig *)(p + 2), &handle->instance);
-/*
-                        if (handle->instance->rxFrequencyMHz == 0) {
-                            handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
-                        }
-*/
                         handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
                         break;
                     case RS41_SUBFRAME_METROLOGY:

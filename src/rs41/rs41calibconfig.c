@@ -24,7 +24,7 @@ static RS41_InstanceData *_RS41_getInstanceDataStructure (const char *name)
     int numSondes = 0;
     p = instanceList;
     while (p) {
-        if (!strcmp(p->hashName, name)) {
+        if (!strcmp(p->name, name)) {
             /* Found it! */
             return p;
         }
@@ -58,7 +58,8 @@ static RS41_InstanceData *_RS41_getInstanceDataStructure (const char *name)
     if (instance) {
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
-        strcpy(instance->hashName, name);
+        strncpy(instance->name, name, sizeof(instance->name) - 1);
+        instance->name[sizeof(instance->name) - 1] = 0;
 
         /* Insert into list */
         p = instanceList;
