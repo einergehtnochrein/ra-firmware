@@ -218,15 +218,19 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         special += 1;
     }
 
-    length = sprintf((char *)s, "%ld,0,%.3f,,,,%s,%s,,,%s,%s,%ld,,%.1f,,%.1f,%.1f,%d,%d,%s,",
+    length = sprintf((char *)s, "%ld,0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%ld,,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,",
                     instance->id,
                     instance->rxFrequencyMHz,   /* Frequency [MHz] */
+                    instance->gps.usedSats,
+                    latitude,                   /* Latitude [degrees] */
+                    longitude,                  /* Longitude [degrees] */
                     sAltitude,                  /* Altitude [m] */
                     sClimbRate,                 /* Climb rate [m/s] */
                     sTemperature,               /* Temperature [°C] */
                     sPressure,                  /* Pressure [hPa] */
                     special,                    /* Flags (Ozone, ...) */
                     instance->metro.humidity,   /* RH [%] */
+                    instance->gps.hdop,
                     SYS_getFrameRssi(sys),
                     offset,                     /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,
