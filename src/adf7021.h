@@ -51,7 +51,7 @@ typedef enum ADF7021_Opcode {
 typedef struct ADF7021_Config {
     ADF7021_Opcode opcode;                  /**< Config action opcode */
     union {
-        uint32_t referenceFrequencyHz;
+        float referenceFrequency;
     };
 } ADF7021_Config;
 
@@ -116,10 +116,9 @@ LPCLIB_Result ADF7021_write (ADF7021_Handle handle,
 /** Set PLL frequency
  *
  *  \param[in] handle Device handle.
- *  \param[in] frequencyHz PLL frequency in Hz
+ *  \param[in] frequency PLL frequency in Hz
  */
-LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle,
-                              uint32_t frequencyHz);
+LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency);
 
 
 /** Read RSSI

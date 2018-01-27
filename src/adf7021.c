@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include <string.h>
 
 #include "lpclib.h"
@@ -23,8 +24,8 @@ typedef struct ADF7021_Context {
     int ssel;
     GPIO_Pin muxoutPin;
     uint32_t txWord;
-    uint32_t referenceFrequencyHz;
-    uint32_t frequencyHz;
+    float referenceFrequency;
+    float frequency;
     uint32_t reg0Bits;
     uint32_t ifBandwidthSelect;
     volatile bool muxoutEvent;
@@ -198,7 +199,7 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
     while (pConfig->opcode != ADF7021_OPCODE_INVALID) {
         switch (pConfig->opcode) {
         case ADF7021_OPCODE_SET_REFERENCE:
-            handle->referenceFrequencyHz = pConfig->referenceFrequencyHz;
+            handle->referenceFrequency = pConfig->referenceFrequency;
             break;
 
         case ADF7021_OPCODE_INVALID:
@@ -214,7 +215,7 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
 
 
 /* Set PLL frequency */
-LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, uint32_t frequencyHz)
+LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency)
 {
     uint32_t regval;
 
@@ -222,10 +223,10 @@ LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, uint32_t frequencyHz)
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    handle->frequencyHz = frequencyHz;
+    handle->frequency = frequency;
 
     regval = (2u << 29) | (1u << 28) | (1u << 27);      /* MUXOUT=PLL_lock, UART/SPI mode, RX */
-    regval |= ((((uint64_t)frequencyHz * 32768ull) / handle->referenceFrequencyHz) & 0x007FFFFF) << 4;
+    regval |= (lrintf((frequency * 32768.0f) / handle->referenceFrequency) & 0x007FFFFF) << 4;
     handle->reg0Bits = regval & ~(7u << 29);
 
     ADF7021_write(handle, ADF7021_REGISTER_N, regval);
@@ -352,8 +353,8 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
     /* Select fine or coarse calibration */
     regval = 0
             | ((mode ? 1 : 0) << 4)         /* Enable fine calibration */
-            | ((handle->referenceFrequencyHz / (2 * calibrationFrequencies[handle->ifBandwidthSelect][0])) << 5)
-            | ((handle->referenceFrequencyHz / (2 * calibrationFrequencies[handle->ifBandwidthSelect][1])) << 13)
+            | (lrintf(handle->referenceFrequency / (2 * calibrationFrequencies[handle->ifBandwidthSelect][0])) << 5)
+            | (lrintf(handle->referenceFrequency / (2 * calibrationFrequencies[handle->ifBandwidthSelect][1])) << 13)
             | (80u << 21)
             ;
     ADF7021_write(handle, ADF7021_REGISTER_6, regval);
@@ -362,7 +363,7 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
     handle->muxoutEvent = false;
     regval = 0
             | (1u << 4)                     /* Do calibration */
-            | ((handle->referenceFrequencyHz / 50000) << 5) /* --> 50 kHz */
+            | (lrintf(handle->referenceFrequency / 50e3f) << 5)   /* --> 50 kHz */
             //TODO configure image rejection
             ;
     ADF7021_write(handle, ADF7021_REGISTER_5, regval);

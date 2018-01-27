@@ -126,7 +126,7 @@ struct SYS_Context {
 
     SONDE_Type sondeType;
     SONDE_Detector sondeDetector;
-    uint32_t currentFrequencyHz;
+    float currentFrequency;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
     float vbat;
@@ -251,41 +251,41 @@ void MAILBOX_IRQHandler (void)
 static void _SYS_reportRadioFrequency (SYS_Handle handle)
 {
     char s[20];
-    sprintf(s, "1,%.3f", handle->currentFrequencyHz / 1e6f);
+    sprintf(s, "1,%.3f", handle->currentFrequency / 1e6f);
     SYS_send2Host(HOST_CHANNEL_GUI, s);
 }
 
 
 
-static void _SYS_setRadioFrequency (SYS_Handle handle, uint32_t frequencyHz)
+static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
 {
-    if (frequencyHz < 400000000) {
-        frequencyHz = 400000000;
+    if (frequency < 400e6f) {
+        frequency = 400e6f;
     }
-    if (frequencyHz > 406100000) {
-        frequencyHz = 406100000;
+    if (frequency > 406.1e6f) {
+        frequency = 406.1e6f;
     }
 
-    ADF7021_setPLL(radio, frequencyHz - 100000);
+    ADF7021_setPLL(radio, frequency - 100000);
 
-    handle->currentFrequencyHz = frequencyHz;
+    handle->currentFrequency = frequency;
 }
 
 
 
 /* Get current RX frequency */
-uint32_t SYS_getCurrentFrequencyHz (SYS_Handle handle)
+float SYS_getCurrentFrequency (SYS_Handle handle)
 {
-    return handle->currentFrequencyHz;
+    return handle->currentFrequency;
 }
 
 
 
 /* Enable the receiver, select a frequency and a sonde decoder type.
  */
-LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE_Detector detector)
+LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Detector detector)
 {
-    if ((detector != handle->sondeDetector) || (frequencyHz != handle->currentFrequencyHz)) {
+    if ((detector != handle->sondeDetector) || (frequency != handle->currentFrequency)) {
         PDM_stop(handle->pdm);
 
         handle->sondeDetector = detector;
@@ -320,7 +320,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
 #endif
                             | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
                             );
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
@@ -387,7 +387,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
 #endif
                             | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
                             );
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
@@ -456,7 +456,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
             // TODO Data NOT inverted. Does data polarity depend on DEMOD_CLK_DIVIDE?
             ADF7021_write(radio, ADF7021_REGISTER_4,  (1u << 30) | (4u << 20) | (342u << 10) | (0u << 8) | (0u << 7) | (1u << 4)); /* IF=13.5kHz, 2FSK correlator */
 #endif
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
             ADF7021_write(radio, ADF7021_REGISTER_10, (20u << 24) | (2u << 21) | (11u << 17) | (645u << 5) | (1u << 4)); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
 
@@ -506,7 +506,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (1u << 4)     /* BBOSdivide=8 --> BBOS_CLK=1.6 MHz */
                             );
 #endif
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
@@ -571,7 +571,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (1u << 4)     /* BBOSdivide=8 --> BBOS_CLK=1.6 MHz */
                             );
 #endif
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
@@ -702,7 +702,7 @@ static void SYS_sleep (SYS_Handle handle)
     /* Restore radio mode */
     SONDE_Detector detector = handle->sondeDetector;
     handle->sondeDetector = _SONDE_DETECTOR_UNDEFINED_;
-    SYS_enableDetector(handle, handle->currentFrequencyHz, detector);
+    SYS_enableDetector(handle, handle->currentFrequency, detector);
 }
 
 
@@ -892,10 +892,10 @@ LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
         switch (event.opcode) {
             case APP_EVENT_HEARD_SONDE:
                 {
-                    float frequencyMHz = (uint32_t)event.parameter / 1e6f;
+                    float frequency = (uint32_t)event.parameter;
                     SCANNER_addListenFrequency(
                             scanner,
-                            frequencyMHz,
+                            frequency,
                             (SONDE_Type)event.block);
                 }
                 break;
@@ -1071,7 +1071,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 if (sscanf(cl, "#%*d,%d,%d", &list, &action) == 2) {
                     if (list == 0) {        /* Scanner */
                         ; //TODO
-//                            SCANNER_addListenFrequency(scanner, frequencyMHz, SONDE_DECODER_RS41_RS92);  //TODO TODO
+//                            SCANNER_addListenFrequency(scanner, frequency, SONDE_DECODER_RS41_RS92);  //TODO TODO
 //                        SCANNER_setManualMode(scanner, true);
                     }
 
@@ -1125,7 +1125,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 2:
                             SCANNER_setScannerMode(scanner, enable);
                             if (enable) {
-                                handle->currentFrequencyHz = 0;
+                                handle->currentFrequency = 0;
                                 _SYS_reportRadioFrequency(handle);
                             }
                             break;
@@ -1326,14 +1326,14 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->srsc,
                                     (uint8_t *)pMessage->event.parameter,
                                     7,
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_IMET_RSB) {
                         IMET_processBlock(
                                     handle->imet,
                                     (uint8_t *)pMessage->event.parameter,
                                     0,  /* variable packet length */
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
                     }
                     break;
                 }
@@ -1345,7 +1345,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                     int bufferIndex = pMessage->bufferIndex;
 
                     /* Ignore glitches (packets arriving while switching to/from scanner mode) */
-                    if (handle->currentFrequencyHz != 0) {
+                    if (handle->currentFrequency != 0) {
                         SONDE_Type sondeType = SONDE_UNDEFINED;
                         switch (ipc[bufferIndex].param) {
                             case 0: sondeType = SONDE_RS92; break;
@@ -1361,7 +1361,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->m10,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_M10),
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
 
                             /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
@@ -1371,7 +1371,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->rs41,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_RS41),
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
 
                             /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
@@ -1381,7 +1381,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->rs92,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_RS92),
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
 
                             /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
@@ -1396,7 +1396,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     sondeType,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_DFM06),
-                                    handle->currentFrequencyHz * 1.0f) == LPCLIB_SUCCESS) {
+                                    handle->currentFrequency) == LPCLIB_SUCCESS) {
                                 /* Frame complete. Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
                             }
@@ -1407,7 +1407,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     sondeType,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_DFM09),
-                                    handle->currentFrequencyHz * 1.0f) == LPCLIB_SUCCESS) {
+                                    handle->currentFrequency) == LPCLIB_SUCCESS) {
                                 /* Frame complete. Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
                             }
