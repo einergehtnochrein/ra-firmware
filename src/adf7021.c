@@ -18,17 +18,32 @@ typedef enum ADF7021_Readback {
 } ADF7021_Readback;
 
 
+/* Readbacks */
+typedef enum ADF7021_Muxout {
+    ADF7021_MUXOUT_REGULATOR_READY = 0,
+    ADF7021_MUXOUT_FILTER_CAL_COMPLETE = 1,
+    ADF7021_MUXOUT_DIGITAL_LOCK_DETECT = 2,
+    ADF7021_MUXOUT_RSSI_READY = 3,
+    ADF7021_MUXOUT_TX_RX = 4,
+    ADF7021_MUXOUT_LOGIC_ZERO = 5,
+    ADF7021_MUXOUT_TRISTATE = 6,
+    ADF7021_MUXOUT_LOGIC_ONE = 7,
+} ADF7021_Muxout;
+
+
 /** Local device context. */
 typedef struct ADF7021_Context {
     LPC_SPI_Type *spi;
     int ssel;
-    GPIO_Pin muxoutPin;
+
+    GPIO_Pin muxoutPin;                 /* Pin used for reading MUXOUT */
+    ADF7021_Muxout muxout;              /* Currently selected MUXOUT function */
+    volatile bool muxoutEvent;          /* Indicator of MUXOUT event (signal edge) */
+
     uint32_t txWord;
     float referenceFrequency;
     float frequency;
-    uint32_t reg0Bits;
     uint32_t ifBandwidthSelect;
-    volatile bool muxoutEvent;
 } ADF7021_Context;
 
 
@@ -138,6 +153,33 @@ static LPCLIB_Result _ADF7021_read (ADF7021_Handle handle, ADF7021_Readback read
 }
 
 
+/* Update register 0 (MUXOUT and PLL divider settings) */
+static void _ADF7021_updateRegister0 (ADF7021_Handle handle)
+{
+    uint32_t regval = 0
+            | (handle->muxout << 29)
+            | (1u << 28)                    /* UART/SPI mode */
+            | (1u << 27)                    /* RX */
+            | ((lrintf((handle->frequency * 32768.0f) / handle->referenceFrequency) & 0x007FFFFF) << 4)
+            ;
+    ADF7021_write(handle, ADF7021_REGISTER_N, regval);
+}
+
+
+/* Set MUXOUT function */
+static void _ADF7021_setMuxout (ADF7021_Handle handle, ADF7021_Muxout muxout, bool forceUpdate)
+{
+    /* Check if MUXOUT needs to be modified */
+    if ((handle->muxout != muxout) || forceUpdate) {
+        handle->muxout = muxout;
+
+        /* MUXOUT is controlled by register 0 (= REGISTER_N) */
+        _ADF7021_updateRegister0(handle);
+    }
+}
+
+
+
 void ADF7021_handleSpiEvent (void)
 {
 }
@@ -151,6 +193,7 @@ LPCLIB_Result ADF7021_open (LPC_SPI_Type *spi, int ssel, GPIO_Pin muxoutPin, ADF
     handle->spi = spi;
     handle->ssel = ssel;
     handle->muxoutPin = muxoutPin;
+    handle->muxout = ADF7021_MUXOUT_REGULATOR_READY;
 
     spi->CFG = 0
             | (1u << 2)                     /* Master */
@@ -217,19 +260,12 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
 /* Set PLL frequency */
 LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency)
 {
-    uint32_t regval;
-
     if (handle == LPCLIB_INVALID_HANDLE) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
     handle->frequency = frequency;
-
-    regval = (2u << 29) | (1u << 28) | (1u << 27);      /* MUXOUT=PLL_lock, UART/SPI mode, RX */
-    regval |= (lrintf((frequency * 32768.0f) / handle->referenceFrequency) & 0x007FFFFF) << 4;
-    handle->reg0Bits = regval & ~(7u << 29);
-
-    ADF7021_write(handle, ADF7021_REGISTER_N, regval);
+    _ADF7021_setMuxout(handle, ADF7021_MUXOUT_DIGITAL_LOCK_DETECT, true);
     while (GPIO_readBit(handle->muxoutPin) == 0)
         ;
 
@@ -257,8 +293,12 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
     if (rssi == NULL) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
-    *rssi = -1740;
 
+    _ADF7021_setMuxout(handle, ADF7021_MUXOUT_RSSI_READY, false);
+    while (GPIO_readBit(handle->muxoutPin) == 0)
+        ;
+
+    *rssi = -1740;
     if (_ADF7021_read(handle, ADF7021_READBACK_RSSI, &rawdata) == LPCLIB_SUCCESS) {
         *rssi = -1300 + (((int)rawdata & 0x7F) + _ADF7021_rssiGainCorrection[(rawdata >> 7) & 0x0F]) * 5;
 
@@ -345,8 +385,7 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    /* Configure MUXOUT for FILTER_CAL_COMPLETE function */
-    ADF7021_write(handle, ADF7021_REGISTER_N, handle->reg0Bits | (1u << 29));
+    _ADF7021_setMuxout(handle, ADF7021_MUXOUT_FILTER_CAL_COMPLETE, false);
     _muxoutEdgeEnable[0].pinInterrupt.pin = handle->muxoutPin;
     GPIO_ioctl(_muxoutEdgeEnable);
 
