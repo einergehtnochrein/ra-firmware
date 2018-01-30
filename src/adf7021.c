@@ -20,6 +20,8 @@ typedef enum ADF7021_Readback {
 
 /* Readbacks */
 typedef enum ADF7021_Muxout {
+    ADF7021_MUXOUT_INVALID = -1,
+
     ADF7021_MUXOUT_REGULATOR_READY = 0,
     ADF7021_MUXOUT_FILTER_CAL_COMPLETE = 1,
     ADF7021_MUXOUT_DIGITAL_LOCK_DETECT = 2,
@@ -40,9 +42,14 @@ typedef struct ADF7021_Context {
     ADF7021_Muxout muxout;              /* Currently selected MUXOUT function */
     volatile bool muxoutEvent;          /* Indicator of MUXOUT event (signal edge) */
 
-    uint32_t txWord;
+    ADF7021_InterfaceMode interfaceMode;
+    ADF7021_Bandwidth bandwidth;
+    int demodClockDivider;
+    struct ADF7021_ConfigDemodulatorParams demodParams;
+    ADF7021_DemodulatorType demodType;
     float referenceFrequency;
     float frequency;
+    int bitRate;
     uint32_t ifBandwidthSelect;
 } ADF7021_Context;
 
@@ -179,6 +186,84 @@ static void _ADF7021_setMuxout (ADF7021_Handle handle, ADF7021_Muxout muxout, bo
 }
 
 
+/* Set up clocks */
+static void _ADF7021_setClocks (ADF7021_Handle handle)
+{
+    uint32_t bbos_clk_divide = lrintf(log2f(handle->referenceFrequency / 1.5e6f) - 2.0f);
+    uint32_t seq_clk_divide = lrintf(handle->referenceFrequency / 100e3f);
+    uint32_t agc_clk_divide = lrintf(handle->referenceFrequency / (seq_clk_divide * 8e3f));
+    uint32_t cdr_clk_divide = 1;
+    if ((handle->demodClockDivider > 0) && (handle->bitRate > 0) && !(handle->interfaceMode & (1u << 16))) {
+        cdr_clk_divide = lrintf(handle->referenceFrequency / (handle->demodClockDivider * 32 * handle->bitRate));
+    }
+    uint32_t regval = 0
+            | (agc_clk_divide << 26)
+            | (seq_clk_divide << 18)
+            | (cdr_clk_divide << 10)
+            | (handle->demodClockDivider << 6)
+            | (bbos_clk_divide << 4)
+            ;
+    ADF7021_write(handle, ADF7021_REGISTER_TRANSMIT_RECEIVE_CLOCK, regval);
+}
+
+
+/* Configure interface (test DAC on/off) */
+static void _ADF7021_configureInterface (ADF7021_Handle handle)
+{
+    uint32_t regval;
+
+    regval = 0
+        | ((handle->interfaceMode << 4) & (0xF << 21))
+        | (lrintf((4.0f * 65536.0f * handle->demodClockDivider * 100e3f) / handle->referenceFrequency) << 5)
+        | ((handle->interfaceMode >> 12) & (1u << 4))
+        ;
+    ADF7021_write(handle, ADF7021_REGISTER_14, regval);
+    regval = 0
+        | ((handle->interfaceMode & 0xE3FF) << 4)
+        ;
+    ADF7021_write(handle, ADF7021_REGISTER_15, regval);
+}
+
+
+/* Configure the demodulator */
+static void _ADF7021_configureDemodulator (ADF7021_Handle handle)
+{
+    uint32_t regval;
+    uint32_t K;
+    float demodClock;
+    const uint8_t R4_987[4] = {0,5,4,1};
+
+    
+    demodClock = handle->referenceFrequency;
+    if (handle->demodClockDivider > 0) {
+        demodClock /= handle->demodClockDivider;
+    }
+
+    if (handle->demodParams.deviation == 0) {
+        K = 42;     /* Not a joke! deviation = 2400 Hz (2FSK) */
+    }
+    else {
+        K = lrintf(100e3f / handle->demodParams.deviation);
+    }
+
+    regval = 0
+        | (handle->bandwidth << 30)
+        | (lrintf(ceil((6433.98176f * handle->demodParams.postDemodBandwidth) / demodClock)) << 20)
+        | (lrintf((demodClock * K) / 400e3f) << 10)
+        | (R4_987[K % 4] << 7)
+        | (handle->demodType << 4)
+        ;
+    ADF7021_write(handle, ADF7021_REGISTER_4, regval);
+}
+
+
+static void _ADF7021_configureAll (ADF7021_Handle handle)
+{
+    _ADF7021_configureInterface(handle);
+    _ADF7021_setClocks(handle);
+    _ADF7021_configureDemodulator(handle);
+}
+
 
 void ADF7021_handleSpiEvent (void)
 {
@@ -194,6 +279,7 @@ LPCLIB_Result ADF7021_open (LPC_SPI_Type *spi, int ssel, GPIO_Pin muxoutPin, ADF
     handle->ssel = ssel;
     handle->muxoutPin = muxoutPin;
     handle->muxout = ADF7021_MUXOUT_REGULATOR_READY;
+    handle->demodClockDivider = 4;
 
     spi->CFG = 0
             | (1u << 2)                     /* Master */
@@ -235,14 +321,66 @@ LPCLIB_Result ADF7021_close (ADF7021_Handle *pHandle)
 /* Configure the device */
 LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfig)
 {
+    uint32_t regval;
+
     if (handle == LPCLIB_INVALID_HANDLE) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
     while (pConfig->opcode != ADF7021_OPCODE_INVALID) {
         switch (pConfig->opcode) {
+        case ADF7021_OPCODE_POWER_ON:
+            //TODO activate CE
+
+            /* Force sending R0 (configure UART/SPI mode) */
+            _ADF7021_setMuxout(handle, ADF7021_MUXOUT_LOGIC_ZERO, true);
+
+            ADF7021_write(handle, ADF7021_REGISTER_1, 0
+                            | (1u << 25)        /* External L */
+                            | (3u << 19)        /* VCO bias = 0.75 mA */
+                            | (1u << 17)        /* VCO on */
+                            | (1u << 12)        /* XOSC on */
+                            | (0u << 7)         /* CLKOUT off */
+                            | (1u << 4)         /* R = 1 */
+                            );
+            break;
+
         case ADF7021_OPCODE_SET_REFERENCE:
             handle->referenceFrequency = pConfig->referenceFrequency;
+            break;
+
+        case ADF7021_OPCODE_SET_INTERFACE_MODE:
+            handle->interfaceMode = pConfig->interfaceMode;
+            break;
+
+        case ADF7021_OPCODE_SET_BANDWIDTH:
+            handle->bandwidth = pConfig->bandwidth;
+            break;
+
+        case ADF7021_OPCODE_SET_AFC:
+            regval = 0;
+            if (pConfig->afc.enable) {
+                regval = 0
+                    | (1u << 4)
+                    | (lrintf(8.388608e9f / handle->referenceFrequency) << 5)
+                    | (pConfig->afc.KI << 17)
+                    | (pConfig->afc.KP << 21)
+                    | (pConfig->afc.maxRange << 24)
+                    ;
+            }
+            ADF7021_write(handle, ADF7021_REGISTER_10, regval);
+            break;
+
+        case ADF7021_OPCODE_SET_DEMODULATOR:
+            handle->demodType = pConfig->demodType;
+            break;
+
+        case ADF7021_OPCODE_SET_DEMODULATOR_PARAMS:
+            handle->demodParams = pConfig->demodParams;
+            break;
+
+        case ADF7021_OPCODE_CONFIGURE:
+            _ADF7021_configureAll(handle);
             break;
 
         case ADF7021_OPCODE_INVALID:
@@ -268,6 +406,54 @@ LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency)
     _ADF7021_setMuxout(handle, ADF7021_MUXOUT_DIGITAL_LOCK_DETECT, true);
     while (GPIO_readBit(handle->muxoutPin) == 0)
         ;
+
+    return LPCLIB_SUCCESS;
+}
+
+
+/* Set demod clock divider */
+LPCLIB_Result ADF7021_setDemodClockDivider (ADF7021_Handle handle, int divider)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    handle->demodClockDivider = divider;
+
+    return LPCLIB_SUCCESS;
+}
+
+
+/* Specify bit rate */
+LPCLIB_Result ADF7021_setBitRate (ADF7021_Handle handle, int bitRate)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    handle->bitRate = bitRate;
+    _ADF7021_setClocks(handle);
+
+    return LPCLIB_SUCCESS;
+}
+
+
+LPCLIB_Result ADF7021_getDemodClock (ADF7021_Handle handle, float *demodClock)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    if (demodClock == NULL) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    float f = handle->referenceFrequency;
+    if (handle->demodClockDivider > 0) {
+        f /= handle->demodClockDivider;
+    }
+
+    *demodClock = f;
 
     return LPCLIB_SUCCESS;
 }
@@ -419,3 +605,4 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
 
     return LPCLIB_SUCCESS;
 }
+

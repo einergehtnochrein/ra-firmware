@@ -38,7 +38,7 @@ static const SYNC_Config configGraw = {
         {
             .id = 2,
             .nSyncLen = 32,
-            .pattern = {0x000000006566A5AALL, 0},
+            .pattern = {0x000000009A995A55LL, 0},
             .nMaxDifference = 2,
             .frameLength = 66,
             .startOffset = 0,
@@ -46,7 +46,7 @@ static const SYNC_Config configGraw = {
         {
             .id = 3,
             .nSyncLen = 32,
-            .pattern = {0x000000009A995A55LL, 0},
+            .pattern = {0x000000006566A5AALL, 0},
             .nMaxDifference = 2,
             .frameLength = 66,
             .startOffset = 0,
