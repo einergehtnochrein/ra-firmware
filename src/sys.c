@@ -407,19 +407,14 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 
         switch (detector) {
         case SONDE_DETECTOR_C34_C50:
-#if (BOARD_RA == 1)
-            ADF7021_setDemodClockDivider(radio, 6);
-#endif
-#if (BOARD_RA == 2)
             ADF7021_setDemodClockDivider(radio, 4);
-#endif
             ADF7021_ioctl(radio, radioModeC34C50);
 
             _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
 #if (BOARD_RA == 1)
-            PDM_run(handle->pdm, 134, SRSC_handleAudioCallback);
+            PDM_run(handle->pdm, 202, SRSC_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
             ADF7021_getDemodClock(radio, &demodClock);
@@ -429,19 +424,14 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             break;
 
         case SONDE_DETECTOR_IMET:
-#if (BOARD_RA == 1)
-            ADF7021_setDemodClockDivider(radio, 6);
-#endif
-#if (BOARD_RA == 2)
             ADF7021_setDemodClockDivider(radio, 4);
-#endif
             ADF7021_ioctl(radio, radioModeImet);
 
             _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
 #if (BOARD_RA == 1)
-            PDM_run(handle->pdm, 134, IMET_handleAudioCallback);
+            PDM_run(handle->pdm, 202, IMET_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
             ADF7021_getDemodClock(radio, &demodClock);
