@@ -21,6 +21,16 @@
 #define THRESHOLD_HIGH          (0.01875f)
 
 
+enum {
+    BEACON_DEBUGAUDIO_NORMAL = 0,
+
+    BEACON_DEBUGAUDIO_1,
+    BEACON_DEBUGAUDIO_2,
+
+    __BEACON_DEBUGAUDIO_MAX__
+};
+
+
 static struct _BEACON_Audio {
     float filter[SAMPLES_PER_BIT_4];
     int filterIndex;
@@ -39,6 +49,8 @@ float samplePoints[256];
 
     uint32_t rxData;
     uint32_t rxCount;
+
+    int debugAudioChannel;
 } _beaconAudioContext;
 
 
@@ -171,11 +183,27 @@ void BEACON_handleAudioCallback (int32_t *samples, int nSamples)
 
     BEACON_DSP_processAudio(samples, handle->filterOut, nSamples);
 #if (BOARD_RA == 2)
-//    USBUSER_writeAudioStereo_i32_float(samples, handle->filterOut, nSamples);
-//    USBUSER_writeAudioStereo_float_float(handle->testOut, handle->filterOut, nSamples);
-    USBUSER_writeAudioStereo_float_float(handle->testOut, handle->samplePoints, nSamples);
+    switch (handle->debugAudioChannel) {
+        case BEACON_DEBUGAUDIO_1:
+            USBUSER_writeAudioStereo_float_float(handle->testOut, handle->filterOut, nSamples);
+            break;
+        case BEACON_DEBUGAUDIO_2:
+            USBUSER_writeAudioStereo_float_float(handle->testOut, handle->samplePoints, nSamples);
+            break;
+        default:
+            USBUSER_writeAudioStereo_i32_i32(samples, samples, nSamples);
+            break;
+    }
 #endif
 }
 
 
+void BEACON_selectDebugAudio (int debugAudioChannel)
+{
+    struct _BEACON_Audio *handle = &_beaconAudioContext;
+
+    if (debugAudioChannel < __BEACON_DEBUGAUDIO_MAX__) {
+        handle->debugAudioChannel = debugAudioChannel;
+    }
+}
 
