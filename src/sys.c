@@ -292,6 +292,25 @@ static const ADF7021_Config radioModeImet[] = {
     ADF7021_CONFIG_END
 };
 
+static const ADF7021_Config radioModeBeacon[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_9k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = DISABLE, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .postDemodBandwidth = 3000, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
 
 
 static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
@@ -444,34 +463,12 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             break;
 
         case SONDE_DETECTOR_BEACON:
-            ADF7021_write(radio, ADF7021_REGISTER_0, 0
-                            | (1u << 28)        /* UART/SPI mode */
-                            | (1u << 27)        /* Receive mode */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_1, 0
-                            | (1u << 25)        /* External L */
-                            | (3u << 19)        /* VCO bias = 0.75 mA */
-                            | (1u << 17)        /* VCO on */
-                            | (1u << 12)        /* XOSC on */
-                            | (0u << 7)         /* CLKOUT off */
-                            | (1u << 4)         /* R = 1 */
-                            );
-            osDelay(10);
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)       /* AGC_CLK_DIVIDE = 12 --> AGCUpdateRate = 8,3 kHz (8 kHz) */
-                            | (130u << 18)      /* SEQ_CLK_DIVIDE = 130 --> SEQCLK = 100 kHz (100 kHz) */
-#if (BOARD_RA == 1)
-                            | (1u << 10)        /* CDR_CLK_DIVIDE = 1 --> CDRCLK = 2.1667 MHz (=DEMODCLK) */
-                            | (6u << 6)         /* DEMOD_CLK_DIVIDE = 6 --> DEMODCLK = 2.1667 MHz (2...15 MHz) */
-#endif
-#if (BOARD_RA == 2)
-                            | (1u << 10)        /* CDR_CLK_DIVIDE = 1 --> CDRCLK = 3.2 MHz (=DEMODCLK) */
-                            | (4u << 6)         /* DEMOD_CLK_DIVIDE = 4 --> DEMODCLK = 3.2 MHz (2...15 MHz) */
-#endif
-                            | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
-                            );
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_ioctl(radio, radioModeBeacon);
+
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
+#if 0
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
                             | (0u << 30)        /* IF_FILTER_BW = 9.5 kHz */
@@ -500,12 +497,14 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 #endif
                             | (1 << 4)          /* Enable Test DAC */
                             );
+#endif
 
 #if (BOARD_RA == 1)
-            PDM_run(handle->pdm, 134, BEACON_handleAudioCallback);
+            PDM_run(handle->pdm, 202, BEACON_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
-            PDM_run(handle->pdm, 200, BEACON_handleAudioCallback);
+            ADF7021_getDemodClock(radio, &demodClock);
+            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), BEACON_handleAudioCallback);
 #endif
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
