@@ -434,7 +434,9 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
     scannerContext.queue = osMailCreate(osMailQ(scannerQueueDef), NULL);
 
     handle->manualFrequency = 405.1e6f;
-    handle->manualSondeDetector = SONDE_DETECTOR_RS41_RS92;
+handle->manualFrequencyHz = 406025000;
+//    handle->manualSondeDetector = SONDE_DETECTOR_RS41_RS92;
+handle->manualSondeDetector = SONDE_DETECTOR_BEACON;
 //handle->mode = SCANNER_MODE_SEARCH;
 handle->mode = SCANNER_MODE_MANUAL;
 

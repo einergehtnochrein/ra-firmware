@@ -34,6 +34,7 @@
 
 #include "adf7021.h"
 #include "app.h"
+#include "beacon.h"
 #include "dfm.h"
 #include "imet.h"
 #include "m10.h"
@@ -115,6 +116,7 @@ struct SYS_Context {
 
     RS41_Handle rs41;
     RS92_Handle rs92;
+    BEACON_Handle beacon;
     DFM_Handle dfm;
     IMET_Handle imet;
     M10_Handle m10;
@@ -255,7 +257,7 @@ static const ADF7021_Config radioModeModem[] = {
 static const ADF7021_Config radioModeC34C50[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
-        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK, }},
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN4, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
         {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
@@ -274,7 +276,7 @@ static const ADF7021_Config radioModeC34C50[] = {
 static const ADF7021_Config radioModeImet[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
-        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK, }},
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN4, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
         {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
@@ -285,6 +287,25 @@ static const ADF7021_Config radioModeImet[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 3500, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeBeacon[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN6, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_9k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = DISABLE, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .postDemodBandwidth = 3000, }}},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -311,6 +332,7 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
         case SONDE_M10:
             length = (100+1) * 2;
             break;
+        case SONDE_BEACON:
         case SONDE_C34:
         case SONDE_C50:
         case SONDE_IMET_RSB:
@@ -436,6 +458,53 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 #if (BOARD_RA == 2)
             ADF7021_getDemodClock(radio, &demodClock);
             PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), SRSC_handleAudioCallback);
+#endif
+            LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
+            break;
+
+        case SONDE_DETECTOR_BEACON:
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_ioctl(radio, radioModeBeacon);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+#if 0
+            // K=42
+            ADF7021_write(radio, ADF7021_REGISTER_4, 0
+                            | (0u << 30)        /* IF_FILTER_BW = 9.5 kHz */
+                            | (30u << 20)       /* POST_DEMOD_BW, assuming fcutoff = 10000 Hz */
+                                                //TODO: post demod filter seems to have half that value (5k)
+                            | (226u << 10)      /* DISCRIMINATOR_BW, assuming K = 42, fdev = 2.4 kHz */
+                            | (2u << 8)         /* INVERT DATA */
+                            | (0u << 7)         /* CROSS_PRODUCT */
+                            | (0u << 4)         /* 2FSK linear demodulator */
+                            );
+            ADF7021_write(radio, ADF7021_REGISTER_10, 0
+                            | (0u << 4)         /* AFC off */
+                            );
+            ADF7021_write(radio, ADF7021_REGISTER_15, 0
+                            | (2u << 17)        /* CLKOUT pin carries CDR CLK */
+                            | (0u << 11)        /* 3rd order sigma-delta, no dither */
+                            | (9u << 4)         /* Enable REG14 modes */
+                            );
+            ADF7021_write(radio, ADF7021_REGISTER_14, 0
+                            | (5 << 21)         /* Test DAC gain = ? dB */
+#if (BOARD_RA == 1)
+                            | (12098 << 5)      /* Test DAC offset (0...65535) */
+#endif
+#if (BOARD_RA == 2)
+                            | (8192 << 5)       /* Test DAC offset (0...65535) */
+#endif
+                            | (1 << 4)          /* Enable Test DAC */
+                            );
+#endif
+
+#if (BOARD_RA == 1)
+            PDM_run(handle->pdm, 202, BEACON_handleAudioCallback);
+#endif
+#if (BOARD_RA == 2)
+            ADF7021_getDemodClock(radio, &demodClock);
+            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), BEACON_handleAudioCallback);
 #endif
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
@@ -911,6 +980,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     SRSC_resendLastPositions(handle->srsc);
                     IMET_resendLastPositions(handle->imet);
                     M10_resendLastPositions(handle->m10);
+                    BEACON_resendLastPositions(handle->beacon);
                 }
             }
             break;
@@ -938,7 +1008,8 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 2:     detector = SONDE_DETECTOR_C34_C50; break;
                         case 3:     detector = SONDE_DETECTOR_IMET; break;
                         case 4:     detector = SONDE_DETECTOR_MODEM; break;
-                        case 5:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
+                        case 5:     detector = SONDE_DETECTOR_BEACON; break;
+                        case 6:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                 }
@@ -981,6 +1052,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                         break;
                                     case SONDE_DECODER_C34_C50:
                                         SRSC_removeFromList(handle->srsc, id);
+                                        break;
+                                    case SONDE_DECODER_BEACON:
+                                        BEACON_removeFromList(handle->beacon, id);
                                         break;
                                     default:
                                         /* ignore */
@@ -1118,6 +1192,24 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             }
             break;
 
+        case HOST_CHANNEL_DEBUG:
+            {
+                int function;
+                int mode;
+
+                if (sscanf(cl, "#%*d,%d", &function) == 1) {
+                    switch (function) {
+                        case 13:
+                            if (sscanf(cl, "#%*d,%*d,%d", &mode) == 1) {
+                                /* Send USB audio test mode to all decoders */
+                                BEACON_selectDebugAudio(mode);
+                            }
+                            break;
+                    }
+                }
+            }
+            break;
+
         case 99:        /* Keep-alive message */
             /* No action required. Packet reception itself has retriggered the keep-alive timer. */
             break;
@@ -1167,6 +1259,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     RS41_open(&handle->rs41);
     RS92_open(&handle->rs92);
     DFM_open(&handle->dfm);
+    BEACON_open(&handle->beacon);
     SRSC_open(&handle->srsc);
     IMET_open(&handle->imet);
     M10_open(&handle->m10);
@@ -1219,6 +1312,14 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     (uint8_t *)pMessage->event.parameter,
                                     0,  /* variable packet length */
                                     handle->currentFrequency);
+                    }
+                    else if ((SONDE_Type)pMessage->event.block == SONDE_BEACON) {
+                        BEACON_processBlock(
+                                    handle->beacon,
+                                    (uint8_t *)pMessage->event.parameter,
+                                    15,
+                                    handle->currentFrequency,
+                                    pMessage->event.channel);
                     }
                     break;
                 }
