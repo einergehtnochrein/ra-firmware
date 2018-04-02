@@ -53,8 +53,14 @@ typedef enum ADF7021_InterfaceMode {
             | (7 << 13)                     /* CLKOUT = TxRxCLK */ 
             | (0 << 0)                      /* RX normal */
             ,
-    ADF7021_INTERFACEMODE_AFSK = 0
+    ADF7021_INTERFACEMODE_AFSK_GAIN4 = 0
             | (4 << 17)                     /* DAC gain */
+            | (1 << 16)                     /* DAC on */
+            | (2 << 13)                     /* CLKOUT = CDR CLK */
+            | (9 << 0)                      /* RX R14 modes */
+            ,
+    ADF7021_INTERFACEMODE_AFSK_GAIN6 = 0
+            | (6 << 17)                     /* DAC gain */
             | (1 << 16)                     /* DAC on */
             | (2 << 13)                     /* CLKOUT = CDR CLK */
             | (9 << 0)                      /* RX R14 modes */
