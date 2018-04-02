@@ -60,6 +60,9 @@ typedef struct {
     uint8_t protocol;
     bool isLocationProtocol;
 
+    uint8_t userSerialType;
+    uint32_t userSerialNumber;
+
     float latitudeCoarse;
     float longitudeCoarse;
     uint8_t auxRL;
@@ -68,8 +71,8 @@ typedef struct {
 
 typedef struct {
     bool valid;
-    double latitudeFine;
-    double longitudeFine;
+    double latitude;
+    double longitude;
 } BEACON_CookedPDF2;
 
 
@@ -79,6 +82,7 @@ typedef struct _BEACON_InstanceData {
     uint32_t id;
     float rxFrequencyMHz;
     float rxOffset;
+    bool emergency;
 
     uint32_t lastUpdated;
     

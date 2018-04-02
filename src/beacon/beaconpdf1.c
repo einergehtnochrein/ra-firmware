@@ -21,6 +21,8 @@
 #define PDF1_LOCATION_PROTOCOL                  ((37 << 8)  | 4)
 
 #define PDF1_USER_EPIRB_ID                      ((40 << 8)  | 36)
+#define PDF1_USER_SERIAL_TYPE                   ((40 << 8)  | 3)
+#define PDF1_USER_SERIAL_NUMBER                 ((44 << 8)  | 20)
 #define PDF1_USER_AVIATION_ID                   ((40 << 8)  | 42)
 #define PDF1_USER_AVIATION_AUX_RADIO_LOCATING   ((84 << 8)  | 2)
 
@@ -93,8 +95,8 @@ LPCLIB_Result _BEACON_processPDF1 (BEACON_CookedPDF1 *cooked)
         _BEACON_getField(PDF1_LOCATION_PROTOCOL, (uint8_t *)&protocol);
         cooked->protocol = protocol;
 
-        /* Extract coarse location */
         switch (protocol) {
+            /* Extract coarse location */
             case PDF1_LOCATION_PROTOCOL_STANDARD_EPIRB:
             case PDF1_LOCATION_PROTOCOL_STANDARD_ELT:
             case PDF1_LOCATION_PROTOCOL_STANDARD_ELT_SERIAL:
@@ -131,6 +133,8 @@ LPCLIB_Result _BEACON_processPDF1 (BEACON_CookedPDF1 *cooked)
                 _BEACON_getField(PDF1_USER_AVIATION_AUX_RADIO_LOCATING, &cooked->auxRL);
                 break;
             case PDF1_USER_PROTOCOL_SERIAL:
+                _BEACON_getField(PDF1_USER_SERIAL_TYPE, &cooked->userSerialType);
+                _BEACON_getField(PDF1_USER_SERIAL_NUMBER, (uint8_t *)&cooked->userSerialNumber);
                 break;
             case PDF1_USER_PROTOCOL_TEST:
                 break;
@@ -139,6 +143,8 @@ LPCLIB_Result _BEACON_processPDF1 (BEACON_CookedPDF1 *cooked)
             case PDF1_USER_PROTOCOL_NATIONAL:
                 break;
         }
+
+        isLocationProtocol = true;
     }
 
     /* Extract 15 Hex ID */

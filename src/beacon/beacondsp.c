@@ -60,7 +60,7 @@ float samplePoints[256];
     uint32_t rxData[4];
     uint32_t rxCount;
     bool rxActive;
-    uint8_t selfTestBeacon;
+    uint8_t emergency;
 float dci[2];
 
     int debugAudioChannel;
@@ -180,7 +180,7 @@ void BEACON_DSP_processAudio (const int32_t *rawAudio, float *cookedAudio, int n
                         event.opcode = APP_EVENT_RAW_FRAME;
                         event.block = SONDE_BEACON;
                         event.parameter = &handle->frames[handle->frameWrIndex];
-                        event.channel = handle->selfTestBeacon;
+                        event.channel = handle->emergency;
                         SYS_handleEvent(event);
                     }
 
@@ -200,13 +200,13 @@ void BEACON_DSP_processAudio (const int32_t *rawAudio, float *cookedAudio, int n
                     handle->samplePoints[n] = 0.5f;
                     handle->rxActive = true;
                     handle->rxCount = 0;
-                    handle->selfTestBeacon = 0;
+                    handle->emergency = 0;
                 }
                 if ((handle->rxSync & 0x3FFFFF) == 0x29A655) {
                     handle->samplePoints[n] = 0.5f;
                     handle->rxActive = true;
                     handle->rxCount = 0;
-                    handle->selfTestBeacon = 1;
+                    handle->emergency = 1;
                 }
             }
         }

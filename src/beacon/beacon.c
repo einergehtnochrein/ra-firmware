@@ -23,8 +23,6 @@ typedef struct BEACON_Context {
     float rxFrequencyHz;
     float rxOffset;
 
-    bool isSelfTestBeacon;
-
 } BEACON_Context;
 
 static BEACON_Context _beacon;
@@ -54,22 +52,29 @@ static void _BEACON_sendKiss (BEACON_InstanceData *instance)
     int length = 0;
     double lat = NAN;
     double lon = NAN;
+    int special = 0;
 
     /* Send position if beacon uses a location protocol */
     if (instance->pdf1.isLocationProtocol) {
         lat = instance->pdf1.latitudeCoarse;
         lon = instance->pdf1.longitudeCoarse;
         if (instance->pdf2.valid) {
-            lat = instance->pdf2.latitudeFine;
-            lon = instance->pdf2.longitudeFine;
+            lat = instance->pdf2.latitude;
+            lon = instance->pdf2.longitude;
         }
     }
 
-    length = snprintf(s, sizeof(s), "%ld,9,%.3f,,%.5lf,%.5lf,,,,,,,,,,,%.1f,,,,,",
+    /* Flags */
+    if (instance->emergency) {
+        special |= 2;
+    }
+
+    length = snprintf(s, sizeof(s), "%ld,9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,",
                     instance->id,
                     instance->rxFrequencyMHz,           /* Frequency [MHz] */
                     lat,
                     lon,
+                    special,
                     SYS_getFrameRssi(sys)
                     );
     if (length > 0) {
@@ -158,7 +163,7 @@ LPCLIB_Result BEACON_processBlock (
         void *buffer,
         uint32_t length,
         float rxFrequencyHz,
-        uint8_t selfTestBeacon)
+        uint8_t emergency)
 {
     (void)rxFrequencyHz;
     int nErrors;
@@ -189,7 +194,6 @@ LPCLIB_Result BEACON_processBlock (
             SYS_send2Host(HOST_CHANNEL_INFO, log);
         }
 
-        handle->isSelfTestBeacon = selfTestBeacon != 0;
         nErrors = 0;
 
         /* Check BCH-1 */
@@ -197,6 +201,7 @@ LPCLIB_Result BEACON_processBlock (
             /* Process protected data field 1 (also updates 'longMessage' flag) */
             if (_BEACON_processConfigFrame(&handle->instance) == LPCLIB_SUCCESS) {
                 handle->instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
+                handle->instance->emergency = (emergency != 0);
                 if (handle->instance->pdf1.longMessage) {
                     /* Check BCH-2 */
                     if (BCH_63_51_t2_process(_BEACON_getDataBCH2, _BEACON_toggleDataBCH2, &nErrors) == LPCLIB_SUCCESS) {
