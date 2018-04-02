@@ -60,7 +60,7 @@ static const UART_Config blePortConfig[] = {
 
 const ADF7021_Config radioConfig[] = {
     {.opcode = ADF7021_OPCODE_SET_REFERENCE,
-        {.referenceFrequencyHz = 13000000, }},
+        {.referenceFrequency = 13e6f, }},
 
     ADF7021_CONFIG_END
 };

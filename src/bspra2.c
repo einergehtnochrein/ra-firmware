@@ -60,7 +60,7 @@ static const UART_Config blePortConfig[] = {
 
 static ADF7021_Config radioConfig[] = {
     {.opcode = ADF7021_OPCODE_SET_REFERENCE,
-        {.referenceFrequencyHz = 0, }}, /* Will be set at run-time from global config */
+        {.referenceFrequency = 0, }},   /* Will be set at run-time from global config */
 
     ADF7021_CONFIG_END
 };
@@ -131,7 +131,7 @@ void BSP_init (void)
     /* Install IRQ handler */
     FLEXCOMM_installHandler(FLEXCOMM7, (FLEXCOMM_IRQHandler_t)ADF7021_handleSpiEvent);
     ADF7021_open(LPC_SPI7, 2, GPIO_1_2, &radio);
-    radioConfig[0].referenceFrequencyHz = round(config_g->referenceFrequency);
+    radioConfig[0].referenceFrequency = config_g->referenceFrequency;
     ADF7021_ioctl(radio, radioConfig);
 }
 

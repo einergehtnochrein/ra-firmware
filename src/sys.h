@@ -30,9 +30,9 @@ void SYS_installCallback (struct SYS_ConfigCallback configCallback);
 typedef struct SYS_Context *SYS_Handle;
 
 LPCLIB_Result SYS_open (SYS_Handle *pHandle);
-LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE_Detector detector);
+LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Detector detector);
 
-uint32_t SYS_getCurrentFrequencyHz (SYS_Handle handle);
+float SYS_getCurrentFrequency (SYS_Handle handle);
 
 /* Read a new RSSI value in dBm. */
 LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi);
@@ -53,6 +53,7 @@ float SYS_getFrameOffsetKhz (SYS_Handle handle);
 #define HOST_CHANNEL_SPECTRUM       5
 #define HOST_CHANNEL_SWITCHES       7
 #define HOST_CHANNEL_FIRMWAREUPDATE 9
+#define HOST_CHANNEL_DEBUG          77
 
 LPCLIB_Result SYS_send2Host (int channel, const char *message);
 

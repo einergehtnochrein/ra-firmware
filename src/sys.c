@@ -34,6 +34,7 @@
 
 #include "adf7021.h"
 #include "app.h"
+#include "beacon.h"
 #include "dfm.h"
 #include "imet.h"
 #include "m10.h"
@@ -115,6 +116,7 @@ struct SYS_Context {
 
     RS41_Handle rs41;
     RS92_Handle rs92;
+    BEACON_Handle beacon;
     DFM_Handle dfm;
     IMET_Handle imet;
     M10_Handle m10;
@@ -126,7 +128,7 @@ struct SYS_Context {
 
     SONDE_Type sondeType;
     SONDE_Detector sondeDetector;
-    uint32_t currentFrequencyHz;
+    float currentFrequency;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
     float vbat;
@@ -182,6 +184,134 @@ static const GPIO_Config uartRxdWakeupInit[] = {
 #endif
 
 
+static const ADF7021_Config radioModeVaisala[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 4,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 3600, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeGraw[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 1875, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeModem[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 4,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+//TODO fails! use linear demod as workaround        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 7200, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeC34C50[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN4, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = DISABLE, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .postDemodBandwidth = 7500, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeImet[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN4, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = DISABLE, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .postDemodBandwidth = 3500, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeBeacon[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN6, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_9k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = DISABLE, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .postDemodBandwidth = 3000, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+
 
 static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
 {
@@ -202,6 +332,7 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
         case SONDE_M10:
             length = (100+1) * 2;
             break;
+        case SONDE_BEACON:
         case SONDE_C34:
         case SONDE_C50:
         case SONDE_IMET_RSB:
@@ -251,41 +382,45 @@ void MAILBOX_IRQHandler (void)
 static void _SYS_reportRadioFrequency (SYS_Handle handle)
 {
     char s[20];
-    sprintf(s, "1,%.3f", handle->currentFrequencyHz / 1e6f);
+    sprintf(s, "1,%.3f", handle->currentFrequency / 1e6f);
     SYS_send2Host(HOST_CHANNEL_GUI, s);
 }
 
 
 
-static void _SYS_setRadioFrequency (SYS_Handle handle, uint32_t frequencyHz)
+static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
 {
-    if (frequencyHz < 400000000) {
-        frequencyHz = 400000000;
+    if (frequency < 400e6f) {
+        frequency = 400e6f;
     }
-    if (frequencyHz > 406100000) {
-        frequencyHz = 406100000;
+    if (frequency > 406.1e6f) {
+        frequency = 406.1e6f;
     }
 
-    ADF7021_setPLL(radio, frequencyHz - 100000);
+    ADF7021_setPLL(radio, frequency - 100000);
 
-    handle->currentFrequencyHz = frequencyHz;
+    handle->currentFrequency = frequency;
 }
 
 
 
 /* Get current RX frequency */
-uint32_t SYS_getCurrentFrequencyHz (SYS_Handle handle)
+float SYS_getCurrentFrequency (SYS_Handle handle)
 {
-    return handle->currentFrequencyHz;
+    return handle->currentFrequency;
 }
 
 
 
 /* Enable the receiver, select a frequency and a sonde decoder type.
  */
-LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE_Detector detector)
+LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Detector detector)
 {
-    if ((detector != handle->sondeDetector) || (frequencyHz != handle->currentFrequencyHz)) {
+#if (BOARD_RA == 2)
+    float demodClock;
+#endif
+
+    if ((detector != handle->sondeDetector) || (frequency != handle->currentFrequency)) {
         PDM_stop(handle->pdm);
 
         handle->sondeDetector = detector;
@@ -294,104 +429,49 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
 
         switch (detector) {
         case SONDE_DETECTOR_C34_C50:
-            ADF7021_write(radio, ADF7021_REGISTER_0, 0
-                            | (1u << 28)        /* UART/SPI mode */
-                            | (1u << 27)        /* Receive mode */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_1, 0
-                            | (1u << 25)        /* External L */
-                            | (3u << 19)        /* VCO bias = 0.75 mA */
-                            | (1u << 17)        /* VCO on */
-                            | (1u << 12)        /* XOSC on */
-                            | (0u << 7)         /* CLKOUT off */
-                            | (1u << 4)         /* R = 1 */
-                            );
-            osDelay(10);
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)       /* AGC_CLK_DIVIDE = 12 --> AGCUpdateRate = 8,3 kHz (8 kHz) */
-                            | (130u << 18)      /* SEQ_CLK_DIVIDE = 130 --> SEQCLK = 100 kHz (100 kHz) */
-#if (BOARD_RA == 1)
-                            | (1u << 10)        /* CDR_CLK_DIVIDE = 1 --> CDRCLK = 2.1667 MHz (=DEMODCLK) */
-                            | (6u << 6)         /* DEMOD_CLK_DIVIDE = 6 --> DEMODCLK = 2.1667 MHz (2...15 MHz) */
-#endif
-#if (BOARD_RA == 2)
-                            | (1u << 10)        /* CDR_CLK_DIVIDE = 1 --> CDRCLK = 3.2 MHz (=DEMODCLK) */
-                            | (4u << 6)         /* DEMOD_CLK_DIVIDE = 4 --> DEMODCLK = 3.2 MHz (2...15 MHz) */
-#endif
-                            | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
-                            );
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_ioctl(radio, radioModeC34C50);
+
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
-            // K=42
-            ADF7021_write(radio, ADF7021_REGISTER_4, 0
-                            | (2u << 30)        /* IF_FILTER_BW = 18.5 kHz */
-                            | (30u << 20)       /* POST_DEMOD_BW, assuming fcutoff = 10000 Hz */
-                                                //TODO: post demod filter seems to have half that value (5k)
-                            | (226u << 10)      /* DISCRIMINATOR_BW, assuming K = 42, fdev = 2.4 kHz */
-                            | (2u << 8)         /* INVERT DATA */
-                            | (0u << 7)         /* CROSS_PRODUCT */
-                            | (0u << 4)         /* 2FSK linear demodulator */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (0u << 4)         /* AFC off */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_15, 0
-                            | (2u << 17)        /* CLKOUT pin carries CDR CLK */
-                            | (0u << 11)        /* 3rd order sigma-delta, no dither */
-                            | (9u << 4)         /* Enable REG14 modes */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_14, 0
-                            | (4 << 21)         /* Test DAC gain = ? dB */
-#if (BOARD_RA == 1)
-                            | (12098 << 5)      /* Test DAC offset (0...65535) */
-#endif
-#if (BOARD_RA == 2)
-                            | (8192 << 5)       /* Test DAC offset (0...65535) */
-#endif
-                            | (1 << 4)          /* Enable Test DAC */
-                            );
 
 #if (BOARD_RA == 1)
-            PDM_run(handle->pdm, 134, SRSC_handleAudioCallback);
+            PDM_run(handle->pdm, 202, SRSC_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
-            PDM_run(handle->pdm, 200, SRSC_handleAudioCallback);
+            ADF7021_getDemodClock(radio, &demodClock);
+            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), SRSC_handleAudioCallback);
 #endif
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
 
         case SONDE_DETECTOR_IMET:
-            ADF7021_write(radio, ADF7021_REGISTER_0, 0
-                            | (1u << 28)        /* UART/SPI mode */
-                            | (1u << 27)        /* Receive mode */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_1, 0
-                            | (1u << 25)        /* External L */
-                            | (3u << 19)        /* VCO bias = 0.75 mA */
-                            | (1u << 17)        /* VCO on */
-                            | (1u << 12)        /* XOSC on */
-                            | (0u << 7)         /* CLKOUT off */
-                            | (1u << 4)         /* R = 1 */
-                            );
-            osDelay(10);
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)       /* AGC_CLK_DIVIDE = 12 --> AGCUpdateRate = 8,3 kHz (8 kHz) */
-                            | (130u << 18)      /* SEQ_CLK_DIVIDE = 130 --> SEQCLK = 100 kHz (100 kHz) */
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_ioctl(radio, radioModeImet);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
 #if (BOARD_RA == 1)
-                            | (1u << 10)        /* CDR_CLK_DIVIDE = 1 --> CDRCLK = 2.1667 MHz (=DEMODCLK) */
-                            | (6u << 6)         /* DEMOD_CLK_DIVIDE = 6 --> DEMODCLK = 2.1667 MHz (2...15 MHz) */
+            PDM_run(handle->pdm, 202, IMET_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
-                            | (1u << 10)        /* CDR_CLK_DIVIDE = 1 --> CDRCLK = 3.2 MHz (=DEMODCLK) */
-                            | (4u << 6)         /* DEMOD_CLK_DIVIDE = 4 --> DEMODCLK = 3.2 MHz (2...15 MHz) */
+            ADF7021_getDemodClock(radio, &demodClock);
+            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), SRSC_handleAudioCallback);
 #endif
-                            | (1u << 4)         /* BBOS_CLK_DIVIDE = 8 --> BBOSCLK = 1.625 MHz (1...2 MHz) */
-                            );
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
+            break;
+
+        case SONDE_DETECTOR_BEACON:
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_ioctl(radio, radioModeBeacon);
+
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
+#if 0
             // K=42
             ADF7021_write(radio, ADF7021_REGISTER_4, 0
-                            | (2u << 30)        /* IF_FILTER_BW = 18.5 kHz */
+                            | (0u << 30)        /* IF_FILTER_BW = 9.5 kHz */
                             | (30u << 20)       /* POST_DEMOD_BW, assuming fcutoff = 10000 Hz */
                                                 //TODO: post demod filter seems to have half that value (5k)
                             | (226u << 10)      /* DISCRIMINATOR_BW, assuming K = 42, fdev = 2.4 kHz */
@@ -408,7 +488,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
                             | (9u << 4)         /* Enable REG14 modes */
                             );
             ADF7021_write(radio, ADF7021_REGISTER_14, 0
-                            | (4 << 21)         /* Test DAC gain = ? dB */
+                            | (5 << 21)         /* Test DAC gain = ? dB */
 #if (BOARD_RA == 1)
                             | (12098 << 5)      /* Test DAC offset (0...65535) */
 #endif
@@ -417,178 +497,52 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, uint32_t frequencyHz, SONDE
 #endif
                             | (1 << 4)          /* Enable Test DAC */
                             );
+#endif
 
 #if (BOARD_RA == 1)
-            PDM_run(handle->pdm, 134, IMET_handleAudioCallback);
+            PDM_run(handle->pdm, 202, BEACON_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
-            PDM_run(handle->pdm, 200, IMET_handleAudioCallback);
+            ADF7021_getDemodClock(radio, &demodClock);
+            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), BEACON_handleAudioCallback);
 #endif
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
 
         case SONDE_DETECTOR_DFM:
-            ADF7021_write(radio, ADF7021_REGISTER_0,  (1u << 28) | (1u << 27)); /* UART/SPI mode (see also register 15), RX */
-            ADF7021_write(radio, ADF7021_REGISTER_14, (0 << 30) | (0 << 27) | (0 << 25) | (0 << 21) | (0 << 5) | (0 << 4)); /* ED_PEAK_RESPONSE=0, ED_LEAK_FACTOR=0 */
-            ADF7021_write(radio, ADF7021_REGISTER_15, (7u << 17) | (9u << 4)); /* CLKOUT=TxRxCLK, Rx_TEST_MODES=9 */
-            ADF7021_write(radio, ADF7021_REGISTER_1,  (1u << 25) | (3u << 19) | (1u << 17) | (1u << 12) | (1u << 4)); /* External L, VCObias=0.75mA, VCO=on, XOSC=on, CLKOUT=off, R=1 */
-            osDelay(10);
 #if (BOARD_RA == 1)
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)   /* AGC_CLK_DIVIDE=12 --> AGC_rate=8.333 kHz */
-                            | (130u << 18)  /* SEQ_CLK_DIVIDE=130 --> SEQ_CLK=100 kHz */
-                            | (54u << 10)   /* CDR_CLK_DIVIDE=54 --> CDR_CLK=80.2469 kHz (+0.3%) */
-                            | (3u << 6)     /* DEMOD_CLK_DIVIDE=3 --> DEMOD_CLK=4.3333 MHz */
-                            | (1u << 4)     /* BBOSdivide=8 --> BBOS_CLK=1.625 MHz */
-                            );
-            // K=42
-            ADF7021_write(radio, ADF7021_REGISTER_4,  (1u << 30) | (4u << 20) | (342u << 10) | (2u << 8) | (0u << 7) | (1u << 4)); /* IF=13.5kHz, 2FSK correlator */
+            ADF7021_setDemodClockDivider(radio, 3);
 #endif
 #if (BOARD_RA == 2)
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)   /* AGC_CLK_DIVIDE=12 --> AGC_rate=8.333 kHz */
-                            | (128u << 18)  /* SEQ_CLK_DIVIDE=128 --> SEQ_CLK=100 kHz */
-                            | (40u << 10)   /* CDR_CLK_DIVIDE=40 --> CDR_CLK=80.0000 kHz (0%) */
-                            | (4u << 6)     /* DEMOD_CLK_DIVIDE=4 --> DEMOD_CLK=3.2 MHz */
-                            | (1u << 4)     /* BBOSdivide=8 --> BBOS_CLK=1.6 MHz */
-                            );
-            // K=42
-            // TODO Data NOT inverted. Does data polarity depend on DEMOD_CLK_DIVIDE?
-            ADF7021_write(radio, ADF7021_REGISTER_4,  (1u << 30) | (4u << 20) | (342u << 10) | (0u << 8) | (0u << 7) | (1u << 4)); /* IF=13.5kHz, 2FSK correlator */
+            ADF7021_setDemodClockDivider(radio, 4);
 #endif
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            ADF7021_setBitRate(radio, 2500);
+            ADF7021_ioctl(radio, radioModeGraw);
+
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
-            ADF7021_write(radio, ADF7021_REGISTER_10, (20u << 24) | (2u << 21) | (11u << 17) | (645u << 5) | (1u << 4)); /* MAX_AFC_RANGE=20 (+/-5 kHz), KP=2, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
 
             LPC_MAILBOX->IRQ0SET = (1u << 1); //TODO
             break;
 
         case SONDE_DETECTOR_RS41_RS92:
-            ADF7021_write(radio, ADF7021_REGISTER_0, 0
-                            | (1u << 28)
-                            | (1u << 27)
-                            ); /* UART/SPI mode (see also register 15), RX */
-            ADF7021_write(radio, ADF7021_REGISTER_14, 0
-                            | (0 << 30)
-                            | (0 << 27)
-                            | (0 << 25)
-                            | (0 << 21)
-                            | (0 << 5)
-                            | (0 << 4)
-                            ); /* ED_PEAK_RESPONSE=0, ED_LEAK_FACTOR=0 */
-            ADF7021_write(radio, ADF7021_REGISTER_15, 0
-                            | (7u << 17)
-                            | (9u << 4)
-                            ); /* CLKOUT=TxRxCLK, Rx_TEST_MODES=9 */
-            ADF7021_write(radio, ADF7021_REGISTER_1, 0
-                            | (1u << 25)
-                            | (3u << 19)
-                            | (1u << 17)
-                            | (1u << 12)
-                            | (1u << 4)
-                            ); /* External L, VCObias=0.75mA, VCO=on, XOSC=on, CLKOUT=off, R=1 */
-            osDelay(10);
-#if (BOARD_RA == 1)
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)   /* AGC_CLK_DIVIDE=12 --> AGC_rate=8.333 kHz */
-                            | (130u << 18)  /* SEQ_CLK_DIVIDE=130 --> SEQ_CLK=100 kHz */
-                            | (21u << 10)   /* CDR_CLK_DIVIDE=21 --> CDR_CLK=154.7619 kHz (+0.75%) */
-                            | (4u << 6)     /* DEMOD_CLK_DIVIDE=4 --> DEMOD_CLK=3.25 MHz */
-                            | (1u << 4)     /* BBOSdivide=8 --> BBOS_CLK=1.625 MHz */
-                            );
-#endif
-#if (BOARD_RA == 2)
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)   /* AGC_CLK_DIVIDE=12 --> AGC_rate=8.333 kHz */
-                            | (128u << 18)  /* SEQ_CLK_DIVIDE=128 --> SEQ_CLK=100 kHz */
-                            | (21u << 10)   /* CDR_CLK_DIVIDE=21 --> CDR_CLK=152.3810 kHz (-0.8%) */
-                            | (4u << 6)     /* DEMOD_CLK_DIVIDE=4 --> DEMOD_CLK=3.2 MHz */
-                            | (1u << 4)     /* BBOSdivide=8 --> BBOS_CLK=1.6 MHz */
-                            );
-#endif
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setBitRate(radio, 4800);
+            ADF7021_ioctl(radio, radioModeVaisala);
+
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
-            // K=42
-            ADF7021_write(radio, ADF7021_REGISTER_4, 0
-                            | (1u << 30)    //0=9.5k, 1=13.5k, 2=18.5k
-                            | (8u << 20)
-                            | (342u << 10)
-                            | (2u << 8)
-                            | (0u << 7)
-                            | (1u << 4)
-                            ); /* IF=18.5kHz, 2FSK correlator */
-            ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (20u << 24)
-                            | (4u << 21)    // =2?
-                            | (11u << 17)
-                            | (645u << 5)
-                            | (1u << 4)
-                            ); /* MAX_AFC_RANGE=20 (+/-10 kHz), KP=4, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
 
             LPC_MAILBOX->IRQ0SET = (1u << 0); //TODO
             break;
 
         case SONDE_DETECTOR_MODEM:
-            ADF7021_write(radio, ADF7021_REGISTER_0, 0
-                            | (1u << 28)
-                            | (1u << 27)
-                            ); /* UART/SPI mode (see also register 15), RX */
-            ADF7021_write(radio, ADF7021_REGISTER_14, 0
-                            | (0 << 30)
-                            | (0 << 27)
-                            | (0 << 25)
-                            | (0 << 21)
-                            | (0 << 5)
-                            | (0 << 4)
-                            ); /* ED_PEAK_RESPONSE=0, ED_LEAK_FACTOR=0 */
-            ADF7021_write(radio, ADF7021_REGISTER_15, 0
-                            | (7u << 17)
-                            | (9u << 4)
-                            ); /* CLKOUT=TxRxCLK, Rx_TEST_MODES=9 */
-            ADF7021_write(radio, ADF7021_REGISTER_1, 0
-                            | (1u << 25)
-                            | (3u << 19)
-                            | (1u << 17)
-                            | (1u << 12)
-                            | (1u << 4)
-                            ); /* External L, VCObias=0.75mA, VCO=on, XOSC=on, CLKOUT=off, R=1 */
-            osDelay(10);
-#if (BOARD_RA == 1)
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)   /* AGC_CLK_DIVIDE=12 --> AGC_rate=8.333 kHz */
-                            | (130u << 18)  /* SEQ_CLK_DIVIDE=130 --> SEQ_CLK=100 kHz */
-                            | (14u << 10)   /* CDR_CLK_DIVIDE=14 --> CDR_CLK=309.5238 kHz (+0.75%) */
-                            | (3u << 6)     /* DEMOD_CLK_DIVIDE=3 --> DEMOD_CLK=4.3333 MHz */
-                            | (1u << 4)     /* BBOSdivide=8 --> BBOS_CLK=1.625 MHz */
-                            );
-#endif
-#if (BOARD_RA == 2)
-            ADF7021_write(radio, ADF7021_REGISTER_3, 0
-                            | (12u << 26)   /* AGC_CLK_DIVIDE=12 --> AGC_rate=8.333 kHz */
-                            | (128u << 18)  /* SEQ_CLK_DIVIDE=128 --> SEQ_CLK=100 kHz */
-                            | (14u << 10)   /* CDR_CLK_DIVIDE=14 --> CDR_CLK=304.7619 kHz (-0.8%) */
-                            | (3u << 6)     /* DEMOD_CLK_DIVIDE=3 --> DEMOD_CLK=4.2667 MHz */
-                            | (1u << 4)     /* BBOSdivide=8 --> BBOS_CLK=1.6 MHz */
-                            );
-#endif
-            _SYS_setRadioFrequency(handle, frequencyHz);
+            ADF7021_setDemodClockDivider(radio, 3);
+            ADF7021_setBitRate(radio, 9600);
+            ADF7021_ioctl(radio, radioModeModem);
+
+            _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
-            // K=42
-            ADF7021_write(radio, ADF7021_REGISTER_4, 0
-                            | (2u << 30)    //0=9.5k, 1=13.5k, 2=18.5k
-                            | (11u << 20)
-                            | (448u << 10)
-                            | (2u << 8)
-                            | (0u << 7)
-//                            | (1u << 4)
-                            ); /* IF=18.5kHz, 2FSK correlator */  //TODO uses linear demod as workaround
-            ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (20u << 24)
-                            | (4u << 21)    // =2?
-                            | (11u << 17)
-                            | (645u << 5)
-                            | (1u << 4)
-                            ); /* MAX_AFC_RANGE=20 (+/-10 kHz), KP=4, KI=11, AFC_SCALING_FACTOR=645, AFC_EN=1 */
 
             LPC_MAILBOX->IRQ0SET = (1u << 3); //TODO
             break;
@@ -702,7 +656,7 @@ static void SYS_sleep (SYS_Handle handle)
     /* Restore radio mode */
     SONDE_Detector detector = handle->sondeDetector;
     handle->sondeDetector = _SONDE_DETECTOR_UNDEFINED_;
-    SYS_enableDetector(handle, handle->currentFrequencyHz, detector);
+    SYS_enableDetector(handle, handle->currentFrequency, detector);
 }
 
 
@@ -892,10 +846,10 @@ LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
         switch (event.opcode) {
             case APP_EVENT_HEARD_SONDE:
                 {
-                    float frequencyMHz = (uint32_t)event.parameter / 1e6f;
+                    float frequency = (uint32_t)event.parameter;
                     SCANNER_addListenFrequency(
                             scanner,
-                            frequencyMHz,
+                            frequency,
                             (SONDE_Type)event.block);
                 }
                 break;
@@ -1026,6 +980,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     SRSC_resendLastPositions(handle->srsc);
                     IMET_resendLastPositions(handle->imet);
                     M10_resendLastPositions(handle->m10);
+                    BEACON_resendLastPositions(handle->beacon);
                 }
             }
             break;
@@ -1053,7 +1008,8 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 2:     detector = SONDE_DETECTOR_C34_C50; break;
                         case 3:     detector = SONDE_DETECTOR_IMET; break;
                         case 4:     detector = SONDE_DETECTOR_MODEM; break;
-                        case 5:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
+                        case 5:     detector = SONDE_DETECTOR_BEACON; break;
+                        case 6:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                 }
@@ -1071,7 +1027,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 if (sscanf(cl, "#%*d,%d,%d", &list, &action) == 2) {
                     if (list == 0) {        /* Scanner */
                         ; //TODO
-//                            SCANNER_addListenFrequency(scanner, frequencyMHz, SONDE_DECODER_RS41_RS92);  //TODO TODO
+//                            SCANNER_addListenFrequency(scanner, frequency, SONDE_DECODER_RS41_RS92);  //TODO TODO
 //                        SCANNER_setManualMode(scanner, true);
                     }
 
@@ -1096,6 +1052,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                         break;
                                     case SONDE_DECODER_C34_C50:
                                         SRSC_removeFromList(handle->srsc, id);
+                                        break;
+                                    case SONDE_DECODER_BEACON:
+                                        BEACON_removeFromList(handle->beacon, id);
                                         break;
                                     default:
                                         /* ignore */
@@ -1125,7 +1084,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 2:
                             SCANNER_setScannerMode(scanner, enable);
                             if (enable) {
-                                handle->currentFrequencyHz = 0;
+                                handle->currentFrequency = 0;
                                 _SYS_reportRadioFrequency(handle);
                             }
                             break;
@@ -1233,6 +1192,24 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             }
             break;
 
+        case HOST_CHANNEL_DEBUG:
+            {
+                int function;
+                int mode;
+
+                if (sscanf(cl, "#%*d,%d", &function) == 1) {
+                    switch (function) {
+                        case 13:
+                            if (sscanf(cl, "#%*d,%*d,%d", &mode) == 1) {
+                                /* Send USB audio test mode to all decoders */
+                                BEACON_selectDebugAudio(mode);
+                            }
+                            break;
+                    }
+                }
+            }
+            break;
+
         case 99:        /* Keep-alive message */
             /* No action required. Packet reception itself has retriggered the keep-alive timer. */
             break;
@@ -1282,6 +1259,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     RS41_open(&handle->rs41);
     RS92_open(&handle->rs92);
     DFM_open(&handle->dfm);
+    BEACON_open(&handle->beacon);
     SRSC_open(&handle->srsc);
     IMET_open(&handle->imet);
     M10_open(&handle->m10);
@@ -1326,14 +1304,22 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->srsc,
                                     (uint8_t *)pMessage->event.parameter,
                                     7,
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_IMET_RSB) {
                         IMET_processBlock(
                                     handle->imet,
                                     (uint8_t *)pMessage->event.parameter,
                                     0,  /* variable packet length */
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
+                    }
+                    else if ((SONDE_Type)pMessage->event.block == SONDE_BEACON) {
+                        BEACON_processBlock(
+                                    handle->beacon,
+                                    (uint8_t *)pMessage->event.parameter,
+                                    15,
+                                    handle->currentFrequency,
+                                    pMessage->event.channel);
                     }
                     break;
                 }
@@ -1345,7 +1331,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                     int bufferIndex = pMessage->bufferIndex;
 
                     /* Ignore glitches (packets arriving while switching to/from scanner mode) */
-                    if (handle->currentFrequencyHz != 0) {
+                    if (handle->currentFrequency != 0) {
                         SONDE_Type sondeType = SONDE_UNDEFINED;
                         switch (ipc[bufferIndex].param) {
                             case 0: sondeType = SONDE_RS92; break;
@@ -1361,7 +1347,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->m10,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_M10),
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
 
                             /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
@@ -1371,7 +1357,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->rs41,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_RS41),
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
 
                             /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
@@ -1381,33 +1367,33 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->rs92,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_RS92),
-                                    handle->currentFrequencyHz * 1.0f);
+                                    handle->currentFrequency);
 
                             /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
                         }
                         else if (sondeType == SONDE_DFM06) {
-                            // DFM-06 uses inverted data (or inverted FSK modulation)
-                            for (n = 0; n < _SYS_getSondeBufferLength(SONDE_DFM06); n++) {
+                            if (DFM_processBlock(
+                                    handle->dfm,
+                                    sondeType,
+                                    ipc[bufferIndex].data8,
+                                    _SYS_getSondeBufferLength(SONDE_DFM06),
+                                    handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                /* Frame complete. Let scanner prepare for next frequency */
+                                SCANNER_notifyValidFrame(scanner);
+                            }
+                        }
+                        else if (sondeType == SONDE_DFM09) {
+                            // DFM-09 uses inverted data (or inverted FSK modulation)
+                            for (n = 0; n < _SYS_getSondeBufferLength(SONDE_DFM09); n++) {
                                 ipc[bufferIndex].data8[n] ^= 0xFF;
                             }
                             if (DFM_processBlock(
                                     handle->dfm,
                                     sondeType,
                                     ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_DFM06),
-                                    handle->currentFrequencyHz * 1.0f) == LPCLIB_SUCCESS) {
-                                /* Frame complete. Let scanner prepare for next frequency */
-                                SCANNER_notifyValidFrame(scanner);
-                            }
-                        }
-                        else if (sondeType == SONDE_DFM09) {
-                            if (DFM_processBlock(
-                                    handle->dfm,
-                                    sondeType,
-                                    ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_DFM09),
-                                    handle->currentFrequencyHz * 1.0f) == LPCLIB_SUCCESS) {
+                                    handle->currentFrequency) == LPCLIB_SUCCESS) {
                                 /* Frame complete. Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
                             }
