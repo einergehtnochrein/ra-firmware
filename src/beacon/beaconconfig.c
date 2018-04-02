@@ -14,7 +14,7 @@ static BEACON_InstanceData *instanceList;
 
 
 /* Get a new instance data structure for a new sonde */
-static BEACON_InstanceData *_BEACON_getInstanceDataStructure (float frequencyMHz)
+static BEACON_InstanceData *_BEACON_getInstanceDataStructure (char *hexID)
 {
     BEACON_InstanceData *p;
     BEACON_InstanceData *instance;
@@ -25,7 +25,7 @@ static BEACON_InstanceData *_BEACON_getInstanceDataStructure (float frequencyMHz
     int numSondes = 0;
     p = instanceList;
     while (p) {
-        if (p->rxFrequencyMHz == frequencyMHz) {
+        if (!strcmp(p->pdf1.hexID, hexID)) {
             /* Found it! */
             return p;
         }
@@ -62,7 +62,7 @@ static BEACON_InstanceData *_BEACON_getInstanceDataStructure (float frequencyMHz
     if (instance) {
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
-        instance->rxFrequencyMHz = frequencyMHz;
+        strncpy(instance->pdf1.hexID, hexID, sizeof(instance->pdf1.hexID));
 
         /* Insert into list */
         p = instanceList;
@@ -87,28 +87,33 @@ static BEACON_InstanceData *_BEACON_getInstanceDataStructure (float frequencyMHz
 
 /* Process the config/calib block. */
 LPCLIB_Result _BEACON_processConfigFrame (
-        const BEACON_Packet *rawConfig,
-        BEACON_InstanceData **instancePointer,
-        float rxFrequencyHz)
+        BEACON_InstanceData **instancePointer)
 {
-    uint32_t data;
     LPCLIB_Result result = LPCLIB_SUCCESS;
-
+    BEACON_CookedPDF1 pdf1;
 
     /* Valid pointers to take the output values are required */
     if (!instancePointer) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    /* Allocate new calib space if new sonde! */
-    BEACON_InstanceData *instance = _BEACON_getInstanceDataStructure(rxFrequencyHz / 1e6f);
-    *instancePointer = instance;
-
-    if (!instance) {
+    /* Extract info from PDF-1 */
+    memset(&pdf1, 0, sizeof(pdf1));
+    if (_BEACON_processPDF1(&pdf1) != LPCLIB_SUCCESS) {
         return LPCLIB_ERROR;
     }
 
-    if (instance) {
+    /* Allocate new calib space if new sonde! */
+    BEACON_InstanceData *instance = _BEACON_getInstanceDataStructure(pdf1.hexID);
+    *instancePointer = instance;
+
+    if (!instance) {
+        result = LPCLIB_ERROR;
+    }
+    else {
+        /* Copy first data field */
+        instance->pdf1 = pdf1;
+
         /* Set time marker to be able to identify old records */
         instance->lastUpdated = os_time;
     }

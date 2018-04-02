@@ -34,8 +34,14 @@ typedef struct BEACON_Context *BEACON_Handle;
 
 
 LPCLIB_Result BEACON_open (BEACON_Handle *pHandle);
-LPCLIB_Result BEACON_processBlock (BEACON_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz);
+LPCLIB_Result BEACON_processBlock (
+        BEACON_Handle handle,
+        void *buffer,
+        uint32_t length,
+        float rxFrequencyHz,
+        uint8_t selfTestBeacon);
 void BEACON_handleAudioCallback (int32_t *samples, int nSamples);
+LPCLIB_Result BEACON_resendLastPositions (BEACON_Handle handle);
 LPCLIB_Result BEACON_removeFromList (BEACON_Handle handle, uint32_t id);
 void BEACON_selectDebugAudio (int debugAudioChannel);
 
