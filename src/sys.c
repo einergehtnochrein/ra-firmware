@@ -980,6 +980,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     SRSC_resendLastPositions(handle->srsc);
                     IMET_resendLastPositions(handle->imet);
                     M10_resendLastPositions(handle->m10);
+                    BEACON_resendLastPositions(handle->beacon);
                 }
             }
             break;
@@ -1191,6 +1192,24 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             }
             break;
 
+        case HOST_CHANNEL_DEBUG:
+            {
+                int function;
+                int mode;
+
+                if (sscanf(cl, "#%*d,%d", &function) == 1) {
+                    switch (function) {
+                        case 13:
+                            if (sscanf(cl, "#%*d,%*d,%d", &mode) == 1) {
+                                /* Send USB audio test mode to all decoders */
+                                BEACON_selectDebugAudio(mode);
+                            }
+                            break;
+                    }
+                }
+            }
+            break;
+
         case 99:        /* Keep-alive message */
             /* No action required. Packet reception itself has retriggered the keep-alive timer. */
             break;
@@ -1293,6 +1312,14 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     (uint8_t *)pMessage->event.parameter,
                                     0,  /* variable packet length */
                                     handle->currentFrequency);
+                    }
+                    else if ((SONDE_Type)pMessage->event.block == SONDE_BEACON) {
+                        BEACON_processBlock(
+                                    handle->beacon,
+                                    (uint8_t *)pMessage->event.parameter,
+                                    15,
+                                    handle->currentFrequency,
+                                    pMessage->event.channel);
                     }
                     break;
                 }
