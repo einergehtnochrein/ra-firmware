@@ -129,6 +129,7 @@ struct SYS_Context {
     SONDE_Type sondeType;
     SONDE_Detector sondeDetector;
     float currentFrequency;
+    float currentRssi;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
     float vbat;
@@ -349,10 +350,10 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
 
 
 //TODO need a mailbox driver
-//TODO do all the sonde type modifications on process level!
 void MAILBOX_IRQHandler (void)
 {
     SYS_Message *pMessage;
+    SYS_Handle handle = &sysContext;
     uint32_t requests = LPC_MAILBOX->IRQ1;
 
     if (requests & 1) {
@@ -370,6 +371,11 @@ void MAILBOX_IRQHandler (void)
             }
         }
         LPC_MAILBOX->IRQ1CLR = (1u << 0);
+    }
+    else if (requests & 2) {
+        /* Sample RSSI value for the current RX packet */
+        handle->lastInPacketRssi = handle->currentRssi;
+        LPC_MAILBOX->IRQ1CLR = (1u << 1);
     }
     else {
         /* No supported request. Clear them all */
@@ -1418,12 +1424,10 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                     /* Send RSSI only when not in scanner mode */
                     if (!SCANNER_getScannerMode(scanner)) {
                         if (++rate >= 2) {
-                            float rssi = _SYS_getFilteredRssi(handle);
+                            handle->currentRssi = _SYS_getFilteredRssi(handle);
                             char s[30];
-                            sprintf(s, "3,%.1f", rssi);
+                            sprintf(s, "3,%.1f", handle->currentRssi);
                             SYS_send2Host(HOST_CHANNEL_GUI, s);
-//TODO need to store this near the end of the frame
-handle->lastInPacketRssi = rssi;
 
                             rate = 0;
                         }
