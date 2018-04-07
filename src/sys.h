@@ -37,8 +37,6 @@ float SYS_getCurrentFrequency (SYS_Handle handle);
 /* Read a new RSSI value in dBm. */
 LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi);
 
-void SYS_setAttenuator (SYS_Handle handle, bool enable);
-
 /* Return last RSSI measurement in an RX frame */
 float SYS_getFrameRssi (SYS_Handle handle);
 

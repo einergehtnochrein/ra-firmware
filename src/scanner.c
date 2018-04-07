@@ -83,7 +83,6 @@ struct SCANNER_Context {
 
     float manualFrequency;                              /* Frequency for manual operation */
     SONDE_Detector manualSondeDetector;
-    bool manualAttenuator;
     bool scanner;
     bool scannerNeedInit;
 
@@ -269,27 +268,6 @@ bool SCANNER_getManualMode (SCANNER_Handle handle)
     }
 
     return handle->mode == SCANNER_MODE_MANUAL;
-}
-
-
-void SCANNER_setManualAttenuator (SCANNER_Handle handle, bool enable)
-{
-    if (handle == LPCLIB_INVALID_HANDLE) {
-        return;
-    }
-
-    handle->manualAttenuator = enable;
-    SYS_setAttenuator(sys, handle->manualAttenuator);
-}
-
-
-bool SCANNER_getManualAttenuator (SCANNER_Handle handle)
-{
-    if (handle == LPCLIB_INVALID_HANDLE) {
-        return false;
-    }
-
-    return handle->manualAttenuator;
 }
 
 

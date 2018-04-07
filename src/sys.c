@@ -133,6 +133,7 @@ struct SYS_Context {
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
     float vbat;
+    bool attenuatorActive;
 
     char commandLine[COMMAND_LINE_SIZE];
 
@@ -311,6 +312,10 @@ static const ADF7021_Config radioModeBeacon[] = {
 
     ADF7021_CONFIG_END
 };
+
+
+/* Local function prototypes */
+static void SYS_setAttenuator (SYS_Handle handle, bool enable);
 
 
 
@@ -649,11 +654,11 @@ LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi)
     float level = rawRssiTenthDb / 10.0f;
 
     /* Correct for LNA gain */
-    if (GPIO_readBit(GPIO_LNA_GAIN) == 1) {
-        level += config_g->rssiCorrectionLnaOn;
+    if (handle->attenuatorActive) {
+        level += config_g->rssiCorrectionLnaOff;
     }
     else {
-        level += config_g->rssiCorrectionLnaOff;
+        level += config_g->rssiCorrectionLnaOn;
     }
 
     *rssi = level;
@@ -698,11 +703,11 @@ static float _SYS_getFilteredRssi (SYS_Handle handle)
 
     /* Correct for LNA gain */
     adjustedLevel = level;
-    if (GPIO_readBit(GPIO_LNA_GAIN) == 1) {
-        adjustedLevel += config_g->rssiCorrectionLnaOn;
+    if (handle->attenuatorActive) {
+        adjustedLevel += config_g->rssiCorrectionLnaOff;
     }
     else {
-        adjustedLevel += config_g->rssiCorrectionLnaOff;
+        adjustedLevel += config_g->rssiCorrectionLnaOn;
     }
 
     return adjustedLevel;
@@ -778,9 +783,9 @@ static float _SYS_measureVbat (SYS_Handle handle)
 
 
 /* Control the attenuator (LNA) */
-void SYS_setAttenuator (SYS_Handle handle, bool enable)
+static void SYS_setAttenuator (SYS_Handle handle, bool enable)
 {
-    (void)handle;
+    handle->attenuatorActive = enable;
 
     GPIO_writeBit(GPIO_LNA_GAIN, enable ? 0 : 1);
 }
@@ -946,7 +951,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
                     snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
                     SYS_send2Host(HOST_CHANNEL_GUI, s);
-                    SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualAttenuator(scanner) ? "6,1" : "6,0");
+                    SYS_send2Host(HOST_CHANNEL_GUI, handle->attenuatorActive ? "6,1" : "6,0");
                     SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getScannerMode(scanner) ? "7,1" : "7,0");
 
                     //TODO send only if ping parameter asks for it
@@ -1054,7 +1059,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     enable = (enableValue != 0);
                     switch (command) {
                         case 1:
-                            SCANNER_setManualAttenuator(scanner, enable);
+                            SYS_setAttenuator(handle, enable);
                             break;
 
                         case 2:
