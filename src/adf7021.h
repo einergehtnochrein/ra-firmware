@@ -85,6 +85,14 @@ typedef enum ADF7021_Bandwidth {
 } ADF7021_Bandwidth;
 
 
+/** AGC Mode */
+typedef enum ADF7021_AGCMode {
+    ADF7021_AGCMODE_AUTO = 0,
+    ADF7021_AGCMODE_MANUAL = 1,
+    ADF7021_AGCMODE_FREEZE = 2,
+} ADF7021_AGCMode;
+
+
 /** Opcodes to specify the configuration command in a call to \ref ADF7021_ioctl. */
 typedef enum ADF7021_Opcode {
     ADF7021_OPCODE_INVALID = 0,             /**< List terminator */
@@ -95,6 +103,7 @@ typedef enum ADF7021_Opcode {
     ADF7021_OPCODE_SET_AFC,
     ADF7021_OPCODE_SET_DEMODULATOR,
     ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+    ADF7021_OPCODE_SET_AGC,                 /** Set AGC mode and parameters */
     ADF7021_OPCODE_CONFIGURE,               /** Apply all configuration settings */
 } ADF7021_Opcode;
 
@@ -110,6 +119,12 @@ struct ADF7021_ConfigDemodulatorParams {
     uint16_t postDemodBandwidth;
 };
 
+struct ADF7021_ConfigAGC {
+    ADF7021_AGCMode mode;
+    uint8_t lnaGain;
+    uint8_t filterGain;
+};
+
 /** Descriptor to specify the configuration in a call to \ref ADF7021_ioctl. */
 typedef struct ADF7021_Config {
     ADF7021_Opcode opcode;                  /**< Config action opcode */
@@ -120,6 +135,7 @@ typedef struct ADF7021_Config {
         struct ADF7021_ConfigAFC afc;
         ADF7021_DemodulatorType demodType;
         struct ADF7021_ConfigDemodulatorParams demodParams;
+        struct ADF7021_ConfigAGC agc;
     };
 } ADF7021_Config;
 
@@ -194,7 +210,7 @@ LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency);
  *  \param[in] handle Device handle.
  *  \param[in] rssi Pointer to RSSI result. Format: absolute dBm (1/10 dB resolution)
  */
-LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi);
+LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, float *rssi_dBm);
 
 
 /** Read frequency offset

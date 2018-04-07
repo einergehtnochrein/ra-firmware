@@ -17,8 +17,6 @@
 #define SAMPLES_PER_BIT_4       (SAMPLES_PER_BIT / 4)
 #define CORR_HISTORY_LENGTH     (2 * (SAMPLES_PER_BIT - 1))
 
-#define MA_FILTER_LENGTH        (SAMPLES_PER_BIT * 1)
-
 #define THRESHOLD_LOW           (-0.01875f)
 #define THRESHOLD_HIGH          (0.01875f)
 
@@ -41,27 +39,22 @@ static struct _BEACON_Audio {
     int filterIndex;
     float dcTap;
 
-float maFilter[MA_FILTER_LENGTH];
-int maFilterIndex;
-
     float corrBuffer[CORR_HISTORY_LENGTH + 256];
 
     float filterOut[256];
-float testOut[256];
-float syncDetect[256];
+    float testOut[256];
 
     /* Clock recovery */
     int bitClockPhase;
-int bitClockDelta;
-int lastInput;
-float samplePoints[256];
+    int bitClockDelta;
+    int lastInput;
+    float samplePoints[256];
 
     uint32_t rxSync;
     uint32_t rxData[4];
     uint32_t rxCount;
     bool rxActive;
     uint8_t emergency;
-float dci[2];
 
     int debugAudioChannel;
 
@@ -69,13 +62,6 @@ float dci[2];
     uint8_t frames[BEACON_NUM_FRAMES][15];
 } _beaconAudioContext;
 
-
-static const float _2pi = 2.0 * M_PI;
-
-
-
-
-uint32_t timeDSP[8];
 
 
 /* Process a batch of 16-kHz audio samples */
@@ -110,7 +96,6 @@ void BEACON_DSP_processAudio (const int32_t *rawAudio, float *cookedAudio, int n
         handle->corrBuffer[CORR_HISTORY_LENGTH + n] = sx;
         cookedAudio[n] = sx;
 
-#if 1
         /* Edge detect */
         bool haveEdge = false;
         if ((handle->lastInput == 0) && (sx > THRESHOLD_HIGH)) {
@@ -208,65 +193,14 @@ void BEACON_DSP_processAudio (const int32_t *rawAudio, float *cookedAudio, int n
                     handle->rxCount = 0;
                     handle->emergency = 1;
                 }
+
+                if (handle->rxActive) {
+                    /* Sample RSSI value */
+                    LPC_MAILBOX->IRQ1SET = (1u << 1);
+                }
             }
         }
-
-//handle->samplePoints[n] = (float)(handle->rxData & 1) - 0.5f;
-
-//        cookedAudio[n] = handle->samplePoints[n] ? 0.5f : -0.5f;
-#endif
     }
-#if 0
-    /* Correlator */
-    for (n = SAMPLES_PER_BIT - 1; n < SAMPLES_PER_BIT - 1 + 256; n++) {
-        /* Calculate mean of pre and post bit time */
-        float meanPre = 0;
-        for (i = n - (SAMPLES_PER_BIT - 1); i <= n; i++) {
-            meanPre += handle->corrBuffer[i];
-        }
-        meanPre /= SAMPLES_PER_BIT;
-        float meanPost = 0;
-        for (i = n; i <= n + (SAMPLES_PER_BIT - 1); i++) {
-            meanPost += handle->corrBuffer[i];
-        }
-        meanPost /= SAMPLES_PER_BIT;
-
-        sx = 0;
-        for (i = 0; i < SAMPLES_PER_BIT; i++) {
-            sx += (handle->corrBuffer[n - (SAMPLES_PER_BIT - 1) + i] - meanPre)
-                * (handle->corrBuffer[n + i] - meanPost);
-        }
-
-//        cookedAudio[n - (SAMPLES_PER_BIT - 1)] = sx;
-//handle->testOut[n - (SAMPLES_PER_BIT - 1)] = sx;
-handle->testOut[n - (SAMPLES_PER_BIT - 1)] = (sx < 0) ? -0.05f : 0.05f;
-
-#if 0
-        /* Sample data */
-handle->syncDetect[n - (SAMPLES_PER_BIT - 1)] = -0.5f;
-        if (handle->samplePoints[n - (SAMPLES_PER_BIT - 1)]) {
-            int lastNRZ = handle->rxData & 1;
-            int thisNRZ = (sx < 0) ? (lastNRZ ^ 1) : lastNRZ;
-            handle->rxData = (handle->rxData << 1) | thisNRZ;
-            ++handle->rxCount;
-if(handle->rxCount>=9){
-  if((handle->rxData&0x1FF)==0x02F){
-    handle->syncDetect[n - (SAMPLES_PER_BIT - 1)] = 0.5f;
-  }
-  if((handle->rxData&0x1FF)==0x0D0){
-    handle->syncDetect[n - (SAMPLES_PER_BIT - 1)] = 0.5f;
-  }
-}
-        }
-
-#endif
-    }
-
-    /* Samples that can't be processed now go to history buffer */
-    memcpy(handle->corrBuffer,
-           &handle->corrBuffer[256],
-           CORR_HISTORY_LENGTH * sizeof(float));
-#endif
 }
 
 

@@ -239,6 +239,9 @@ static void SRSC_DSP_c34 (void)
             case 1:
                 if (c == 0xFF) {
                     handle->c34.state = 2;
+
+                    /* Sample RSSI value */
+                    LPC_MAILBOX->IRQ1SET = (1u << 1);
                 }
                 else {
                     handle->c34.state = 0;

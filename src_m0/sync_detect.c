@@ -69,6 +69,9 @@ void PIN_INT3_IRQHandler (void)
                     if (nDifferences <= handle->config->conf[i].nMaxDifference) {
                         /* SYNC! Start frame reception */
 
+                        /* Tell M4 to keep current RSSI value */
+                        LPC_MAILBOX->IRQ1SET = (1u << 1);
+
                         /* Find available buffer */
                         for (j = 0; j < IPC_S2M_NUM_BUFFERS; j++) {
                             if (!ipc_s2m[j].valid) {
