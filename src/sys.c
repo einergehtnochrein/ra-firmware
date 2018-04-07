@@ -647,21 +647,20 @@ LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi)
 {
     (void)handle;
 
-    int32_t rawRssiTenthDb;
+    float dBm;
 
-    /* Get a new RSSI value from radio (value comes as integer in tenth of a dB */
-    ADF7021_readRSSI(radio, &rawRssiTenthDb);
-    float level = rawRssiTenthDb / 10.0f;
+    /* Get a new RSSI value from radio */
+    ADF7021_readRSSI(radio, &dBm);
 
     /* Correct for LNA gain */
     if (handle->attenuatorActive) {
-        level += config_g->rssiCorrectionLnaOff;
+        dBm += config_g->rssiCorrectionLnaOff;
     }
     else {
-        level += config_g->rssiCorrectionLnaOn;
+        dBm += config_g->rssiCorrectionLnaOn;
     }
 
-    *rssi = level;
+    *rssi = dBm;
 
     return LPCLIB_SUCCESS;
 }
@@ -682,13 +681,12 @@ static float _SYS_getFilteredRssi (SYS_Handle handle)
 #define RSSI_INERTIAL_LO 0.1f           /* Inertial for low levels */
 #define RSSI_INERTIAL_LO_BELOW -115.0f   /* Threshold for lo inertial */
 
-    int32_t rawRssiTenthDb;
     static float level;
     float adjustedLevel;
+    float newLevel;
 
     /* Get a new RSSI value from radio (value comes as integer in tenth of a dB */
-    ADF7021_readRSSI(radio, &rawRssiTenthDb);
-    float newLevel = rawRssiTenthDb / 10.0f;
+    ADF7021_readRSSI(radio, &newLevel);
 
     /* Apply inertial damping to raw level (before attenuator correction) */
     float inertial = RSSI_INERTIAL_LO;

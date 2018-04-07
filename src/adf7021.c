@@ -468,7 +468,7 @@ static const int _ADF7021_rssiGainCorrection[16] = {
 
 
 /* Read RSSI information */
-LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
+LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, float *rssi_dBm)
 {
     uint32_t rawdata = 0;
 
@@ -476,7 +476,7 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    if (rssi == NULL) {
+    if (rssi_dBm == NULL) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
@@ -484,9 +484,9 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
     while (GPIO_readBit(handle->muxoutPin) == 0)
         ;
 
-    *rssi = -1740;
+    *rssi_dBm = -174.0f;
     if (_ADF7021_read(handle, ADF7021_READBACK_RSSI, &rawdata) == LPCLIB_SUCCESS) {
-        *rssi = -1300 + (((int)rawdata & 0x7F) + _ADF7021_rssiGainCorrection[(rawdata >> 7) & 0x0F]) * 5;
+        *rssi_dBm = -130.0f + (((int)rawdata & 0x7F) + _ADF7021_rssiGainCorrection[(rawdata >> 7) & 0x0F]) * 0.5f;
 
         return LPCLIB_SUCCESS;
     }

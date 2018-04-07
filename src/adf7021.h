@@ -194,7 +194,7 @@ LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency);
  *  \param[in] handle Device handle.
  *  \param[in] rssi Pointer to RSSI result. Format: absolute dBm (1/10 dB resolution)
  */
-LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi);
+LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, float *rssi_dBm);
 
 
 /** Read frequency offset
