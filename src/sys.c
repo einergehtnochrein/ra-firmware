@@ -474,36 +474,6 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 
             _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
-#if 0
-            // K=42
-            ADF7021_write(radio, ADF7021_REGISTER_4, 0
-                            | (0u << 30)        /* IF_FILTER_BW = 9.5 kHz */
-                            | (30u << 20)       /* POST_DEMOD_BW, assuming fcutoff = 10000 Hz */
-                                                //TODO: post demod filter seems to have half that value (5k)
-                            | (226u << 10)      /* DISCRIMINATOR_BW, assuming K = 42, fdev = 2.4 kHz */
-                            | (2u << 8)         /* INVERT DATA */
-                            | (0u << 7)         /* CROSS_PRODUCT */
-                            | (0u << 4)         /* 2FSK linear demodulator */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (0u << 4)         /* AFC off */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_15, 0
-                            | (2u << 17)        /* CLKOUT pin carries CDR CLK */
-                            | (0u << 11)        /* 3rd order sigma-delta, no dither */
-                            | (9u << 4)         /* Enable REG14 modes */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_14, 0
-                            | (5 << 21)         /* Test DAC gain = ? dB */
-#if (BOARD_RA == 1)
-                            | (12098 << 5)      /* Test DAC offset (0...65535) */
-#endif
-#if (BOARD_RA == 2)
-                            | (8192 << 5)       /* Test DAC offset (0...65535) */
-#endif
-                            | (1 << 4)          /* Enable Test DAC */
-                            );
-#endif
 
 #if (BOARD_RA == 1)
             PDM_run(handle->pdm, 202, BEACON_handleAudioCallback);
