@@ -200,7 +200,15 @@ static void IMET_DSP_uart (void)
 
             case 1:                             /* Waiting for start bit verification */
                 if (handle->uart.charSampleCount > 6) {
-                    handle->uart.charState = (sample == 0) ? 2 : 0;
+                    if (sample == 0) {
+                        handle->uart.charState = 2;
+
+                        /* Sample RSSI value */
+                        LPC_MAILBOX->IRQ1SET = (1u << 1);
+                    }
+                    else {
+                        handle->uart.charState = 0;
+                    }
                 }
                 break;
 

@@ -51,6 +51,9 @@ typedef struct ADF7021_Context {
     float frequency;
     int bitRate;
     uint32_t ifBandwidthSelect;
+
+    uint8_t currentFG;                  /* Last known state of filter gain (Reg9 FG1,FG2) */
+    uint8_t currentLG;                  /* Last known state of LNA gain (Reg9 LG1,LG2) */
 } ADF7021_Context;
 
 
@@ -379,6 +382,21 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
             handle->demodParams = pConfig->demodParams;
             break;
 
+        case ADF7021_OPCODE_SET_AGC:
+            regval = 0
+                | (30u << 4)
+                | (70u << 11)
+                | (pConfig->agc.mode << 18)
+                | (pConfig->agc.lnaGain << 20)
+                | (pConfig->agc.filterGain << 22)
+                | (0 << 24)
+                | (0 << 25)
+                | (0 << 26)
+                | (0 << 28)
+                ;
+            ADF7021_write(handle, ADF7021_REGISTER_9, regval);
+            break;
+
         case ADF7021_OPCODE_CONFIGURE:
             _ADF7021_configureAll(handle);
             break;
@@ -459,6 +477,7 @@ LPCLIB_Result ADF7021_getDemodClock (ADF7021_Handle handle, float *demodClock)
 }
 
 
+
 static const int _ADF7021_rssiGainCorrection[16] = {
     86,86,86,86,
     58,38,24,24,
@@ -468,7 +487,7 @@ static const int _ADF7021_rssiGainCorrection[16] = {
 
 
 /* Read RSSI information */
-LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
+LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, float *rssi_dBm)
 {
     uint32_t rawdata = 0;
 
@@ -476,7 +495,7 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    if (rssi == NULL) {
+    if (rssi_dBm == NULL) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
@@ -484,9 +503,13 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, int32_t *rssi)
     while (GPIO_readBit(handle->muxoutPin) == 0)
         ;
 
-    *rssi = -1740;
+    *rssi_dBm = -174.0f;
     if (_ADF7021_read(handle, ADF7021_READBACK_RSSI, &rawdata) == LPCLIB_SUCCESS) {
-        *rssi = -1300 + (((int)rawdata & 0x7F) + _ADF7021_rssiGainCorrection[(rawdata >> 7) & 0x0F]) * 5;
+        *rssi_dBm = -130.0f + (((int)rawdata & 0x7F) + _ADF7021_rssiGainCorrection[(rawdata >> 7) & 0x0F]) * 0.5f;
+
+        /* Remember filter gain and LNA gain */
+        handle->currentFG = (rawdata >> 7) & 0x03;
+        handle->currentLG = (rawdata >> 9) & 0x03;
 
         return LPCLIB_SUCCESS;
     }

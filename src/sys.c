@@ -129,9 +129,11 @@ struct SYS_Context {
     SONDE_Type sondeType;
     SONDE_Detector sondeDetector;
     float currentFrequency;
+    float currentRssi;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
     float vbat;
+    bool attenuatorActive;
 
     char commandLine[COMMAND_LINE_SIZE];
 
@@ -313,6 +315,7 @@ static const ADF7021_Config radioModeBeacon[] = {
 
 
 
+
 static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
 {
     uint32_t length = 2;
@@ -349,10 +352,10 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
 
 
 //TODO need a mailbox driver
-//TODO do all the sonde type modifications on process level!
 void MAILBOX_IRQHandler (void)
 {
     SYS_Message *pMessage;
+    SYS_Handle handle = &sysContext;
     uint32_t requests = LPC_MAILBOX->IRQ1;
 
     if (requests & 1) {
@@ -370,6 +373,11 @@ void MAILBOX_IRQHandler (void)
             }
         }
         LPC_MAILBOX->IRQ1CLR = (1u << 0);
+    }
+    else if (requests & 2) {
+        /* Sample RSSI value for the current RX packet */
+        handle->lastInPacketRssi = handle->currentRssi;
+        LPC_MAILBOX->IRQ1CLR = (1u << 1);
     }
     else {
         /* No supported request. Clear them all */
@@ -468,36 +476,6 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 
             _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
-#if 0
-            // K=42
-            ADF7021_write(radio, ADF7021_REGISTER_4, 0
-                            | (0u << 30)        /* IF_FILTER_BW = 9.5 kHz */
-                            | (30u << 20)       /* POST_DEMOD_BW, assuming fcutoff = 10000 Hz */
-                                                //TODO: post demod filter seems to have half that value (5k)
-                            | (226u << 10)      /* DISCRIMINATOR_BW, assuming K = 42, fdev = 2.4 kHz */
-                            | (2u << 8)         /* INVERT DATA */
-                            | (0u << 7)         /* CROSS_PRODUCT */
-                            | (0u << 4)         /* 2FSK linear demodulator */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_10, 0
-                            | (0u << 4)         /* AFC off */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_15, 0
-                            | (2u << 17)        /* CLKOUT pin carries CDR CLK */
-                            | (0u << 11)        /* 3rd order sigma-delta, no dither */
-                            | (9u << 4)         /* Enable REG14 modes */
-                            );
-            ADF7021_write(radio, ADF7021_REGISTER_14, 0
-                            | (5 << 21)         /* Test DAC gain = ? dB */
-#if (BOARD_RA == 1)
-                            | (12098 << 5)      /* Test DAC offset (0...65535) */
-#endif
-#if (BOARD_RA == 2)
-                            | (8192 << 5)       /* Test DAC offset (0...65535) */
-#endif
-                            | (1 << 4)          /* Enable Test DAC */
-                            );
-#endif
 
 #if (BOARD_RA == 1)
             PDM_run(handle->pdm, 202, BEACON_handleAudioCallback);
@@ -666,21 +644,20 @@ LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi)
 {
     (void)handle;
 
-    int32_t rawRssiTenthDb;
+    float dBm;
 
-    /* Get a new RSSI value from radio (value comes as integer in tenth of a dB */
-    ADF7021_readRSSI(radio, &rawRssiTenthDb);
-    float level = rawRssiTenthDb / 10.0f;
+    /* Get a new RSSI value from radio */
+    ADF7021_readRSSI(radio, &dBm);
 
     /* Correct for LNA gain */
-    if (GPIO_readBit(GPIO_LNA_GAIN) == 1) {
-        level += config_g->rssiCorrectionLnaOn;
+    if (handle->attenuatorActive) {
+        dBm += config_g->rssiCorrectionLnaOff;
     }
     else {
-        level += config_g->rssiCorrectionLnaOff;
+        dBm += config_g->rssiCorrectionLnaOn;
     }
 
-    *rssi = level;
+    *rssi = dBm;
 
     return LPCLIB_SUCCESS;
 }
@@ -701,13 +678,12 @@ static float _SYS_getFilteredRssi (SYS_Handle handle)
 #define RSSI_INERTIAL_LO 0.1f           /* Inertial for low levels */
 #define RSSI_INERTIAL_LO_BELOW -115.0f   /* Threshold for lo inertial */
 
-    int32_t rawRssiTenthDb;
     static float level;
     float adjustedLevel;
+    float newLevel;
 
     /* Get a new RSSI value from radio (value comes as integer in tenth of a dB */
-    ADF7021_readRSSI(radio, &rawRssiTenthDb);
-    float newLevel = rawRssiTenthDb / 10.0f;
+    ADF7021_readRSSI(radio, &newLevel);
 
     /* Apply inertial damping to raw level (before attenuator correction) */
     float inertial = RSSI_INERTIAL_LO;
@@ -722,11 +698,11 @@ static float _SYS_getFilteredRssi (SYS_Handle handle)
 
     /* Correct for LNA gain */
     adjustedLevel = level;
-    if (GPIO_readBit(GPIO_LNA_GAIN) == 1) {
-        adjustedLevel += config_g->rssiCorrectionLnaOn;
+    if (handle->attenuatorActive) {
+        adjustedLevel += config_g->rssiCorrectionLnaOff;
     }
     else {
-        adjustedLevel += config_g->rssiCorrectionLnaOff;
+        adjustedLevel += config_g->rssiCorrectionLnaOn;
     }
 
     return adjustedLevel;
@@ -801,12 +777,80 @@ static float _SYS_measureVbat (SYS_Handle handle)
 }
 
 
-/* Control the attenuator (LNA) */
-void SYS_setAttenuator (SYS_Handle handle, bool enable)
-{
-    (void)handle;
+static const ADF7021_Config _SYS_radioConfigBeforeAttenuatorOn[] = {
+    {.opcode = ADF7021_OPCODE_SET_AGC,
+        {.agc = {
+            .mode = ADF7021_AGCMODE_MANUAL,
+            .lnaGain = 1,
+            .filterGain = 1, }}},
 
-    GPIO_writeBit(GPIO_LNA_GAIN, enable ? 0 : 1);
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config _SYS_radioConfigAfterAttenuatorOn[] = {
+    {.opcode = ADF7021_OPCODE_SET_AGC,
+        {.agc = {
+            .mode = ADF7021_AGCMODE_AUTO,
+            .lnaGain = 1,
+            .filterGain = 1, }}},
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config _SYS_radioConfigBeforeAttenuatorOff[] = {
+    {.opcode = ADF7021_OPCODE_SET_AGC,
+        {.agc = {
+            .mode = ADF7021_AGCMODE_MANUAL,
+            .lnaGain = 0,
+            .filterGain = 0, }}},
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config _SYS_radioConfigAfterAttenuatorOff[] = {
+    {.opcode = ADF7021_OPCODE_SET_AGC,
+        {.agc = {
+            .mode = ADF7021_AGCMODE_AUTO,
+            .lnaGain = 0,
+            .filterGain = 0, }}},
+
+    ADF7021_CONFIG_END
+};
+
+
+/* Control the attenuator (LNA) */
+static void SYS_controlAutoAttenuator (SYS_Handle handle, float dBm)
+{
+    if (handle->attenuatorActive) {
+        /* Disable attenuator if level falls below -80 dBm */
+        if (dBm <= -80.0f) {
+            handle->attenuatorActive = false;
+
+            /* Set AGC state (filter/LNA gain stages) in ADF7021 manually to the values
+             * expected after switching the attenuator.
+             * Then reenable automatic mode afterwards, so the AGC will ideally not have
+             * to perform any control step.
+             */
+            ADF7021_ioctl(radio, _SYS_radioConfigBeforeAttenuatorOff);
+            GPIO_writeBit(GPIO_LNA_GAIN, 1);
+            ADF7021_ioctl(radio, _SYS_radioConfigAfterAttenuatorOff);
+        }
+    }
+    else {
+        /* Enable attenuator if level reaches -70 dBm */
+        if (dBm >= -70.0f) {
+            handle->attenuatorActive = true;
+
+            /* Set AGC state (filter/LNA gain stages) in ADF7021 manually to the values
+             * expected after switching the attenuator.
+             * Then reenable automatic mode afterwards, so the AGC will ideally not have
+             * to perform any control step.
+             */
+            ADF7021_ioctl(radio, _SYS_radioConfigBeforeAttenuatorOn);
+            GPIO_writeBit(GPIO_LNA_GAIN, 0);
+            ADF7021_ioctl(radio, _SYS_radioConfigAfterAttenuatorOn);
+        }
+    }
 }
 
 
@@ -970,7 +1014,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
                     snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
                     SYS_send2Host(HOST_CHANNEL_GUI, s);
-                    SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualAttenuator(scanner) ? "6,1" : "6,0");
+                    SYS_send2Host(HOST_CHANNEL_GUI, handle->attenuatorActive ? "6,1" : "6,0");
                     SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getScannerMode(scanner) ? "7,1" : "7,0");
 
                     //TODO send only if ping parameter asks for it
@@ -1077,10 +1121,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
                     enable = (enableValue != 0);
                     switch (command) {
-                        case 1:
-                            SCANNER_setManualAttenuator(scanner, enable);
-                            break;
-
                         case 2:
                             SCANNER_setScannerMode(scanner, enable);
                             if (enable) {
@@ -1418,14 +1458,13 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                     /* Send RSSI only when not in scanner mode */
                     if (!SCANNER_getScannerMode(scanner)) {
                         if (++rate >= 2) {
-                            float rssi = _SYS_getFilteredRssi(handle);
+                            handle->currentRssi = _SYS_getFilteredRssi(handle);
                             char s[30];
-                            sprintf(s, "3,%.1f", rssi);
+                            sprintf(s, "3,%.1f", handle->currentRssi);
                             SYS_send2Host(HOST_CHANNEL_GUI, s);
-//TODO need to store this near the end of the frame
-handle->lastInPacketRssi = rssi;
 
                             rate = 0;
+SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         }
                     }
                     else {
