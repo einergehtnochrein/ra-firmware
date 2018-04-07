@@ -824,8 +824,6 @@ static void SYS_controlAutoAttenuator (SYS_Handle handle, float dBm)
     if (GPIO_readBit(GPIO_LNA_GAIN) == 0) {
         /* Disable attenuator if level falls below -80 dBm */
         if (dBm <= -80.0f) {
-            handle->attenuatorActive = false;
-
             /* Set AGC state (filter/LNA gain stages) in ADF7021 manually to the values
              * expected after switching the attenuator.
              * Then reenable automatic mode afterwards, so the AGC will ideally not have
@@ -839,8 +837,6 @@ static void SYS_controlAutoAttenuator (SYS_Handle handle, float dBm)
     else {
         /* Enable attenuator if level reaches -70 dBm */
         if (dBm >= -70.0f) {
-            handle->attenuatorActive = true;
-
             /* Set AGC state (filter/LNA gain stages) in ADF7021 manually to the values
              * expected after switching the attenuator.
              * Then reenable automatic mode afterwards, so the AGC will ideally not have
@@ -851,7 +847,11 @@ static void SYS_controlAutoAttenuator (SYS_Handle handle, float dBm)
             ADF7021_ioctl(radio, _SYS_radioConfigAfterAttenuatorOn);
         }
     }
+
+    /* Remember what state the attenuator is in */
+    handle->attenuatorActive = (GPIO_readBit(GPIO_LNA_GAIN) == 0);
 }
+
 
 
 /* Return last RSSI measurement in an RX frame */
