@@ -221,7 +221,6 @@ void BSP_wakeup (void)
     GPIO_writeBit(GPIO_ENABLE_VDDA, 1);     /* VDDA on */
     GPIO_writeBit(GPIO_ADF7021_SLE, 1);
     GPIO_writeBit(GPIO_ADF7021_CE, 1);      /* Radio chip on */
-    GPIO_writeBit(GPIO_LNA_GAIN, 1);        /* LNA on */
 }
 
 
