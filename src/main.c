@@ -43,14 +43,12 @@ int main (void)
     GPIO_writeBit(GPIO_ENABLE_VDDA, 1);
     GPIO_writeBit(GPIO_ADF7021_CE, 1);
     GPIO_writeBit(GPIO_ENABLE_DISP, 1);
-    GPIO_writeBit(GPIO_LNA_GAIN, 1);
 #endif
 #if (BOARD_RA == 2)
     GPIO_writeBit(GPIO_BLE_MODESEL, 1);     /* Select BL652 "VSP Bridge to UART" mode */
     GPIO_writeBit(GPIO_BLE_AUTORUN, 1);     /* Run in bridge mode */
     GPIO_writeBit(GPIO_ENABLE_VDDA, 1);
     GPIO_writeBit(GPIO_ADF7021_CE, 1);
-    GPIO_writeBit(GPIO_LNA_GAIN, 1);
     GPIO_writeBit(GPIO_BLE_RESET, 1);       /* Release BL652 reset */
 #endif
 

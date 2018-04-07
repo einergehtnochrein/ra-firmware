@@ -821,7 +821,7 @@ static const ADF7021_Config _SYS_radioConfigAfterAttenuatorOff[] = {
 /* Control the attenuator (LNA) */
 static void SYS_controlAutoAttenuator (SYS_Handle handle, float dBm)
 {
-    if (handle->attenuatorActive) {
+    if (GPIO_readBit(GPIO_LNA_GAIN) == 0) {
         /* Disable attenuator if level falls below -80 dBm */
         if (dBm <= -80.0f) {
             handle->attenuatorActive = false;
@@ -1014,7 +1014,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
                     snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
                     SYS_send2Host(HOST_CHANNEL_GUI, s);
-                    SYS_send2Host(HOST_CHANNEL_GUI, handle->attenuatorActive ? "6,1" : "6,0");
                     SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getScannerMode(scanner) ? "7,1" : "7,0");
 
                     //TODO send only if ping parameter asks for it
