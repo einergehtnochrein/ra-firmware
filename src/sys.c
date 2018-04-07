@@ -314,9 +314,6 @@ static const ADF7021_Config radioModeBeacon[] = {
 };
 
 
-/* Local function prototypes */
-static void SYS_setAttenuator (SYS_Handle handle, bool enable);
-
 
 
 static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
@@ -780,12 +777,80 @@ static float _SYS_measureVbat (SYS_Handle handle)
 }
 
 
-/* Control the attenuator (LNA) */
-static void SYS_setAttenuator (SYS_Handle handle, bool enable)
-{
-    handle->attenuatorActive = enable;
+static const ADF7021_Config _SYS_radioConfigBeforeAttenuatorOn[] = {
+    {.opcode = ADF7021_OPCODE_SET_AGC,
+        {.agc = {
+            .mode = ADF7021_AGCMODE_MANUAL,
+            .lnaGain = 1,
+            .filterGain = 1, }}},
 
-    GPIO_writeBit(GPIO_LNA_GAIN, enable ? 0 : 1);
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config _SYS_radioConfigAfterAttenuatorOn[] = {
+    {.opcode = ADF7021_OPCODE_SET_AGC,
+        {.agc = {
+            .mode = ADF7021_AGCMODE_AUTO,
+            .lnaGain = 1,
+            .filterGain = 1, }}},
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config _SYS_radioConfigBeforeAttenuatorOff[] = {
+    {.opcode = ADF7021_OPCODE_SET_AGC,
+        {.agc = {
+            .mode = ADF7021_AGCMODE_MANUAL,
+            .lnaGain = 0,
+            .filterGain = 0, }}},
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config _SYS_radioConfigAfterAttenuatorOff[] = {
+    {.opcode = ADF7021_OPCODE_SET_AGC,
+        {.agc = {
+            .mode = ADF7021_AGCMODE_AUTO,
+            .lnaGain = 0,
+            .filterGain = 0, }}},
+
+    ADF7021_CONFIG_END
+};
+
+
+/* Control the attenuator (LNA) */
+static void SYS_controlAutoAttenuator (SYS_Handle handle, float dBm)
+{
+    if (handle->attenuatorActive) {
+        /* Disable attenuator if level falls below -80 dBm */
+        if (dBm <= -80.0f) {
+            handle->attenuatorActive = false;
+
+            /* Set AGC state (filter/LNA gain stages) in ADF7021 manually to the values
+             * expected after switching the attenuator.
+             * Then reenable automatic mode afterwards, so the AGC will ideally not have
+             * to perform any control step.
+             */
+            ADF7021_ioctl(radio, _SYS_radioConfigBeforeAttenuatorOff);
+            GPIO_writeBit(GPIO_LNA_GAIN, 1);
+            ADF7021_ioctl(radio, _SYS_radioConfigAfterAttenuatorOff);
+        }
+    }
+    else {
+        /* Enable attenuator if level reaches -70 dBm */
+        if (dBm >= -70.0f) {
+            handle->attenuatorActive = true;
+
+            /* Set AGC state (filter/LNA gain stages) in ADF7021 manually to the values
+             * expected after switching the attenuator.
+             * Then reenable automatic mode afterwards, so the AGC will ideally not have
+             * to perform any control step.
+             */
+            ADF7021_ioctl(radio, _SYS_radioConfigBeforeAttenuatorOn);
+            GPIO_writeBit(GPIO_LNA_GAIN, 0);
+            ADF7021_ioctl(radio, _SYS_radioConfigAfterAttenuatorOn);
+        }
+    }
 }
 
 
@@ -1056,10 +1121,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
                     enable = (enableValue != 0);
                     switch (command) {
-                        case 1:
-                            SYS_setAttenuator(handle, enable);
-                            break;
-
                         case 2:
                             SCANNER_setScannerMode(scanner, enable);
                             if (enable) {
@@ -1403,6 +1464,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             SYS_send2Host(HOST_CHANNEL_GUI, s);
 
                             rate = 0;
+SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         }
                     }
                     else {
