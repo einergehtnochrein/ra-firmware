@@ -435,7 +435,7 @@ LPCLIB_Result RS92_resendLastPositions (RS92_Handle handle)
 
 
 /* Remove entries from heard list */
-LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id)
+LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id, float *frequency)
 {
     (void)handle;
 
@@ -446,6 +446,10 @@ LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id)
             if (instance == handle->instance) {
                 handle->instance = NULL;
             }
+
+            /* Let caller know about sonde frequency */
+            *frequency = instance->rxFrequencyMHz * 1e6f;
+
             /* Remove sonde */
             _RS92_deleteInstance(instance);
             break;

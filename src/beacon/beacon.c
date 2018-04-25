@@ -247,7 +247,7 @@ LPCLIB_Result BEACON_resendLastPositions (BEACON_Handle handle)
 
 
 /* Remove entries from heard list */
-LPCLIB_Result BEACON_removeFromList (BEACON_Handle handle, uint32_t id)
+LPCLIB_Result BEACON_removeFromList (BEACON_Handle handle, uint32_t id, float *frequency)
 {
     (void)handle;
 
@@ -258,6 +258,10 @@ LPCLIB_Result BEACON_removeFromList (BEACON_Handle handle, uint32_t id)
             if (instance == handle->instance) {
                 handle->instance = NULL;
             }
+
+            /* Let caller know about sonde frequency */
+            *frequency = instance->rxFrequencyMHz * 1e6f;
+
             /* Remove sonde */
             _BEACON_deleteInstance(instance);
             break;

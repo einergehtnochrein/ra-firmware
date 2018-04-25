@@ -38,7 +38,7 @@ typedef struct M10_Context *M10_Handle;
 LPCLIB_Result M10_open (M10_Handle *pHandle);
 LPCLIB_Result M10_processBlock (M10_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz);
 LPCLIB_Result M10_resendLastPositions (M10_Handle handle);
-LPCLIB_Result M10_removeFromList (M10_Handle handle, uint32_t id);
+LPCLIB_Result M10_removeFromList (M10_Handle handle, uint32_t id, float *frequency);
 
 
 #endif

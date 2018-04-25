@@ -371,7 +371,7 @@ void SCANNER_addListenFrequency (SCANNER_Handle handle, float frequency, SONDE_D
 }
 
 
-void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency)
+void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency, SONDE_Detector detector)
 {
     float frequencyKhz = roundf(frequency / 1e3f);
 
@@ -379,10 +379,12 @@ void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency)
     SCANNER_Item **parent = &handle->scanList;
     SCANNER_Item *item = handle->scanList;
     while (item) {
-        if (roundf(item->frequency / 1000.0f) == frequencyKhz) {
-            *parent = item->next;           /* Remove from chain */
-            free(item);
-            break;
+        if (item->detector == detector) {
+            if (roundf(item->frequency / 1000.0f) == frequencyKhz) {
+                *parent = item->next;           /* Remove from chain */
+                free(item);
+                break;
+            }
         }
 
         parent = &item->next;

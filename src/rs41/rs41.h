@@ -38,7 +38,7 @@ typedef struct RS41_Context *RS41_Handle;
 LPCLIB_Result RS41_open (RS41_Handle *pHandle);
 LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz);
 LPCLIB_Result RS41_resendLastPositions (RS41_Handle handle);
-LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id);
+LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id, float *frequency);
 
 
 #endif

@@ -410,7 +410,7 @@ LPCLIB_Result DFM_resendLastPositions (DFM_Handle handle)
 
 
 /* Remove entries from heard list */
-LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id)
+LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id, float *frequency)
 {
     (void)handle;
 
@@ -421,6 +421,10 @@ LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id)
             if (instance == handle->instance) {
                 handle->instance = NULL;
             }
+
+            /* Let caller know about sonde frequency */
+            *frequency = instance->rxFrequencyMHz * 1e6f;
+
             /* Remove sonde */
             _DFM_deleteInstance(instance);
             break;

@@ -42,7 +42,7 @@ LPCLIB_Result BEACON_processBlock (
         uint8_t emergency);
 void BEACON_handleAudioCallback (int32_t *samples, int nSamples);
 LPCLIB_Result BEACON_resendLastPositions (BEACON_Handle handle);
-LPCLIB_Result BEACON_removeFromList (BEACON_Handle handle, uint32_t id);
+LPCLIB_Result BEACON_removeFromList (BEACON_Handle handle, uint32_t id, float *frequency);
 void BEACON_selectDebugAudio (int debugAudioChannel);
 
 #endif

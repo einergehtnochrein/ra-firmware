@@ -17,7 +17,7 @@ void SCANNER_setManualFrequency (SCANNER_Handle handle, float frequency);
 void SCANNER_setManualSondeDetector (SCANNER_Handle handle, SONDE_Detector sondeDetector);
 SONDE_Detector SCANNER_getManualSondeDetector (SCANNER_Handle handle);
 void SCANNER_addListenFrequency (SCANNER_Handle handle, float frequency, SONDE_Detector sondeDetector);
-void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency);
+void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency, SONDE_Detector detector);
 
 /** Notify scanner engine that a valid frame was received */
 void SCANNER_notifyValidFrame (SCANNER_Handle handle);

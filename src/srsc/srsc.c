@@ -265,7 +265,7 @@ LPCLIB_Result SRSC_resendLastPositions (SRSC_Handle handle)
 
 
 /* Remove entries from heard list (select by frequency) */
-LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id)
+LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id, float *frequency)
 {
     (void)handle;
 
@@ -276,6 +276,10 @@ LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id)
             if (instance == handle->instance) {
                 handle->instance = NULL;
             }
+
+            /* Let caller know about sonde frequency */
+            *frequency = instance->rxFrequencyMHz * 1e6f;
+
             /* Remove sonde */
             _SRSC_deleteInstance(instance);
             break;

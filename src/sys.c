@@ -1080,30 +1080,41 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                             int decoderCode;
                             if (sscanf(cl, "#%*d,%*d,%*d,%d,%d", &id, &decoderCode) == 2) {
                                 SONDE_Decoder decoder = (SONDE_Decoder)decoderCode;
+                                SONDE_Detector detector = _SONDE_DETECTOR_UNDEFINED_;
+                                float frequency = NAN;
                                 switch (decoder) {
                                     case SONDE_DECODER_MODEM:
-                                        M10_removeFromList(handle->m10, id);
+                                        M10_removeFromList(handle->m10, id, &frequency);
+                                        detector = SONDE_DETECTOR_MODEM;
                                         break;
                                     case SONDE_DECODER_RS41:
-                                        RS41_removeFromList(handle->rs41, id);
+                                        RS41_removeFromList(handle->rs41, id, &frequency);
+                                        detector = SONDE_DETECTOR_RS41_RS92;
                                         break;
                                     case SONDE_DECODER_RS92:
-                                        RS92_removeFromList(handle->rs92, id);
+                                        RS92_removeFromList(handle->rs92, id, &frequency);
+                                        detector = SONDE_DETECTOR_RS41_RS92;
                                         break;
                                     case SONDE_DECODER_DFM:
-                                        DFM_removeFromList(handle->dfm, id);
+                                        DFM_removeFromList(handle->dfm, id, &frequency);
+                                        detector = SONDE_DETECTOR_DFM;
                                         break;
                                     case SONDE_DECODER_C34_C50:
-                                        SRSC_removeFromList(handle->srsc, id);
+                                        SRSC_removeFromList(handle->srsc, id, &frequency);
+                                        detector = SONDE_DETECTOR_C34_C50;
                                         break;
                                     case SONDE_DECODER_BEACON:
-                                        BEACON_removeFromList(handle->beacon, id);
+                                        BEACON_removeFromList(handle->beacon, id, &frequency);
+                                        detector = SONDE_DETECTOR_BEACON;
                                         break;
                                     default:
                                         /* ignore */
                                         break;
                                 }
-//                                SCANNER_removeListenFrequency(scanner, id);
+
+                                if (!isnan(frequency)) {
+                                    SCANNER_removeListenFrequency(scanner, frequency, detector);
+                                }
                             }
                         }
                     }
