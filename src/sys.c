@@ -1044,6 +1044,8 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 SONDE_Detector detector;
 
                 if (sscanf(cl, "#%*d,%d", &selector) == 1) {
+                    char s[40];
+
                     detector = SONDE_DETECTOR_RS41_RS92;
                     switch (selector) {
                         case 0:     detector = SONDE_DETECTOR_RS41_RS92; break;
@@ -1055,6 +1057,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 6:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
+                    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+                    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+                    SYS_send2Host(HOST_CHANNEL_GUI, s);
                 }
             }
             break;
