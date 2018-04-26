@@ -405,9 +405,16 @@ static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
         frequency = 406.1e6f;
     }
 
-    ADF7021_setPLL(radio, frequency - 100000);
+    LPC_MAILBOX->IRQ0SET = (1u << 30);
+    SRSC_pauseResume(handle->srsc, ENABLE);
+    IMET_pauseResume(handle->imet, ENABLE);
 
+    ADF7021_setPLL(radio, frequency - 100000);
     handle->currentFrequency = frequency;
+
+    LPC_MAILBOX->IRQ0SET = (1u << 31);
+    SRSC_pauseResume(handle->srsc, DISABLE);
+    IMET_pauseResume(handle->imet, DISABLE);
 }
 
 

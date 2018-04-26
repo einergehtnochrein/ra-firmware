@@ -427,4 +427,12 @@ void IMET_handleAudioCallback (int32_t *samples, int nSamples)
 }
 
 
+/* Discard partial decoder result */
+void IMET_DSP_reset (void)
+{
+    // Can be done better, but...
+    _imetAudioContext.rsb.state = 0;
+}
+
+
 

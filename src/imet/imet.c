@@ -236,3 +236,18 @@ LPCLIB_Result IMET_resendLastPositions (IMET_Handle handle)
     return LPCLIB_SUCCESS;
 }
 
+
+LPCLIB_Result IMET_pauseResume (IMET_Handle handle, bool pause)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    (void)pause;
+
+    /* Simple approach: Reset decode pause begins/ends */
+    IMET_DSP_reset();
+    
+    return LPCLIB_SUCCESS;
+}
+

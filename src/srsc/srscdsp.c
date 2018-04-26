@@ -363,4 +363,10 @@ void SRSC_handleAudioCallback (int32_t *samples, int nSamples)
 }
 
 
+/* Discard partial decoder result */
+void SRSC_DSP_reset (void)
+{
+    // Can be done better, but...
+    _srscAudioContext.c34.state = 0;
+}
 

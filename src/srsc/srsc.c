@@ -290,3 +290,17 @@ LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id, float *frequ
 }
 
 
+LPCLIB_Result SRSC_pauseResume (SRSC_Handle handle, bool pause)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    (void)pause;
+
+    /* Simple approach: Reset decode pause begins/ends */
+    SRSC_DSP_reset();
+    
+    return LPCLIB_SUCCESS;
+}
+

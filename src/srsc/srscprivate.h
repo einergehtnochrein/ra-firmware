@@ -226,5 +226,6 @@ LPCLIB_Result _SRSC_processGpsFrame (
 
 void SRSC_DSP_processAudio (const int32_t *rawAudio, float *cookedAudio, int nSamples);
 void SRSC_DSP_initAudio (void);
+void SRSC_DSP_reset (void);
 
 #endif

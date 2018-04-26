@@ -151,5 +151,6 @@ LPCLIB_Result _IMET_processGpsxFrame (
 
 void IMET_DSP_processAudio (const int32_t *rawAudio, float *cookedAudio, int nSamples);
 void IMET_DSP_initAudio (void);
+void IMET_DSP_reset (void);
 
 #endif
