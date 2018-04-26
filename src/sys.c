@@ -1017,7 +1017,8 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
 
                     /* Send status */
                     _SYS_reportRadioFrequency(handle);
-                    SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualMode(scanner) ? "2,1" : "2,0");
+                    snprintf(s, sizeof(s), "2,%d", SCANNER_getMode(scanner));
+                    SYS_send2Host(HOST_CHANNEL_GUI, s);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
                     snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
                     SYS_send2Host(HOST_CHANNEL_GUI, s);
@@ -1143,7 +1144,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
                     enable = (enableValue != 0);
                     switch (command) {
-                        case 2:
+                        case 2: /* DEPRECATED */
                             SCANNER_setScannerMode(scanner, enable);
                             if (enable) {
                                 handle->currentFrequency = 0;
@@ -1152,7 +1153,11 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                             break;
 
                         case 3:
-                            SCANNER_setManualMode(scanner, enable);
+                            SCANNER_setMode(scanner, enableValue);
+                            if (enableValue == 2) {     /* Spectrum scan mode */
+                                handle->currentFrequency = 0;
+                                _SYS_reportRadioFrequency(handle);
+                            }
                             osTimerStart(handle->rssiTick, 20);
                             break;
                     }

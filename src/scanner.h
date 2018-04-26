@@ -9,8 +9,8 @@ typedef struct SCANNER_Context *SCANNER_Handle;
 
 LPCLIB_Result SCANNER_open (SCANNER_Handle *pHandle);
 
-void SCANNER_setManualMode (SCANNER_Handle handle, bool enable);
-bool SCANNER_getManualMode (SCANNER_Handle handle);
+void SCANNER_setMode (SCANNER_Handle handle, int enableValue);
+int SCANNER_getMode (SCANNER_Handle handle);
 void SCANNER_setScannerMode (SCANNER_Handle handle, bool enable);
 bool SCANNER_getScannerMode (SCANNER_Handle handle);
 void SCANNER_setManualFrequency (SCANNER_Handle handle, float frequency);
