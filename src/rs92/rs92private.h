@@ -16,8 +16,6 @@
 #include "gps.h"
 
 
-#define RS92_CLIMB_HISTORY_LENGTH       10
-
 typedef enum {
     RS92_SUBFRAME_CALIB_CONFIG = 'e',
     RS92_SUBFRAME_METROLOGY = 'i',
@@ -189,8 +187,7 @@ typedef struct _RS92_InstanceData {
     struct {
         float alt;
         int32_t frame;
-    } lastAltitudes[RS92_CLIMB_HISTORY_LENGTH];
-    int lastAltitudesWrIndex;
+    } lastAltitude;
 } RS92_InstanceData;
 
 

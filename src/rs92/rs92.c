@@ -14,7 +14,6 @@
 #include "rs92.h"
 #include "rs92private.h"
 #include "reedsolomon.h"
-#include "linregression.h"
 
 
 /** Context */
@@ -118,36 +117,20 @@ static void _RS92_checkCRC (RS92_Handle handle)
 }
 
 
-static void _RS92_getClimbSample (void *context, int index, float *x, float *y)
-{
-    RS92_Handle handle = (RS92_Handle)context;
-
-    int idx = ((handle->instance->lastAltitudesWrIndex + RS92_CLIMB_HISTORY_LENGTH - 1) - index) % RS92_CLIMB_HISTORY_LENGTH;
-    *x = handle->instance->lastAltitudes[idx].frame;
-    *y = handle->instance->lastAltitudes[idx].alt;
-}
-
-
+/* Estimate climb rate from altitude measurements (Doppler readings from RS are currently ignored) */
 static float _RS92_estimateClimbRate (RS92_Handle handle)
 {
     float climbRate = NAN;
 
     if (!isnan(handle->instance->gps.observerLLA.alt)) {
-        handle->instance->lastAltitudes[handle->instance->lastAltitudesWrIndex].alt = handle->instance->gps.observerLLA.alt;
-        handle->instance->lastAltitudes[handle->instance->lastAltitudesWrIndex].frame = handle->instance->frameCounter;
-        if (++handle->instance->lastAltitudesWrIndex >= RS92_CLIMB_HISTORY_LENGTH) {
-            handle->instance->lastAltitudesWrIndex = 0;
+        uint32_t timeDiff = handle->instance->frameCounter - handle->instance->lastAltitude.frame;
+        float altitudeDiff = handle->instance->gps.observerLLA.alt - handle->instance->lastAltitude.alt;
+        if (timeDiff > 0) {
+            climbRate = altitudeDiff / timeDiff;
+
+            handle->instance->lastAltitude.frame = handle->instance->frameCounter;
+            handle->instance->lastAltitude.alt = handle->instance->gps.observerLLA.alt;
         }
-
-        // Linear regression.
-        const LINREG_Input linreg_in = {
-            .N = RS92_CLIMB_HISTORY_LENGTH,
-            .get_data = _RS92_getClimbSample,
-        };
-        LINREG_Output linreg_out;
-        LINREG_computeRegression(handle, &linreg_in, &linreg_out);
-
-        climbRate = linreg_out.slope;
     }
 
     return climbRate;
@@ -386,11 +369,7 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
                     }
 
                     /* Send out the results (if they make sense...) */
-
-float climbRate = _RS92_estimateClimbRate(handle);
-if (!isnan(climbRate)) {
-    handle->instance->gps.climbRate = climbRate;
-}
+                    handle->instance->gps.climbRate = _RS92_estimateClimbRate(handle);
 if(1){//                    if (handle->instance->gps.valid) {
                         _RS92_sendKiss(handle->instance);
                     }
