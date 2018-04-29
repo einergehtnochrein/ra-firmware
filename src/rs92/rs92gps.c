@@ -70,20 +70,23 @@ LPCLIB_Result _RS92_processGpsBlock (
     /* Extract the satellite PRN's from the bit fields.
      * There are four 16-bit fields with three 5-bit PRN's each.
      * Set PRN to zero if the pseudorange value of that channel is invalid
-     * (either 0x7FFFFFFF or a negative value)
+     * (either 0x7FFFFFFF or a negative value), or in case of a marginal SNR.
      */
     for (i = 0; i < 4; i++) {
         cookedGps->sats[3*i+0].PRN = (rawGps->prn[i] >> 0 ) & 0x1F;     /* [4:0] */
-        if (g[3*i+0].rang0 == 0x7FFFFFFF) {
+        if ((g[3*i+0].rang0 == 0x7FFFFFFF) || (g[3*i+0].snr < 3)) {
             cookedGps->sats[3*i+0].PRN = 0;
+            g[3*i+0].rang0 = 0x7FFFFFFF;
         }
         cookedGps->sats[3*i+1].PRN = (rawGps->prn[i] >> 5 ) & 0x1F;     /* [9:5] */
-        if (g[3*i+1].rang0 == 0x7FFFFFFF) {
+        if ((g[3*i+1].rang0 == 0x7FFFFFFF) || (g[3*i+1].snr < 3)) {
             cookedGps->sats[3*i+1].PRN = 0;
+            g[3*i+1].rang0 = 0x7FFFFFFF;
         }
         cookedGps->sats[3*i+2].PRN = (rawGps->prn[i] >> 10) & 0x1F;     /* [14:10] */
-        if (g[3*i+2].rang0 == 0x7FFFFFFF) {
+        if ((g[3*i+2].rang0 == 0x7FFFFFFF) || (g[3*i+2].snr < 3)) {
             cookedGps->sats[3*i+2].PRN = 0;
+            g[3*i+2].rang0 = 0x7FFFFFFF;
         }
     }
 
