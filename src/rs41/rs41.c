@@ -192,7 +192,10 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     /* Flags */
     if (instance->metro.hasO3) {
-        special += 1;
+        special += (1u << 0);
+    }
+    if (instance->onDescent) {
+        special += (1u << 8);
     }
 
     /* Convert lat/lon from radian to decimal degrees */

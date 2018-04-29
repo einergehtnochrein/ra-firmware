@@ -35,7 +35,10 @@ typedef enum {
 typedef __PACKED(struct {
     uint16_t frameCounter;
     char name[8];
-    uint8_t reserved00A[13];
+    uint8_t reserved00A[3];
+    uint8_t flags;                          /* Bit 1: 0=Ascent, 1=Descent */
+    uint8_t reserved00E[8];
+    uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
     uint8_t thisCalibIndex;                 /* Index of calibration fragment in this frame */
     uint8_t calibFragment[16];
     uint16_t crc;
@@ -128,6 +131,7 @@ typedef struct _RS41_InstanceData {
     float rxFrequencyMHz;
     uint16_t frameCounter;
     bool encrypted;                             /* Set for RS41-SGM military version */
+    bool onDescent;                             /* Descent phase detected */
 
     RS41_CookedGps gps;
     RS41_CookedMetrology metro;

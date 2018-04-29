@@ -134,12 +134,13 @@ LPCLIB_Result _RS41_processConfigBlock (
 
         /* Set time marker to be able to identify old records */
         instance->lastUpdated = os_time;
-    }
 
-    /* Cook some other values */
-    instance->frameCounter = rawConfig->frameCounter;
-    if (_RS41_checkValidCalibration(instance, CALIB_FREQUENCY)) {
-        instance->rxFrequencyMHz = 400.0 + (instance->frequency * 10) / 64000.0;
+        /* Cook some other values */
+        instance->frameCounter = rawConfig->frameCounter;
+        instance->onDescent = (rawConfig->flags & (1u << 1)) ? true : false;
+        if (_RS41_checkValidCalibration(instance, CALIB_FREQUENCY)) {
+            instance->rxFrequencyMHz = 400.0 + (instance->frequency * 10) / 64000.0;
+        }
     }
 
     return LPCLIB_SUCCESS;

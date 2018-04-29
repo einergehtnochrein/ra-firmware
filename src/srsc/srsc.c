@@ -129,13 +129,16 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     /* Sonde type */
     special = 0;
     if (instance->config.hasO3) {
-        special += 1;
+        special += (1u << 0);
     }
     if (instance->config.isC34) {
-        special += 4;
+        special += (1u << 2);
     }
     if (instance->config.isC50) {
-        special += 8;
+        special += (1u << 3);
+    }
+    if (instance->config.state >= 8) {
+        special += (1u << 8);
     }
     snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
 
