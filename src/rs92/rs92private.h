@@ -16,6 +16,8 @@
 #include "gps.h"
 
 
+#define RS92_SNR_FILTER_LENGTH      (8)
+
 typedef enum {
     RS92_SUBFRAME_CALIB_CONFIG = 'e',
     RS92_SUBFRAME_METROLOGY = 'i',
@@ -120,6 +122,9 @@ typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     float climbRate;
+
+    uint8_t snrRaw[32][RS92_SNR_FILTER_LENGTH];     /* Maintain short-term SNR average for all 32 PRN */
+    uint8_t snrRawWrIndex;
 } RS92_CookedGps;
 
 
