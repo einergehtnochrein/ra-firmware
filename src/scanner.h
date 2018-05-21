@@ -11,8 +11,6 @@ LPCLIB_Result SCANNER_open (SCANNER_Handle *pHandle);
 
 void SCANNER_setMode (SCANNER_Handle handle, int enableValue);
 int SCANNER_getMode (SCANNER_Handle handle);
-void SCANNER_setScannerMode (SCANNER_Handle handle, bool enable);
-bool SCANNER_getScannerMode (SCANNER_Handle handle);
 void SCANNER_setManualFrequency (SCANNER_Handle handle, float frequency);
 void SCANNER_setManualSondeDetector (SCANNER_Handle handle, SONDE_Detector sondeDetector);
 SONDE_Detector SCANNER_getManualSondeDetector (SCANNER_Handle handle);

@@ -238,11 +238,6 @@ osMailQDef(scannerQueueDef, SCANNER_QUEUE_LENGTH, SCANNER_Message);
 LPCLIB_Result SCANNER_open (SCANNER_Handle *pHandle)
 {
     *pHandle = &scannerContext;
-//    SCANNER_Handle handle = *pHandle;
-
-//    SCANNER_addListenFrequency(handle, 402.9e6f, SONDE_RS92);
-//    SCANNER_addListenFrequency(handle, 405.5e6f, SONDE_RS41);
-//    SCANNER_addListenFrequency(handle, 402.5e6f, SONDE_RS92);
 
     return LPCLIB_SUCCESS;
 }
@@ -279,33 +274,6 @@ int SCANNER_getMode (SCANNER_Handle handle)
         case SCANNER_MODE_SPECTRUM:     return 2;
         default:                        return -1;
     }
-}
-
-
-void SCANNER_setScannerMode (SCANNER_Handle handle, bool enable)
-{
-    if (handle == LPCLIB_INVALID_HANDLE) {
-        return;
-    }
-
-    if (enable) {
-        handle->previousMode = handle->mode;
-        handle->mode = SCANNER_MODE_SPECTRUM;
-        handle->scannerNeedInit = true;
-    }
-    else {
-        handle->mode = handle->previousMode;
-    }
-}
-
-
-bool SCANNER_getScannerMode (SCANNER_Handle handle)
-{
-    if (handle == LPCLIB_INVALID_HANDLE) {
-        return false;
-    }
-
-    return (handle->mode == SCANNER_MODE_SPECTRUM);
 }
 
 
@@ -469,9 +437,9 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
                         handle->manualFrequency = SYS_getCurrentFrequency(sys);
                     }
 //durationMs = 0xFFFFFFFF;
-                    osTimerStart(handle->scanTick, durationMs);
 printf("scanner @ %.3f\r\n", frequency / 1e6f);
                 }
+                osTimerStart(handle->scanTick, durationMs);
             }
         }
     }

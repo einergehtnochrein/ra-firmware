@@ -395,6 +395,19 @@ static void _SYS_reportRadioFrequency (SYS_Handle handle)
 }
 
 
+static void _SYS_reportControls (SYS_Handle handle)
+{
+    (void)handle;
+
+    char s[20];
+    snprintf(s, sizeof(s), "2,%d", SCANNER_getMode(scanner));
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
 
 static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
 {
@@ -584,7 +597,7 @@ static void SYS_sleep (SYS_Handle handle)
     uint32_t OldSystemCoreClock;
 
 
-    SCANNER_setScannerMode(scanner, false);
+    SCANNER_setMode(scanner, 1);
 
     handle->sleeping = true;
 
@@ -1017,12 +1030,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
 
                     /* Send status */
                     _SYS_reportRadioFrequency(handle);
-                    snprintf(s, sizeof(s), "2,%d", SCANNER_getMode(scanner));
-                    SYS_send2Host(HOST_CHANNEL_GUI, s);
-                    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
-                    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
-                    SYS_send2Host(HOST_CHANNEL_GUI, s);
-                    SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getScannerMode(scanner) ? "7,1" : "7,0");
+                    _SYS_reportControls(handle);
 
                     //TODO send only if ping parameter asks for it
                     RS41_resendLastPositions(handle->rs41);
@@ -1139,28 +1147,19 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             {
                 int command;
                 int enableValue;
-                bool enable;
 
                 if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
-                    enable = (enableValue != 0);
                     switch (command) {
-                        case 2: /* DEPRECATED */
-                            SCANNER_setScannerMode(scanner, enable);
-                            if (enable) {
-                                handle->currentFrequency = 0;
-                                _SYS_reportRadioFrequency(handle);
-                            }
-                            break;
-
                         case 3:
                             SCANNER_setMode(scanner, enableValue);
-                            if (enableValue == 2) {     /* Spectrum scan mode */
+                            if ((enableValue == 2) || (enableValue == 3)) {     /* Spectrum scan mode */
                                 handle->currentFrequency = 0;
                                 _SYS_reportRadioFrequency(handle);
                             }
                             osTimerStart(handle->rssiTick, 20);
                             break;
                     }
+//                    _SYS_reportControls(handle);
                 }
             }
             break;
@@ -1474,34 +1473,29 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
 
             case SYS_OPCODE_GET_RSSI:
                 {
-                    static int rate;
-                    static bool lastScannerMode;
-
-                    if (SCANNER_getScannerMode(scanner) != lastScannerMode) {
-                        lastScannerMode = SCANNER_getScannerMode(scanner);
-                        rate = 0;
-                    }
+                    static int rate1;
+                    static int rate2;
 
                     /* Send RSSI only when not in scanner mode */
-                    if (!SCANNER_getScannerMode(scanner)) {
-                        if (++rate >= 2) {
+                    if (SCANNER_getMode(scanner) != 2) {
+                        if (++rate1 >= 2) {
                             handle->currentRssi = _SYS_getFilteredRssi(handle);
                             char s[30];
                             sprintf(s, "3,%.1f", handle->currentRssi);
                             SYS_send2Host(HOST_CHANNEL_GUI, s);
 
-                            rate = 0;
+                            rate1 = 0;
 SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         }
                     }
                     else {
                         /* Send dummy value at a low rate to ensure S-meter shows minimum */
-                        if (rate == 0) {
+                        if (rate2 == 0) {
                             SYS_send2Host(HOST_CHANNEL_GUI, "3,");
                         }
 
-                        if (++rate >= 100) {
-                            rate = 0;
+                        if (++rate2 >= 100) {
+                            rate2 = 0;
                         }
                     }
 
