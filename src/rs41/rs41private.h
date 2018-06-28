@@ -35,7 +35,8 @@ typedef enum {
 typedef __PACKED(struct {
     uint16_t frameCounter;
     char name[8];
-    uint8_t reserved00A[3];
+    uint8_t batteryVoltage100mV;            /* Battery voltage in multiples of 100 mV */
+    uint8_t reserved00B[2];
     uint8_t flags;                          /* Bit 1: 0=Ascent, 1=Descent */
     uint8_t reserved00E[8];
     uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
@@ -129,6 +130,7 @@ typedef struct _RS41_InstanceData {
     uint64_t fragmentValidFlags;                /* The 52 bits (if set) indicate validity of the corresponding fragment */
     uint32_t lastUpdated;
     float rxFrequencyMHz;
+    float batteryVoltage;                       /* Battery voltage [V] */
     uint16_t frameCounter;
     bool encrypted;                             /* Set for RS41-SGM military version */
     bool onDescent;                             /* Descent phase detected */

@@ -209,7 +209,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         direction *= 180.0 / M_PI;
         velocity *= 3.6f;
 
-        length = sprintf((char *)s, "%ld,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,,%.1f,%.1f,%d,%d,%s,",
+        length = sprintf((char *)s, "%ld,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,,%.1f,%.1f,%d,%d,%s,%.1f,",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         latitude,                               /* Latitude [degrees] */
@@ -225,18 +225,20 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         offset,                                 /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
-                        sKillTimer                              /* Kill timer (frame) */
+                        sKillTimer,                             /* Kill timer (frame) */
+                        instance->batteryVoltage                /* Battery voltage [V] */
                         );
     }
     else if (instance->encrypted) {
-        length = sprintf((char *)s, "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,",
+        length = sprintf((char *)s, "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,%.1f,",
                         instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         SYS_getFrameRssi(sys),
                         offset,    /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
-                        sKillTimer                              /* Kill timer (frame) */
+                        sKillTimer,                             /* Kill timer (frame) */
+                        instance->batteryVoltage                /* Battery voltage [V] */
                         );
     }
 

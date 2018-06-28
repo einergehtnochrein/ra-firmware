@@ -137,6 +137,7 @@ LPCLIB_Result _RS41_processConfigBlock (
 
         /* Cook some other values */
         instance->frameCounter = rawConfig->frameCounter;
+        instance->batteryVoltage = rawConfig->batteryVoltage100mV / 10.0f;
         instance->onDescent = (rawConfig->flags & (1u << 1)) ? true : false;
         if (_RS41_checkValidCalibration(instance, CALIB_FREQUENCY)) {
             instance->rxFrequencyMHz = 400.0 + (instance->frequency * 10) / 64000.0;
