@@ -246,10 +246,11 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,1,0,%s,%.1f",
+    length = sprintf(s, "%ld,1,0,%s,%.1f,%s",
                 instance->id,
                 instance->name,
-                instance->metro.temperature2
+                instance->metro.temperature2,
+                instance->modelname218
                 );
 
     if (length > 0) {
