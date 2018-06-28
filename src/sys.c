@@ -143,18 +143,6 @@ struct SYS_Context {
 
 
 #if (BOARD_RA == 1)
-static const GPIO_Config buttonInit[] = {
-    {.opcode = GPIO_OPCODE_CONFIGURE_PIN_INTERRUPT,
-        {.pinInterrupt = {
-            .pin = GPIO_BUTTON,
-            .enable = LPCLIB_YES,
-            .mode = GPIO_INT_FALLING_EDGE,
-            .interruptLine = GPIO_PIN_INT_0,
-            .callback = SYS_handleEvent, }}},
-
-    GPIO_CONFIG_END
-};
-
 /* UART RXD line for wakeup */
 static const GPIO_Config uartRxdWakeupInit[] = {
     {.opcode = GPIO_OPCODE_CONFIGURE_PIN_INTERRUPT,
@@ -1317,7 +1305,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     PT_BEGIN(&handle->pt);
 
     sysContext.queue = osMailCreate(osMailQ(sysQueueDef), NULL);
-//    GPIO_ioctl(buttonInit);
     GPIO_ioctl(uartRxdWakeupInit);
 
     EPHEMERIS_init();
