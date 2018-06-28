@@ -138,8 +138,6 @@ static const float _B2 = 0.029402f;
 static const float _A1 = -1.459787f;
 static const float _A2 = 0.577394f;
 
-static const float _2pi = 2.0 * M_PI;
-
 
 /* Process last FM decoder output */
 static void SRSC_DSP_uart (void)
