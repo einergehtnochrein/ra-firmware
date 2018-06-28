@@ -49,7 +49,12 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance)
         f = (float)instance->gpsDetect.fragment[4].i16;
         instance->gps.climbRate = f / 100.0f;
         f = (float)((uint32_t)instance->gpsDetect.fragment[5].i32 & 0xFFFF);
-        instance->gps.hdop = f / 1000.0f;
+        if (instance->config.isPS15) {
+            instance->gps.hdop = NAN;
+        }
+        else {
+            instance->gps.hdop = f / 1000.0f;
+        }
 
         i32 = instance->gpsDetect.fragment[6].i32;
         i16 = instance->gpsDetect.fragment[6].i16;
@@ -97,7 +102,9 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance)
         instance->gps.utc.minute = ((uint32_t)i32 >> 0) & 0x3F;
 
         i16 = instance->gpsDetect.fragment[8].i16;
-        instance->gps.usedSats = (uint32_t)i16 / 256;
+        if (!instance->config.isPS15) {
+//            instance->gps.usedSats = (uint32_t)i16 / 256;
+        }
 
         // [1].i32 is a mask that indicates which PRN is used for this
         // position solution. Bit0=PRN1, bit31=PRN32
@@ -112,7 +119,7 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance)
         }
         // In case the number of satellites is not transmitted in field [8].i16,
         // use counted satellites from bitmask instead.
-        if (n > instance->gps.usedSats) {
+if(1){//        if (n > instance->gps.usedSats) {
             instance->gps.usedSats = n;
         }
 

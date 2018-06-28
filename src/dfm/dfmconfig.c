@@ -148,10 +148,18 @@ dfm_config_unknown[rawConfig->type].n++;
                     instance->confDetect.numAnalog = lrintf(delta0 / DFM_FRAME_LENGTH_MILLISEC) - 1;
                     if (++instance->confDetect.nDetections >= 3) {
                         instance->numAnalog = instance->confDetect.numAnalog;
-                        instance->detectorState = DFM_DETECTOR_FIND_CONFIG_STRUCTURE;
-
                         instance->confDetect.maxChannel = 0;
                         instance->confDetect.nDetections = 0;
+
+                        /* TODO: Assume PS15 in case of a very high number of fast channels */
+                        if (instance->numAnalog >= 7) {
+                            instance->detectorState = DFM_DETECTOR_FIND_NAME;
+                            instance->maxConfigChannel = instance->numAnalog - 1;
+                            instance->config.isPS15 = true;
+                        }
+                        else {
+                            instance->detectorState = DFM_DETECTOR_FIND_CONFIG_STRUCTURE;
+                        }
                     }
                 }
                 else {
@@ -223,7 +231,7 @@ dfm_config_unknown[rawConfig->type].n++;
     /* Get the sonde name (and sonde type, DFM-06/DFM-09) from the highest config channel */
     case DFM_DETECTOR_FIND_NAME:
         {
-            if (instance->platform == SONDE_DFM09) {
+            if ((instance->platform == SONDE_DFM09) || instance->config.isPS15) {
                 if (channel == instance->maxConfigChannel) {
                     if (rawConfig->h[5] == 0) {
                         instance->confDetect.sondeNumber = 0
@@ -264,7 +272,7 @@ dfm_config_unknown[rawConfig->type].n++;
                     }
                 }
             }
-            if (instance->platform == SONDE_DFM06) {
+            else if (instance->platform == SONDE_DFM06) {
                 if (channel == instance->maxConfigChannel) {
                     instance->confDetect.sondeNumber = 0;
                     for (i = 0; i < 6; i++) {
