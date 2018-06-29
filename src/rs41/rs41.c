@@ -172,6 +172,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     char sPressure[10];
     char sKillTimer[6];
     uint32_t special;
+    char sModelName[10+1];
 
     offset = 0;
     special = 0;
@@ -246,6 +247,11 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
+    sModelName[0] = 0;
+    if (_RS41_checkValidCalibration(instance, CALIB_MODELNAME)) {
+        memcpy(sModelName, instance->modelname218, 10);
+        sModelName[10] = 0;
+    }
     length = sprintf(s, "%ld,1,0,%s,%.1f,%s",
                 instance->id,
                 instance->name,

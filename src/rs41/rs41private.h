@@ -197,6 +197,7 @@ LPCLIB_Result _RS41_processConfigBlock (
 #define CALIB_TEMPERATURE2          0x00000000000C0018ll
 #define CALIB_PRESSURE              0x000007E000000000ll
 #define CALIB_KILLTIMER             0x0000000000000004ll
+#define CALIB_MODELNAME             0x0000000600000000ll
 
 bool _RS41_checkValidCalibration(RS41_InstanceData *instance, uint64_t purpose);
 
