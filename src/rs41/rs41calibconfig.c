@@ -148,6 +148,20 @@ LPCLIB_Result _RS41_processConfigBlock (
 }
 
 
+/* Read 24-bit little-endian unsigned integer from memory */
+uint32_t _RS41_readU24 (const uint8_t *p24)
+{
+    return p24[0] + 256 * p24[1] + 65536 * p24[2];
+}
+
+
+/* Read 24-bit little-endian signed integer from memory */
+int32_t _RS41_readS24 (const uint8_t *p24)
+{
+    return (int32_t)(_RS41_readU24(p24) << 8) / 256;
+}
+
+
 /* Check if the calibration block contains valid data for a given purpose */
 bool _RS41_checkValidCalibration(RS41_InstanceData *instance, uint64_t purpose)
 {
