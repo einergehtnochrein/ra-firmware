@@ -5,9 +5,9 @@
 #include "scanner.h"
 #include "sys.h"
 
-#define FIRMWARE_VERSION_MAJOR              30
-#define FIRMWARE_VERSION_MINOR              3
-#define FIRMWARE_NAME                       ""
+#define FIRMWARE_VERSION_MAJOR              31
+#define FIRMWARE_VERSION_MINOR              0
+#define FIRMWARE_NAME                       "pre3"
 
 #if (BOARD_RA == 1)
 #define FIRMWARE_START_ADDRESS              0x00008000
