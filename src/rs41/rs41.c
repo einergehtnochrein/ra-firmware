@@ -136,7 +136,6 @@ LPCLIB_Result RS41_open (RS41_Handle *pHandle)
 }
 
 
-
 /* Send position as a KISS packet */
 static void _RS41_sendKiss (RS41_InstanceData *instance)
 {
@@ -515,8 +514,9 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
         }
 
         _RS41_sendKiss(handle->instance);
-
-//        _RS41_sendRaw(handle->instance, buffer, length);
+        if (handle->instance->logMode == RS41_LOGMODE_RAW) {
+            _RS41_sendRaw(handle->instance, buffer, length);
+        }
     }
 
     return LPCLIB_SUCCESS;
@@ -562,5 +562,26 @@ LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id, float *frequ
     }
 
     return LPCLIB_SUCCESS;
+}
+
+
+/* Control logging */
+LPCLIB_Result RS41_setLogMode (RS41_Handle handle, uint32_t id, RS41_LogMode mode)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
+    RS41_InstanceData *instance = NULL;
+    while (_RS41_iterateInstance(&instance)) {
+        if (instance->id == id) {
+            instance->logMode = mode;
+            result = LPCLIB_SUCCESS;
+            break;
+        }
+    }
+
+    return result;
 }
 

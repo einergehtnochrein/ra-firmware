@@ -1135,6 +1135,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             {
                 int command;
                 int enableValue;
+                int extra1;
 
                 if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
                     switch (command) {
@@ -1146,6 +1147,18 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                             }
                             osTimerStart(handle->rssiTick, 20);
                             break;
+
+                        case 5:
+                        {
+                            if (sscanf(cl, "#%*d,%*d,%*d,%d", &extra1) == 1) {
+                                RS41_LogMode mode = RS41_LOGMODE_NONE;
+                                if (enableValue == 1) {
+                                    mode = RS41_LOGMODE_RAW;
+                                }
+                                RS41_setLogMode(handle->rs41, extra1, mode);
+                            }
+                            break;
+                        }
                     }
 //                    _SYS_reportControls(handle);
                 }

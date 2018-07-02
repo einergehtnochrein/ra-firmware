@@ -152,9 +152,9 @@ typedef struct _RS41_InstanceData {
     uint16_t frameCounter;
     bool encrypted;                             /* Set for RS41-SGM military version */
     bool onDescent;                             /* Descent phase detected */
-
     RS41_CookedGps gps;
     RS41_CookedMetrology metro;
+    RS41_LogMode logMode;
 
     __PACKED(union {
         uint8_t rawData[RS41_CALIBRATION_MAX_INDEX + 1][16];
