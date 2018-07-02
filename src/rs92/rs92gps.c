@@ -14,10 +14,7 @@
 #include "rinex.h"
 
 
-
-GPS_4SatInfo sats;
-
-ECEF_Coordinate observer;
+#define RS92_INVALID_PSEUDORANGE            (0x7FFFFFFF)
 
 
 static struct {
@@ -41,11 +38,11 @@ LPCLIB_Result _RS92_processGpsBlock (
         float pressureAltitude)
 {
     int i;
-    uint32_t numSats;
 
 
     /* Initialize default result in case no solution can be found */
-    memset(cookedGps, 0, sizeof(RS92_CookedGps));
+    memset(cookedGps->sats, 0, sizeof(cookedGps->sats));
+    cookedGps->rxClockOffset = 0;
     cookedGps->observerLLA.lat = NAN;
     cookedGps->observerLLA.lon = NAN;
     cookedGps->observerLLA.alt = NAN;
@@ -60,31 +57,29 @@ LPCLIB_Result _RS92_processGpsBlock (
     for (i = 0; i < 12; i++) {
         g[i].rang0 = rawGps->satData[i].val32;
         if ((g[i].rang0 < -50000000) || (g[i].rang0 > 50000000)) {
-            g[i].rang0 = 0x7FFFFFFF;
+            g[i].rang0 = RS92_INVALID_PSEUDORANGE;
         }
         g[i].rang1 = _BLOCKRX_read24(rawGps->satData[i].val24) & 0x7FFFFF;
         g[i].rang3 = rawGps->satData[i].val8;
         g[i].snr = rawGps->channel[i].snr;
+
+        if (g[i].rang0 == RS92_INVALID_PSEUDORANGE) {
+            cookedGps->sats[i].ignore = true;
+        }
+        else {
+            cookedGps->sats[i].ignore = false;
+        }
     }
 
     /* Extract the satellite PRN's from the bit fields.
      * There are four 16-bit fields with three 5-bit PRN's each.
      * Set PRN to zero if the pseudorange value of that channel is invalid
-     * (either 0x7FFFFFFF or a negative value)
+     * (either 0x7FFFFFFF or a negative value), or in case of a marginal SNR.
      */
     for (i = 0; i < 4; i++) {
         cookedGps->sats[3*i+0].PRN = (rawGps->prn[i] >> 0 ) & 0x1F;     /* [4:0] */
-        if (g[3*i+0].rang0 == 0x7FFFFFFF) {
-            cookedGps->sats[3*i+0].PRN = 0;
-        }
         cookedGps->sats[3*i+1].PRN = (rawGps->prn[i] >> 5 ) & 0x1F;     /* [9:5] */
-        if (g[3*i+1].rang0 == 0x7FFFFFFF) {
-            cookedGps->sats[3*i+1].PRN = 0;
-        }
         cookedGps->sats[3*i+2].PRN = (rawGps->prn[i] >> 10) & 0x1F;     /* [14:10] */
-        if (g[3*i+2].rang0 == 0x7FFFFFFF) {
-            cookedGps->sats[3*i+2].PRN = 0;
-        }
     }
 
     /* If PRN32 is received (takes six bits to encode), RS92 tries to fit that into
@@ -115,12 +110,10 @@ LPCLIB_Result _RS92_processGpsBlock (
     /* Look for an occurrence of PRN32 */
     bool havePRN32 = false;
     for (i = 0; i < 12; i++) {
-        if (cookedGps->sats[i].PRN == 0) {
-            if (g[i].rang0 != 0x7FFFFFFF) {
-                /* This PRN=0 is in fact PRN32 */
-                cookedGps->sats[i].PRN = 32;
-                havePRN32 = true; /* PRN32 has been positively identified */
-            }
+        if ((cookedGps->sats[i].PRN == 0) && (g[i].rang0 != RS92_INVALID_PSEUDORANGE)) {
+            /* This PRN=0 is in fact PRN32 */
+            cookedGps->sats[i].PRN = 32;
+            havePRN32 = true; /* PRN32 has been positively identified */
         }
     }
 
@@ -133,7 +126,7 @@ LPCLIB_Result _RS92_processGpsBlock (
             ((cookedGps->sats[i].PRN == 0) && !havePRN32)) {
             if ((i % 3) != 2) {     /* PRN32 in channels 2, 5, 8, 11 doesn't hurt */
                 /* Check if affected channel contains a valid pseudorange */
-                if (g[i+1].rang0 != 0x7FFFFFFF) {
+                if (g[i+1].rang0 != RS92_INVALID_PSEUDORANGE) {
                     /* An even PRN cannot be corrupted! */
                     if ((cookedGps->sats[i+1].PRN % 2) == 1) {
                         int j;
@@ -154,9 +147,40 @@ LPCLIB_Result _RS92_processGpsBlock (
                         }
                         if (j >= 12) {
                             /* TODO. Give up, invalidate next channel */
-                            cookedGps->sats[i+1].PRN = 0;
+                            cookedGps->sats[i+1].ignore = true;
                         }
                     }
+                }
+            }
+        }
+    }
+
+    /* Maintain SNR average */
+    {
+        ++cookedGps->snrRawWrIndex;
+        if (cookedGps->snrRawWrIndex >= RS92_SNR_FILTER_LENGTH) {
+            cookedGps->snrRawWrIndex = 0;
+        }
+
+        for (i = 0; i < 32; i++) {
+            /* Set SNR sample for unheard PRN to zero */
+            cookedGps->snrRaw[i][cookedGps->snrRawWrIndex] = 0;
+        }
+
+        /* Store current SNR of received satellites */
+        for (i = 0; i < 12; i++) {
+            uint8_t prn = cookedGps->sats[i].PRN;
+            if (prn > 0) {
+                cookedGps->snrRaw[prn-1][cookedGps->snrRawWrIndex] = g[i].snr;
+
+                float f = 0;
+                for (int j = 0; j < RS92_SNR_FILTER_LENGTH; j++) {
+                    f += cookedGps->snrRaw[prn-1][j];
+                }
+                cookedGps->sats[i].snr = f / RS92_SNR_FILTER_LENGTH;
+
+                if (cookedGps->sats[i].snr < 3.0f) {
+                    cookedGps->sats[i].ignore = true;
                 }
             }
         }
@@ -172,7 +196,7 @@ LPCLIB_Result _RS92_processGpsBlock (
     /* For all channels with a valid PRN calculate satellite parameters
      * (position, clock, constellation as seen from approximate observer location)
      */
-    numSats = 0;
+    uint8_t numVisibleSats = 0;
     for (i = 0; i < 12; i++) { 
         if ((cookedGps->sats[i].PRN < 1) || (cookedGps->sats[i].PRN > 32)) {
             continue;
@@ -215,8 +239,8 @@ LPCLIB_Result _RS92_processGpsBlock (
         cookedGps->sats[i].prange = (5e7 - g[i].rang0) * (GPS_SPEED_OF_LIGHT / (64.0f * 16.368e6f));
         cookedGps->sats[i].prange -= cookedGps->rxClockOffset;
 
-        if (g[i].rang0 != 0x7FFFFFFF) {
-            ++numSats;
+        if (cookedGps->sats[i].PRN > 0) {
+            ++numVisibleSats;
         }
 
         {
@@ -250,7 +274,7 @@ cookedGps->sats[i].slantDist = slant;
         }
     }
 
-    cookedGps->visibleSats = numSats;
+    cookedGps->visibleSats = numVisibleSats;
 
     {
         if (cookedGps->visibleSats >= 4) {
@@ -264,8 +288,10 @@ cookedGps->sats[i].slantDist = slant;
                 &startPos,
                 &cookedGps->rxClockOffset,
                 &cookedGps->hdop,
-                pressureAltitude
+                pressureAltitude,
+                &cookedGps->usedSats
                 );
+
 
 cookedGps->valid=false;
 if(cookedGps->hdop<20.0f){

@@ -143,18 +143,6 @@ struct SYS_Context {
 
 
 #if (BOARD_RA == 1)
-static const GPIO_Config buttonInit[] = {
-    {.opcode = GPIO_OPCODE_CONFIGURE_PIN_INTERRUPT,
-        {.pinInterrupt = {
-            .pin = GPIO_BUTTON,
-            .enable = LPCLIB_YES,
-            .mode = GPIO_INT_FALLING_EDGE,
-            .interruptLine = GPIO_PIN_INT_0,
-            .callback = SYS_handleEvent, }}},
-
-    GPIO_CONFIG_END
-};
-
 /* UART RXD line for wakeup */
 static const GPIO_Config uartRxdWakeupInit[] = {
     {.opcode = GPIO_OPCODE_CONFIGURE_PIN_INTERRUPT,
@@ -395,6 +383,19 @@ static void _SYS_reportRadioFrequency (SYS_Handle handle)
 }
 
 
+static void _SYS_reportControls (SYS_Handle handle)
+{
+    (void)handle;
+
+    char s[20];
+    snprintf(s, sizeof(s), "2,%d", SCANNER_getMode(scanner));
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
 
 static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
 {
@@ -405,9 +406,16 @@ static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
         frequency = 406.1e6f;
     }
 
-    ADF7021_setPLL(radio, frequency - 100000);
+    LPC_MAILBOX->IRQ0SET = (1u << 30);
+    SRSC_pauseResume(handle->srsc, ENABLE);
+    IMET_pauseResume(handle->imet, ENABLE);
 
+    ADF7021_setPLL(radio, frequency - 100000);
     handle->currentFrequency = frequency;
+
+    LPC_MAILBOX->IRQ0SET = (1u << 31);
+    SRSC_pauseResume(handle->srsc, DISABLE);
+    IMET_pauseResume(handle->imet, DISABLE);
 }
 
 
@@ -577,7 +585,7 @@ static void SYS_sleep (SYS_Handle handle)
     uint32_t OldSystemCoreClock;
 
 
-    SCANNER_setScannerMode(scanner, false);
+    SCANNER_setMode(scanner, 1);
 
     handle->sleeping = true;
 
@@ -1010,11 +1018,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
 
                     /* Send status */
                     _SYS_reportRadioFrequency(handle);
-                    SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getManualMode(scanner) ? "2,1" : "2,0");
-                    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
-                    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
-                    SYS_send2Host(HOST_CHANNEL_GUI, s);
-                    SYS_send2Host(HOST_CHANNEL_GUI, SCANNER_getScannerMode(scanner) ? "7,1" : "7,0");
+                    _SYS_reportControls(handle);
 
                     //TODO send only if ping parameter asks for it
                     RS41_resendLastPositions(handle->rs41);
@@ -1044,6 +1048,8 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 SONDE_Detector detector;
 
                 if (sscanf(cl, "#%*d,%d", &selector) == 1) {
+                    char s[40];
+
                     detector = SONDE_DETECTOR_RS41_RS92;
                     switch (selector) {
                         case 0:     detector = SONDE_DETECTOR_RS41_RS92; break;
@@ -1055,6 +1061,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 6:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
+                    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+                    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+                    SYS_send2Host(HOST_CHANNEL_GUI, s);
                 }
             }
             break;
@@ -1080,30 +1089,41 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                             int decoderCode;
                             if (sscanf(cl, "#%*d,%*d,%*d,%d,%d", &id, &decoderCode) == 2) {
                                 SONDE_Decoder decoder = (SONDE_Decoder)decoderCode;
+                                SONDE_Detector detector = _SONDE_DETECTOR_UNDEFINED_;
+                                float frequency = NAN;
                                 switch (decoder) {
                                     case SONDE_DECODER_MODEM:
-                                        M10_removeFromList(handle->m10, id);
+                                        M10_removeFromList(handle->m10, id, &frequency);
+                                        detector = SONDE_DETECTOR_MODEM;
                                         break;
                                     case SONDE_DECODER_RS41:
-                                        RS41_removeFromList(handle->rs41, id);
+                                        RS41_removeFromList(handle->rs41, id, &frequency);
+                                        detector = SONDE_DETECTOR_RS41_RS92;
                                         break;
                                     case SONDE_DECODER_RS92:
-                                        RS92_removeFromList(handle->rs92, id);
+                                        RS92_removeFromList(handle->rs92, id, &frequency);
+                                        detector = SONDE_DETECTOR_RS41_RS92;
                                         break;
                                     case SONDE_DECODER_DFM:
-                                        DFM_removeFromList(handle->dfm, id);
+                                        DFM_removeFromList(handle->dfm, id, &frequency);
+                                        detector = SONDE_DETECTOR_DFM;
                                         break;
                                     case SONDE_DECODER_C34_C50:
-                                        SRSC_removeFromList(handle->srsc, id);
+                                        SRSC_removeFromList(handle->srsc, id, &frequency);
+                                        detector = SONDE_DETECTOR_C34_C50;
                                         break;
                                     case SONDE_DECODER_BEACON:
-                                        BEACON_removeFromList(handle->beacon, id);
+                                        BEACON_removeFromList(handle->beacon, id, &frequency);
+                                        detector = SONDE_DETECTOR_BEACON;
                                         break;
                                     default:
                                         /* ignore */
                                         break;
                                 }
-//                                SCANNER_removeListenFrequency(scanner, id);
+
+                                if (!isnan(frequency)) {
+                                    SCANNER_removeListenFrequency(scanner, frequency, detector);
+                                }
                             }
                         }
                     }
@@ -1115,24 +1135,32 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             {
                 int command;
                 int enableValue;
-                bool enable;
+                int extra1;
 
                 if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
-                    enable = (enableValue != 0);
                     switch (command) {
-                        case 2:
-                            SCANNER_setScannerMode(scanner, enable);
-                            if (enable) {
+                        case 3:
+                            SCANNER_setMode(scanner, enableValue);
+                            if ((enableValue == 2) || (enableValue == 3)) {     /* Spectrum scan mode */
                                 handle->currentFrequency = 0;
                                 _SYS_reportRadioFrequency(handle);
                             }
-                            break;
-
-                        case 3:
-                            SCANNER_setManualMode(scanner, enable);
                             osTimerStart(handle->rssiTick, 20);
                             break;
+
+                        case 5:
+                        {
+                            if (sscanf(cl, "#%*d,%*d,%*d,%d", &extra1) == 1) {
+                                RS41_LogMode mode = RS41_LOGMODE_NONE;
+                                if (enableValue == 1) {
+                                    mode = RS41_LOGMODE_RAW;
+                                }
+                                RS41_setLogMode(handle->rs41, extra1, mode);
+                            }
+                            break;
+                        }
                     }
+//                    _SYS_reportControls(handle);
                 }
             }
             break;
@@ -1290,7 +1318,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     PT_BEGIN(&handle->pt);
 
     sysContext.queue = osMailCreate(osMailQ(sysQueueDef), NULL);
-//    GPIO_ioctl(buttonInit);
     GPIO_ioctl(uartRxdWakeupInit);
 
     EPHEMERIS_init();
@@ -1446,34 +1473,29 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
 
             case SYS_OPCODE_GET_RSSI:
                 {
-                    static int rate;
-                    static bool lastScannerMode;
-
-                    if (SCANNER_getScannerMode(scanner) != lastScannerMode) {
-                        lastScannerMode = SCANNER_getScannerMode(scanner);
-                        rate = 0;
-                    }
+                    static int rate1;
+                    static int rate2;
 
                     /* Send RSSI only when not in scanner mode */
-                    if (!SCANNER_getScannerMode(scanner)) {
-                        if (++rate >= 2) {
+                    if (SCANNER_getMode(scanner) != 2) {
+                        if (++rate1 >= 2) {
                             handle->currentRssi = _SYS_getFilteredRssi(handle);
                             char s[30];
                             sprintf(s, "3,%.1f", handle->currentRssi);
                             SYS_send2Host(HOST_CHANNEL_GUI, s);
 
-                            rate = 0;
+                            rate1 = 0;
 SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         }
                     }
                     else {
                         /* Send dummy value at a low rate to ensure S-meter shows minimum */
-                        if (rate == 0) {
+                        if (rate2 == 0) {
                             SYS_send2Host(HOST_CHANNEL_GUI, "3,");
                         }
 
-                        if (++rate >= 100) {
-                            rate = 0;
+                        if (++rate2 >= 100) {
+                            rate2 = 0;
                         }
                     }
 

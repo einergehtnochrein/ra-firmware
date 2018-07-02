@@ -16,7 +16,7 @@
 #include "gps.h"
 
 
-#define RS92_CLIMB_HISTORY_LENGTH       10
+#define RS92_SNR_FILTER_LENGTH      (8)
 
 typedef enum {
     RS92_SUBFRAME_CALIB_CONFIG = 'e',
@@ -122,6 +122,9 @@ typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     float climbRate;
+
+    uint8_t snrRaw[32][RS92_SNR_FILTER_LENGTH];     /* Maintain short-term SNR average for all 32 PRN */
+    uint8_t snrRawWrIndex;
 } RS92_CookedGps;
 
 
@@ -189,8 +192,7 @@ typedef struct _RS92_InstanceData {
     struct {
         float alt;
         int32_t frame;
-    } lastAltitudes[RS92_CLIMB_HISTORY_LENGTH];
-    int lastAltitudesWrIndex;
+    } lastAltitude;
 } RS92_InstanceData;
 
 

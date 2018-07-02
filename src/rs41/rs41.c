@@ -22,14 +22,12 @@ typedef struct RS41_Context {
     uint8_t *pRawData;
 
     bool thisFrameNumberValid;
-    bool thisGpsInfoValid;
 
     float rxFrequencyHz;
     int nCorrectedErrors;
 
     RS41_InstanceData *instance;
-
-    RS41_SatInfo sats[12];
+    RS41_RawGps rawGps;
 
 #if SEMIHOSTING_RS41
     FILE *fpAnalog;
@@ -87,14 +85,6 @@ static void _RS41_removeWhitening(uint8_t *buffer, int length)
 
 
 
-/* Read 24-bit little-endian integer from memory */
-static uint32_t _RS41_read24 (const uint8_t *p24)
-{
-    return p24[0] + 256 * p24[1] + 65536 * p24[2];
-}
-
-
-
 /* Check CRC of a sub-block */
 static bool _RS41_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC)
 {
@@ -123,22 +113,6 @@ static bool _RS41_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC)
 
 
 
-static void _RS41_readSubFrame7D (RS41_Handle handle, RS41_SubFrame7D *p)
-{
-    int i;
-
-    /* Only use this subframe if we have previously decoded a GPS info subframe in the same frame. */
-    if (handle->thisGpsInfoValid) {
-        for (i = 0; i < 12; i++) {
-            handle->sats[i].reserved000 = p->unknown005[i].reservedX0;
-            handle->sats[i].reserved001 = (uint32_t)(_RS41_read24(p->unknown005[i].reservedX1));
-            handle->sats[i].reserved004 = (int32_t)(_RS41_read24(p->unknown005[i].reservedX4) << 8) / 256;
-        }
-    }
-}
-
-
-
 static void _RS41_readSubFrameAux (char *p, int length, RS41_InstanceData *instance)
 {
 (void)p;
@@ -162,7 +136,6 @@ LPCLIB_Result RS41_open (RS41_Handle *pHandle)
 }
 
 
-
 /* Send position as a KISS packet */
 static void _RS41_sendKiss (RS41_InstanceData *instance)
 {
@@ -172,6 +145,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     char sPressure[10];
     char sKillTimer[6];
     uint32_t special;
+    char sModelName[10+1];
 
     offset = 0;
     special = 0;
@@ -192,7 +166,10 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     /* Flags */
     if (instance->metro.hasO3) {
-        special += 1;
+        special += (1u << 0);
+    }
+    if (instance->onDescent) {
+        special += (1u << 8);
     }
 
     /* Convert lat/lon from radian to decimal degrees */
@@ -206,9 +183,10 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         direction *= 180.0 / M_PI;
         velocity *= 3.6f;
 
-        length = sprintf((char *)s, "%ld,1,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,,%.1f,%.1f,%d,%d,%s,",
+        length = sprintf((char *)s, "%ld,1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,%.2f,%.1f,%.1f,%d,%d,%s,%.1f,",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
+                        instance->gps.usedSats,                 /* # sats in position solution */
                         latitude,                               /* Latitude [degrees] */
                         longitude,                              /* Longitude [degrees] */
                         instance->gps.observerLLA.alt,          /* Altitude [m] */
@@ -218,22 +196,25 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->metro.temperature,            /* Temperature [°C] */
                         sPressure,                              /* Pressure sensor [hPa] */
                         special,
+                        instance->gps.dop,
                         SYS_getFrameRssi(sys),
                         offset,                                 /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
-                        sKillTimer                              /* Kill timer (frame) */
+                        sKillTimer,                             /* Kill timer (frame) */
+                        instance->batteryVoltage                /* Battery voltage [V] */
                         );
     }
     else if (instance->encrypted) {
-        length = sprintf((char *)s, "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,",
+        length = sprintf((char *)s, "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,%.1f,",
                         instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         SYS_getFrameRssi(sys),
                         offset,    /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
-                        sKillTimer                              /* Kill timer (frame) */
+                        sKillTimer,                             /* Kill timer (frame) */
+                        instance->batteryVoltage                /* Battery voltage [V] */
                         );
     }
 
@@ -241,10 +222,16 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,1,0,%s,%.1f",
+    sModelName[0] = 0;
+    if (_RS41_checkValidCalibration(instance, CALIB_MODELNAME)) {
+        memcpy(sModelName, instance->modelname218, 10);
+        sModelName[10] = 0;
+    }
+    length = sprintf(s, "%ld,1,0,%s,%.1f,%s",
                 instance->id,
                 instance->name,
-                instance->metro.temperature2
+                instance->metro.temperature2,
+                instance->modelname218
                 );
 
     if (length > 0) {
@@ -252,6 +239,62 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     }
 }
 
+
+
+static char _rs41_rawCompressed[680+42];    /* 680: Max UUENCODE length, 42: some overhead... */
+
+static void _RS41_sendRaw (RS41_InstanceData *instance, uint8_t *buffer, uint32_t length)
+{
+    uint32_t i = 0;
+    int j;
+    uint8_t uu[4+1];
+    int N = ((length + 1) / 3) * 3;
+    int n;
+    int slen = 0;
+    char *s = _rs41_rawCompressed;
+
+
+    slen += snprintf(&s[slen], sizeof(_rs41_rawCompressed) - slen, "%ld,1,1,%ld,%ld,",
+                     instance->id,
+                     length,
+                     0l
+                    );
+    
+    for (n = 0; n < N; n += 3) {
+        uu[0] = uu[1] = uu[2] = uu[3] = uu[4] = 0;
+
+        if (i < length)  {
+            uu[0] = buffer[i] & 0x3F;
+            uu[1] = (buffer[i] >> 6) & 0x03;
+            ++i;
+        }
+        if (i < length)  {
+            uu[1] |= (buffer[i] << 2) & 0x3C;
+            uu[2] = (buffer[i] >> 4) & 0x0F;
+            ++i;
+        }
+        if (i < length)  {
+            uu[2] |= (buffer[i] << 4) & 0x30;
+            uu[3] = (buffer[i] >> 2) & 0x3F;
+            ++i;
+        }
+
+        for (j = 0; j < 4; j++) {
+            uu[j] ^= 0x20;
+            if (uu[j] <= 0x20) {
+                uu[j] |= 0x40;
+            }
+            /* Deviation from UUENCODE: Avoid comma, replace by space */
+            if (uu[j] == ',') {
+                uu[j] = ' ';
+            }
+        }
+
+        slen += snprintf(&s[slen], sizeof(_rs41_rawCompressed) - slen, "%s", uu);
+    }
+
+    SYS_send2Host(HOST_CHANNEL_INFO, s);
+}
 
 
 static uint8_t _RS41_null;
@@ -321,167 +364,158 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
     bool longFrame = false;
 
 
+    /* Return if raw data is shorter than a short frame. */
+    if (length < 312) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
     handle->pRawData = buffer;
 
-    if (length >= 312) {  //TODO
-        /* Remove data whitening */
-        _RS41_removeWhitening(buffer, length);
+    /* Remove data whitening */
+    _RS41_removeWhitening(buffer, length);
 
-        /* Reed-Solomon error correction */
-        if (REEDSOLOMON_process(_RS41_getDataAddressShort1, &numErrors) != LPCLIB_SUCCESS) {
-            if (REEDSOLOMON_process(_RS41_getDataAddressLong1, &numErrors) != LPCLIB_SUCCESS) {
-                return LPCLIB_ERROR;
-            }
-            longFrame = true;
-        }
-        handle->nCorrectedErrors = numErrors;
-        if (REEDSOLOMON_process(longFrame ? _RS41_getDataAddressLong2 : _RS41_getDataAddressShort2, &numErrors) != LPCLIB_SUCCESS) {
+    /* Reed-Solomon error correction for even bytes */
+    if (REEDSOLOMON_process(_RS41_getDataAddressShort1, &numErrors) != LPCLIB_SUCCESS) {
+        /* Failed to decode as short frame. Try long frame format. */
+        if (REEDSOLOMON_process(_RS41_getDataAddressLong1, &numErrors) != LPCLIB_SUCCESS) {
             return LPCLIB_ERROR;
         }
-        handle->nCorrectedErrors += numErrors;
+        longFrame = true;
+    }
 
-        /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
-        handle->rxFrequencyHz = rxFrequencyHz;
+    /* Reed-Solomon error correction for odd bytes */
+    handle->nCorrectedErrors = numErrors;
+    if (REEDSOLOMON_process(longFrame ? _RS41_getDataAddressLong2 : _RS41_getDataAddressShort2, &numErrors) != LPCLIB_SUCCESS) {
+        return LPCLIB_ERROR;
+    }
+    handle->nCorrectedErrors += numErrors;
 
-        /* Dump raw packet (SondeMonitor format) */
-        if (0) {
-            uint32_t i;
-            char str[10];
+    /* Verify received packet length indicator matches detected packet length. */
+    uint8_t lengthIndicator = ((uint8_t *)buffer)[48];
+    if ((longFrame && (lengthIndicator != 0xF0)) || (!longFrame && (lengthIndicator != 0x0F))) {
+        return LPCLIB_ERROR;
+    }
 
-            for (i = 0; i < length; i++) {
-                sprintf(str, "%02X ", ((uint8_t *)buffer)[i]);
+    /* Limit buffer length in case of short frame */
+    length = longFrame ? 510 : 312;
+
+    /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
+    handle->rxFrequencyHz = rxFrequencyHz;
+
+    /* Run through buffer and process all sub-frames */
+    {
+        uint32_t i = 49;                /* Start after Reed-Solomon parity bytes and packet type indicator */
+        uint8_t *p;
+        uint8_t subFrameLength;
+        uint16_t crc;
+
+        handle->thisFrameNumberValid = false;
+
+        while (i < length) {
+            p = (uint8_t *)buffer + i;
+
+            /* Is the next sub-frame valid? Check if it is complete. */
+            subFrameLength = p[1] + 4;
+            if (subFrameLength <= 4) {
+                /* Zero-length. Probably garbage. */
+                break;
             }
-        }
+            if (i + subFrameLength > length) {
+                /* Doesn't fit. Probably garbage at packet end. */
+                break;
+            }
 
-        /* Read packet type (pos 48, 0F or F0) */
-        ;
-        ;
-        ;
-
-        /* Run through buffer and process all sub-frames */
-        {
-            uint32_t i = 49;                /* Start after Reed-Solomon parity bytes and packet type indicator */
-            uint8_t *p;
-            uint8_t subFrameLength;
-            uint16_t crc;
-
-            handle->thisFrameNumberValid = false;
-            handle->thisGpsInfoValid = false;
-
-            while (i < length) {
-                p = (uint8_t *)buffer + i;
-
-                /* Is the next sub-frame valid? Check if it is complete. */
-                subFrameLength = p[1] + 4;
-                if (subFrameLength <= 4) {
-                    /* Zero-length. Probably garbage. */
+            /* Check sub-frame CRC */
+            crc = p[subFrameLength - 2] | (p[subFrameLength - 1] << 8);
+            if (_RS41_checkCRC(p + 2, subFrameLength - 4, crc)) {
+                /* Check which frame type it is */
+                switch (p[0]) {
+                case RS41_SUBFRAME_GAPFILL:
+                    /* This sub frame of varying length contains all zeros, and is (probably) used
+                     * to fill the gap to the end of the frame.
+                     */
                     break;
-                }
-                if (i + subFrameLength > length) {
-                    /* Doesn't fit. Probably garbage at packet end. */
+                case RS41_SUBFRAME_CALIB_CONFIG:
+                    _RS41_processConfigBlock((RS41_SubFrameCalibConfig *)(p + 2), &handle->instance);
+                    handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
                     break;
-                }
-
-                /* Check sub-frame CRC */
-                crc = p[subFrameLength - 2] | (p[subFrameLength - 1] << 8);
-                if (_RS41_checkCRC(p + 2, subFrameLength - 4, crc)) {
-                    /* Check which frame type it is */
-                    switch (p[0]) {
-                    case RS41_SUBFRAME_GAPFILL:
-                        /* This sub frame of varying length contains all zeros, and is (probably) used
-                         * to fill the gap to the end of the frame.
-                         */
-                        break;
-                    case RS41_SUBFRAME_CALIB_CONFIG:
-                        _RS41_processConfigBlock((RS41_SubFrameCalibConfig *)(p + 2), &handle->instance);
-                        handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
-                        break;
-                    case RS41_SUBFRAME_METROLOGY:
-                        _RS41_processMetrologyBlock((RS41_SubFrameMetrology *)(p + 2), &handle->instance->metro, handle->instance);
+                case RS41_SUBFRAME_METROLOGY:
+                    _RS41_processMetrologyBlock((RS41_SubFrameMetrology *)(p + 2), &handle->instance->metro, handle->instance);
 #if SEMIHOSTING_RS41
-                        if (handle->instance->gps.observerLLA.alt > 100) {
-                            fprintf(handle->fpAnalog, "%u, %.0lf, ",
-                                    handle->instance->frameCounter,
-                                    handle->instance->gps.observerLLA.alt);
-                            RS41_SubFrameMetrology *pm = (RS41_SubFrameMetrology *)(p + 2);
-                            fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                    _RS41_read24(pm->adc[0].current),
-                                    _RS41_read24(pm->adc[0].refmin),
-                                    _RS41_read24(pm->adc[0].refmax));
-                            fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                    _RS41_read24(pm->adc[1].current),
-                                    _RS41_read24(pm->adc[1].refmin),
-                                    _RS41_read24(pm->adc[1].refmax));
-                            fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                    _RS41_read24(pm->adc[2].current),
-                                    _RS41_read24(pm->adc[2].refmin),
-                                    _RS41_read24(pm->adc[2].refmax));
-                            fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                    _RS41_read24(pm->adc[3].current),
-                                    _RS41_read24(pm->adc[3].refmin),
-                                    _RS41_read24(pm->adc[3].refmax));
-                            fprintf(handle->fpAnalog, "%u, %u, %u, ",
-                                    pm->val12_16,
-                                    pm->pressurePolyTwist,
-                                    pm->val14_16);
-                            fprintf(handle->fpAnalog, "%.7f\n",
-                                    (float)(_RS41_read24(pm->adc[0].refmax) - _RS41_read24(pm->adc[0].current))
-                                   /(float)(_RS41_read24(pm->adc[0].refmax) - _RS41_read24(pm->adc[0].refmin)));
-                            fflush(handle->fpAnalog);
-                        }
-#endif
-                        break;
-                    case RS41_SUBFRAME_GPS_POSITION:
-                        _RS41_processGpsPositionBlock((RS41_SubFrameGpsPosition *)(p + 2), &handle->instance->gps);
-
-                        LPCLIB_Event event;
-                        LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
-                        event.opcode = APP_EVENT_HEARD_SONDE;
-                        event.block = SONDE_DETECTOR_RS41_RS92;
-                        event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
-                        SYS_handleEvent(event);
-                        break;
-                    case RS41_SUBFRAME_GPS_INFO:
-                        handle->thisGpsInfoValid = _RS41_processGpsInfoBlock(
-                            (RS41_SubFrameGpsInfo *)(p + 2),
-                            &handle->instance->gps);
-                        break;
-                    case RS41_SUBFRAME_7D:
-                        _RS41_readSubFrame7D(handle, (RS41_SubFrame7D *)(p + 2));
-                        break;
-                    case RS41_SUBFRAME_CRYPT78:
-                    case RS41_SUBFRAME_CRYPT80:
-                        /* RS41-SGM */
-                        handle->instance->gps.observerLLA.lat = NAN;
-                        handle->instance->gps.observerLLA.lon = NAN;
-                        handle->instance->encrypted = true;
-                        break;
-                    case RS41_SUBFRAME_AUX:
-                        _RS41_readSubFrameAux((char *)(p + 2), subFrameLength - 4, handle->instance);
-                        break;
-                    default:
-                        /* Ignore unknown (or unhandled) frame types */
-                        break;
+                    if (handle->instance->gps.observerLLA.alt > 100) {
+                        fprintf(handle->fpAnalog, "%u, %.0lf, ",
+                                handle->instance->frameCounter,
+                                handle->instance->gps.observerLLA.alt);
+                        RS41_SubFrameMetrology *pm = (RS41_SubFrameMetrology *)(p + 2);
+                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
+                                _RS41_read24(pm->adc[0].current),
+                                _RS41_read24(pm->adc[0].refmin),
+                                _RS41_read24(pm->adc[0].refmax));
+                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
+                                _RS41_read24(pm->adc[1].current),
+                                _RS41_read24(pm->adc[1].refmin),
+                                _RS41_read24(pm->adc[1].refmax));
+                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
+                                _RS41_read24(pm->adc[2].current),
+                                _RS41_read24(pm->adc[2].refmin),
+                                _RS41_read24(pm->adc[2].refmax));
+                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
+                                _RS41_read24(pm->adc[3].current),
+                                _RS41_read24(pm->adc[3].refmin),
+                                _RS41_read24(pm->adc[3].refmax));
+                        fprintf(handle->fpAnalog, "%u, %u, %u, ",
+                                pm->val12_16,
+                                pm->pressurePolyTwist,
+                                pm->val14_16);
+                        fprintf(handle->fpAnalog, "%.7f\n",
+                                (float)(_RS41_read24(pm->adc[0].refmax) - _RS41_read24(pm->adc[0].current))
+                                /(float)(_RS41_read24(pm->adc[0].refmax) - _RS41_read24(pm->adc[0].refmin)));
+                        fflush(handle->fpAnalog);
                     }
-                }
+#endif
+                    break;
+                case RS41_SUBFRAME_GPS_POSITION:
+                    _RS41_processGpsPositionBlock((RS41_SubFrameGpsPosition *)(p + 2), &handle->instance->gps);
 
-                /* Advance to next sub-frame */
-                i += subFrameLength;
+                    LPCLIB_Event event;
+                    LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
+                    event.opcode = APP_EVENT_HEARD_SONDE;
+                    event.block = SONDE_DETECTOR_RS41_RS92;
+                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                    SYS_handleEvent(event);
+                    break;
+                case RS41_SUBFRAME_GPS_INFO:
+                    _RS41_processGpsInfoBlock(
+                            (RS41_SubFrameGpsInfo *)(p + 2),
+                            &handle->instance->gps,
+                            &handle->rawGps);
+                    break;
+                case RS41_SUBFRAME_GPS_RAW:
+                    _RS41_processGpsRawBlock((RS41_SubFrameGpsRaw *)(p + 2), &handle->rawGps);
+                    break;
+                case RS41_SUBFRAME_CRYPT78:
+                case RS41_SUBFRAME_CRYPT80:
+                    /* RS41-SGM */
+                    handle->instance->gps.observerLLA.lat = NAN;
+                    handle->instance->gps.observerLLA.lon = NAN;
+                    handle->instance->encrypted = true;
+                    break;
+                case RS41_SUBFRAME_AUX:
+                    _RS41_readSubFrameAux((char *)(p + 2), subFrameLength - 4, handle->instance);
+                    break;
+                default:
+                    /* Ignore unknown (or unhandled) frame types */
+                    break;
+                }
             }
 
-            _RS41_sendKiss(handle->instance);
+            /* Advance to next sub-frame */
+            i += subFrameLength;
         }
 
-        /* Dump cooked data */
-        if (0) {
-            uint32_t i;
-            char str[10];
-
-            for (i = 0; i < length; i++) {
-                sprintf(str, "%02X ", ((uint8_t *)buffer)[i]);
-//                USBSerial_write(1, str, 3);
-            }
-//            USBSerial_write(1, "\r\n", 2);
+        _RS41_sendKiss(handle->instance);
+        if (handle->instance->logMode == RS41_LOGMODE_RAW) {
+            _RS41_sendRaw(handle->instance, buffer, length);
         }
     }
 
@@ -506,7 +540,7 @@ LPCLIB_Result RS41_resendLastPositions (RS41_Handle handle)
 
 
 /* Remove entries from heard list */
-LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id)
+LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id, float *frequency)
 {
     (void)handle;
 
@@ -517,6 +551,10 @@ LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id)
             if (instance == handle->instance) {
                 handle->instance = NULL;
             }
+
+            /* Let caller know about sonde frequency */
+            *frequency = instance->rxFrequencyMHz * 1e6f;
+            
             /* Remove sonde */
             _RS41_deleteInstance(instance);
             break;
@@ -524,5 +562,26 @@ LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id)
     }
 
     return LPCLIB_SUCCESS;
+}
+
+
+/* Control logging */
+LPCLIB_Result RS41_setLogMode (RS41_Handle handle, uint32_t id, RS41_LogMode mode)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
+    RS41_InstanceData *instance = NULL;
+    while (_RS41_iterateInstance(&instance)) {
+        if (instance->id == id) {
+            instance->logMode = mode;
+            result = LPCLIB_SUCCESS;
+            break;
+        }
+    }
+
+    return result;
 }
 

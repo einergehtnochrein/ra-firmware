@@ -274,9 +274,9 @@ void GPS_findPositionSolutionAllSats (
     ECEF_Coordinate *startPos,
     double *rxClockOffset,
     float *hdop,
-    float pressureAltitude)
+    float pressureAltitude,
+    uint8_t *pUsedSats)
 {
-//    int si[12];
     static struct {
         double correctedPR;
         double Rho;
@@ -291,10 +291,16 @@ void GPS_findPositionSolutionAllSats (
     for (i = 0; i < numSats; i++) {
         si[i] = 0;
         if ((sats[i].PRN != 0) && (sats[i].prange > 0) && (sats[i].prange < 50e6)
-                               && (sats[i].elevation > 10.0*(M_PI/180.0f))) {
+                               && (sats[i].elevation > 10.0*(M_PI/180.0f))
+                               && !sats[i].ignore
+           )
+        {
             si[N] = i;
             ++N;
         }
+    }
+    if (pUsedSats != NULL) {
+        *pUsedSats = N;
     }
 
     for (i = 0; i < N; i++) {

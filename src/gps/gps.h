@@ -62,7 +62,9 @@ typedef struct LLA_Coordinate {
 
 /* Status of a satellite */
 typedef struct GPS_SatInfo {
-    int PRN;
+    uint8_t PRN;
+    bool ignore;
+    float snr;
     ECEF_Coordinate pos;
     float elevation;
     float azimuth;

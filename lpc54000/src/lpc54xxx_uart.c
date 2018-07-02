@@ -195,11 +195,13 @@ static const osSemaphoreDef_t * const uartSemas[UART_NUM_UARTS] = {
 
 static LPC_UART_Type * const uartPtr[UART_NUM_UARTS] = {
     LPC_USART0,(LPC_UART_Type *)LPC_UART1, LPC_USART2, LPC_USART3,};
+#if 0
 static const IRQn_Type uartIrqs[UART_NUM_UARTS] = {
     UART0_IRQn,
     UART1_IRQn,
     UART2_IRQn,
     UART3_IRQn,};
+#endif
 static const CLKPWR_Clockswitch uartClockSwitch[UART_NUM_UARTS] = {
     CLKPWR_CLOCKSWITCH_UART0, CLKPWR_CLOCKSWITCH_UART1, CLKPWR_CLOCKSWITCH_UART2, CLKPWR_CLOCKSWITCH_UART3,};
 static const CLKPWR_Clock uartClock[UART_NUM_UARTS] = {

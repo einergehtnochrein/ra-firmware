@@ -138,8 +138,6 @@ static const float _B2 = 0.029402f;
 static const float _A1 = -1.459787f;
 static const float _A2 = 0.577394f;
 
-static const float _2pi = 2.0 * M_PI;
-
 
 /* Process last FM decoder output */
 static void SRSC_DSP_uart (void)
@@ -363,4 +361,10 @@ void SRSC_handleAudioCallback (int32_t *samples, int nSamples)
 }
 
 
+/* Discard partial decoder result */
+void SRSC_DSP_reset (void)
+{
+    // Can be done better, but...
+    _srscAudioContext.c34.state = 0;
+}
 

@@ -44,6 +44,7 @@ typedef enum {
     SCANNER_MODE_OFF = 0,
     SCANNER_MODE_MANUAL,                        /* Manually controlled continuous operation on a single frequency */
     SCANNER_MODE_LIST,                          /* Walk through list of discrete frequencies */
+    SCANNER_MODE_SPECTRUM,                      /* Collect spectrum of sonde band */
 } SCANNER_Mode;
 
 
@@ -83,12 +84,12 @@ struct SCANNER_Context {
 
     float manualFrequency;                              /* Frequency for manual operation */
     SONDE_Detector manualSondeDetector;
-    bool scanner;
     bool scannerNeedInit;
 
     int preferredIndex;
 
     SCANNER_Mode mode;
+    SCANNER_Mode previousMode;
     osTimerId scanTick;
     bool scanTickTimeout;
 
@@ -196,6 +197,10 @@ static bool _SCANNER_getNextQrg (SONDE_Detector *sondeDetector, float *frequency
                 result = false;
             }
             break;
+
+        case SCANNER_MODE_SPECTRUM:
+            /* Nothing to do */
+            break;
     }
 
     return result;
@@ -233,27 +238,23 @@ osMailQDef(scannerQueueDef, SCANNER_QUEUE_LENGTH, SCANNER_Message);
 LPCLIB_Result SCANNER_open (SCANNER_Handle *pHandle)
 {
     *pHandle = &scannerContext;
-//    SCANNER_Handle handle = *pHandle;
-
-//    SCANNER_addListenFrequency(handle, 402.9e6f, SONDE_RS92);
-//    SCANNER_addListenFrequency(handle, 405.5e6f, SONDE_RS41);
-//    SCANNER_addListenFrequency(handle, 402.5e6f, SONDE_RS92);
 
     return LPCLIB_SUCCESS;
 }
 
 
-void SCANNER_setManualMode (SCANNER_Handle handle, bool enable)
+void SCANNER_setMode (SCANNER_Handle handle, int modeValue)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
         return;
     }
 
-    if (enable) {
-        handle->mode = SCANNER_MODE_MANUAL;
-    }
-    else {
-        handle->mode = SCANNER_MODE_LIST;
+    switch (modeValue) {
+        case 0:     handle->mode = SCANNER_MODE_LIST; break;
+        case 1:     handle->mode = SCANNER_MODE_MANUAL; break;
+        case 2:     handle->mode = SCANNER_MODE_SPECTRUM; break;
+        default:
+            return;
     }
 
     /* Force checking for new frequency/type settings */
@@ -261,34 +262,18 @@ void SCANNER_setManualMode (SCANNER_Handle handle, bool enable)
 }
 
 
-bool SCANNER_getManualMode (SCANNER_Handle handle)
+int SCANNER_getMode (SCANNER_Handle handle)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
-        return false;
+        return -1;
     }
 
-    return handle->mode == SCANNER_MODE_MANUAL;
-}
-
-
-void SCANNER_setScannerMode (SCANNER_Handle handle, bool enable)
-{
-    if (handle == LPCLIB_INVALID_HANDLE) {
-        return;
+    switch (handle->mode) {
+        case SCANNER_MODE_LIST:         return 0;
+        case SCANNER_MODE_MANUAL:       return 1;
+        case SCANNER_MODE_SPECTRUM:     return 2;
+        default:                        return -1;
     }
-
-    handle->scanner = enable;
-    handle->scannerNeedInit = enable;
-}
-
-
-bool SCANNER_getScannerMode (SCANNER_Handle handle)
-{
-    if (handle == LPCLIB_INVALID_HANDLE) {
-        return false;
-    }
-
-    return handle->scanner;
 }
 
 
@@ -371,7 +356,7 @@ void SCANNER_addListenFrequency (SCANNER_Handle handle, float frequency, SONDE_D
 }
 
 
-void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency)
+void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency, SONDE_Detector detector)
 {
     float frequencyKhz = roundf(frequency / 1e3f);
 
@@ -379,10 +364,12 @@ void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency)
     SCANNER_Item **parent = &handle->scanList;
     SCANNER_Item *item = handle->scanList;
     while (item) {
-        if (roundf(item->frequency / 1000.0f) == frequencyKhz) {
-            *parent = item->next;           /* Remove from chain */
-            free(item);
-            break;
+        if (item->detector == detector) {
+            if (roundf(item->frequency / 1000.0f) == frequencyKhz) {
+                *parent = item->next;           /* Remove from chain */
+                free(item);
+                break;
+            }
         }
 
         parent = &item->next;
@@ -413,8 +400,8 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
 
     handle->manualFrequency = 405.1e6f;
     handle->manualSondeDetector = SONDE_DETECTOR_RS41_RS92;
-//handle->mode = SCANNER_MODE_SEARCH;
-handle->mode = SCANNER_MODE_MANUAL;
+    handle->mode = SCANNER_MODE_MANUAL;
+    handle->previousMode = SCANNER_MODE_MANUAL;
 
     handle->scanTick = osTimerCreate(osTimer(scannerTickDef), osTimerOnce, (void *)handle);
     osTimerStart(handle->scanTick, 10);
@@ -427,7 +414,7 @@ handle->mode = SCANNER_MODE_MANUAL;
             osTimerStop(handle->scanTick);
             handle->scanTickTimeout = false;
 
-            if (handle->scanner) {
+            if (handle->mode == SCANNER_MODE_SPECTRUM) {
                 /* One-time init for scanner mode */
                 if (handle->scannerNeedInit) {
                     //TODO must disable AFC. SRSC detector does this...
@@ -446,13 +433,13 @@ handle->mode = SCANNER_MODE_MANUAL;
                 uint32_t durationMs = 1;
                 if (_SCANNER_getNextQrg(&sondeDetector, &frequency, &durationMs)) {
                     SYS_enableDetector(sys, frequency, sondeDetector);
-                    if ((handle->mode == SCANNER_MODE_MANUAL) && !handle->scanner) {
+                    if (handle->mode == SCANNER_MODE_MANUAL) {
                         handle->manualFrequency = SYS_getCurrentFrequency(sys);
                     }
 //durationMs = 0xFFFFFFFF;
-                    osTimerStart(handle->scanTick, durationMs);
 printf("scanner @ %.3f\r\n", frequency / 1e6f);
                 }
+                osTimerStart(handle->scanTick, durationMs);
             }
         }
     }

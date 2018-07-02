@@ -289,6 +289,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 LPCLIB_Result DFM_processBlock (DFM_Handle handle, SONDE_Type type, void *buffer, uint32_t length, float rxFrequencyHz)
 {
     LPCLIB_Result result = LPCLIB_ERROR;
+    bool parityOk;
 
     if (length >= 66) {  //TODO
         /* Convert to byte array */
@@ -303,17 +304,24 @@ LPCLIB_Result DFM_processBlock (DFM_Handle handle, SONDE_Type type, void *buffer
         if (handle->instance) {
             handle->instance->platform = type;
 
+            parityOk = true;
             if (_DFM_doParityCheck((uint8_t *)&handle->packet.gps[0].raw, 13)) {
                 _DFM_processGpsBlock(&handle->packet.gps[0].raw, handle->instance);
+            }
+            else {
+                parityOk = false;
             }
 
             if (_DFM_doParityCheck((uint8_t *)&handle->packet.gps[1].raw, 13)) {
                 _DFM_processGpsBlock(&handle->packet.gps[1].raw, handle->instance);
             }
+            else {
+                parityOk = false;
+            }
 
             /* Log (only if whole frame is ok) */
-            if (handle->instance->detectorState == DFM_DETECTOR_READY) {
-                char log[50];
+            if (parityOk) {
+                char log[60];
                 uint32_t confval = 0
                         | (handle->packet.config.h[0] << 24)
                         | (handle->packet.config.h[1] << 20)
@@ -410,7 +418,7 @@ LPCLIB_Result DFM_resendLastPositions (DFM_Handle handle)
 
 
 /* Remove entries from heard list */
-LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id)
+LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id, float *frequency)
 {
     (void)handle;
 
@@ -421,6 +429,10 @@ LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id)
             if (instance == handle->instance) {
                 handle->instance = NULL;
             }
+
+            /* Let caller know about sonde frequency */
+            *frequency = instance->rxFrequencyMHz * 1e6f;
+
             /* Remove sonde */
             _DFM_deleteInstance(instance);
             break;

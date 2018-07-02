@@ -37,7 +37,8 @@ LPCLIB_Result SRSC_open (SRSC_Handle *pHandle);
 LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz);
 void SRSC_handleAudioCallback (int32_t *samples, int nSamples);
 LPCLIB_Result SRSC_resendLastPositions (SRSC_Handle handle);
-LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id);
+LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id, float *frequency);
 LPCLIB_Result SRSC_setRxOffset (SRSC_Handle handle, float rxOffset);
+LPCLIB_Result SRSC_pauseResume (SRSC_Handle handle, bool pause);
 
 #endif

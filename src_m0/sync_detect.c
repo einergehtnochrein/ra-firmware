@@ -136,6 +136,11 @@ void SYNC_open (SYNC_Handle *pHandle)
 
 void SYNC_configure (SYNC_Handle handle, const SYNC_Config *pConfig)
 {
-    handle->config = pConfig;
+    if (pConfig == NULL) {
+        memset(&syncContext, 0, sizeof(syncContext));
+    }
+    else {
+        handle->config = pConfig;
+    }
 }
 

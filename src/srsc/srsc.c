@@ -129,13 +129,16 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     /* Sonde type */
     special = 0;
     if (instance->config.hasO3) {
-        special += 1;
+        special += (1u << 0);
     }
     if (instance->config.isC34) {
-        special += 4;
+        special += (1u << 2);
     }
     if (instance->config.isC50) {
-        special += 8;
+        special += (1u << 3);
+    }
+    if (instance->config.state >= 8) {
+        special += (1u << 8);
     }
     snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
 
@@ -265,7 +268,7 @@ LPCLIB_Result SRSC_resendLastPositions (SRSC_Handle handle)
 
 
 /* Remove entries from heard list (select by frequency) */
-LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id)
+LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id, float *frequency)
 {
     (void)handle;
 
@@ -276,6 +279,10 @@ LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id)
             if (instance == handle->instance) {
                 handle->instance = NULL;
             }
+
+            /* Let caller know about sonde frequency */
+            *frequency = instance->rxFrequencyMHz * 1e6f;
+
             /* Remove sonde */
             _SRSC_deleteInstance(instance);
             break;
@@ -285,4 +292,18 @@ LPCLIB_Result SRSC_removeFromList (SRSC_Handle handle, uint32_t id)
     return LPCLIB_SUCCESS;
 }
 
+
+LPCLIB_Result SRSC_pauseResume (SRSC_Handle handle, bool pause)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    (void)pause;
+
+    /* Simple approach: Reset decode pause begins/ends */
+    SRSC_DSP_reset();
+    
+    return LPCLIB_SUCCESS;
+}
 

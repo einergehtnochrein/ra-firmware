@@ -36,6 +36,8 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
 
     cookedGps->observerECEF = ecef;
     cookedGps->observerLLA = lla;
+    cookedGps->usedSats = rawGps->usedSats;
+    cookedGps->dop = rawGps->dop / 10.0f;
 
     return LPCLIB_SUCCESS;
 }
@@ -44,25 +46,44 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
 /* Process the GPS block (sat info). */
 LPCLIB_Result _RS41_processGpsInfoBlock (
         const RS41_SubFrameGpsInfo *rawGps,
-        RS41_CookedGps *cookedGps)
+        RS41_CookedGps *cookedGps,
+        RS41_RawGps *raw)
 {
     int i;
-    uint8_t prn;
     uint8_t nSats = 0;
 
     cookedGps->gpstime = rawGps->timeOfWeek / 1000.0;
 
     for (i = 0; i < 12; i++) {
-        prn = rawGps->sats[i].prn;
+        raw->sats[i].prn = rawGps->sats[i].prn;
 
         /* Count number of valid sats */
-        if (prn != (uint8_t)-1) {
+        if (raw->sats[i].prn != (uint8_t)-1) {
             ++nSats;
         }
+
+        raw->sats[i].cno = rawGps->sats[i].cno_mesQI / 16;
+        raw->sats[i].mesQI = rawGps->sats[i].cno_mesQI % 16;
     }
 
     cookedGps->visibleSats = nSats;
 
     return LPCLIB_SUCCESS;
 }
+
+
+LPCLIB_Result _RS41_processGpsRawBlock (
+        const RS41_SubFrameGpsRaw *p,
+        RS41_RawGps *raw)
+{
+    int i;
+
+    for (i = 0; i < 12; i++) {
+        raw->sats[i].pseudorange =  (double)p->minPrMes + p->sats[i].deltaPrMes / 256.0;
+        raw->sats[i].doppler = (int32_t)(_RS41_readS24(p->sats[i].doMes) << 8) / 256;
+    }
+
+    return LPCLIB_SUCCESS;
+}
+
 

@@ -6,6 +6,7 @@
 
 int currentMode;
 volatile int newMode;
+volatile bool resetSync;
 SYNC_Handle sync;
 
 
@@ -121,6 +122,14 @@ void MAILBOX_IRQHandler (void)
         newMode = 4;
         LPC_MAILBOX->IRQ0CLR = 8;
     }
+    else if (requests & (1u << 30)) {
+        resetSync = true;
+        LPC_MAILBOX->IRQ0CLR = (1u << 30);
+    }
+    else if (requests & (1u << 31)) {
+        resetSync = false;
+        LPC_MAILBOX->IRQ0CLR = (1u << 31);
+    }
     else {
         /* No supported request. Clear them all */
         LPC_MAILBOX->IRQ0CLR = requests;
@@ -130,6 +139,8 @@ void MAILBOX_IRQHandler (void)
 
 int main (void)
 {
+    const SYNC_Config *syncConfig = NULL;
+    
     SystemCoreClock = 48000000ul;
 
     osKernelInitialize();
@@ -148,22 +159,33 @@ int main (void)
             //TODO configure detector
             switch (newMode) {
                 case 1:
-                    SYNC_configure(sync, &configVaisala);
-                    NVIC_EnableIRQ(PIN_INT3_IRQn);
+                    syncConfig = &configVaisala;
                     break;
                 case 2:
-                    SYNC_configure(sync, &configGraw);
-                    NVIC_EnableIRQ(PIN_INT3_IRQn);
-                    break;
-                case 3:
+                    syncConfig = &configGraw;
                     break;
                 case 4:
-                    SYNC_configure(sync, &configModem);
-                    NVIC_EnableIRQ(PIN_INT3_IRQn);
+                    syncConfig = &configModem;
                     break;
+                default:
+                    syncConfig = NULL;
+                    break;
+            }
+            if (syncConfig != NULL) {
+                SYNC_configure(sync, syncConfig);
+                NVIC_EnableIRQ(PIN_INT3_IRQn);
             }
 
             currentMode = newMode;
+        }
+
+        if (resetSync) {
+            NVIC_DisableIRQ(PIN_INT3_IRQn);
+            SYNC_configure(sync, NULL);
+        }
+        else {
+            SYNC_configure(sync, syncConfig);
+            NVIC_EnableIRQ(PIN_INT3_IRQn);
         }
     }
 }

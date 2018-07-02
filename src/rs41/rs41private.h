@@ -23,7 +23,7 @@ typedef enum {
     RS41_SUBFRAME_METROLOGY = 0x7A,
     RS41_SUBFRAME_GPS_POSITION = 0x7B,
     RS41_SUBFRAME_GPS_INFO = 0x7C,
-    RS41_SUBFRAME_7D = 0x7D,
+    RS41_SUBFRAME_GPS_RAW = 0x7D,
     RS41_SUBFRAME_AUX = 0x7E,
     RS41_SUBFRAME_CRYPT80 = 0x80,
 } RS41_SubFrameType;
@@ -35,7 +35,11 @@ typedef enum {
 typedef __PACKED(struct {
     uint16_t frameCounter;
     char name[8];
-    uint8_t reserved00A[13];
+    uint8_t batteryVoltage100mV;            /* Battery voltage in multiples of 100 mV */
+    uint8_t reserved00B[2];
+    uint8_t flags;                          /* Bit 1: 0=Ascent, 1=Descent */
+    uint8_t reserved00E[8];
+    uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
     uint8_t thisCalibIndex;                 /* Index of calibration fragment in this frame */
     uint8_t calibFragment[16];
     uint16_t crc;
@@ -55,6 +59,13 @@ typedef __PACKED(struct {
 }) RS41_SubFrameMetrology;
 
 
+/* The identification of fields in the following GPS structures
+ * was inspired by the contributions of user "zilog80" in the "Finger" forum:
+ * https://www.fingers-welt.de/phpBB/viewtopic.php?f=14&t=43&start=1975#p163997
+ * Further information was taken from the following manual:
+ * GPS.G6-SW-10018-F, www.u-blox.com
+ */
+
 typedef __PACKED(struct {
     uint32_t ecefX;
     uint32_t ecefY;
@@ -62,7 +73,9 @@ typedef __PACKED(struct {
     int16_t speedX;
     int16_t speedY;
     int16_t speedZ;
-    uint8_t reserved[3];
+    uint8_t usedSats;
+    uint8_t reserved;
+    uint8_t dop;
     uint16_t crc;
 }) RS41_SubFrameGpsPosition;
 
@@ -72,30 +85,32 @@ typedef __PACKED(struct {
     uint32_t timeOfWeek;
     __PACKED(struct {
         uint8_t prn;
-        uint8_t reserved;
+        uint8_t cno_mesQI;
     }) sats[12];
     uint16_t crc;
 }) RS41_SubFrameGpsInfo;
 
 
 typedef __PACKED(struct {
-    uint32_t reserved000;
+    uint32_t minPrMes;                  /* Minimum PR measurement of all sats [m] (floor) */
     uint8_t reserved004;
     __PACKED(struct {
-        uint8_t reservedX0;
-        uint8_t reservedX1[3];
-        uint8_t reservedX4[3];  // signed 24 bit
-    }) unknown005[12];
+        uint32_t deltaPrMes;            /* PR measurement (delta to minPrMes) [1/256 m] */
+                                        /* NOTE: In general also the satellite with the minimum PR
+                                         *        will have a non-zero delta!
+                                         */
+        uint8_t doMes[3];               /* Doppler measurement [Hz], signed 24-bit int */
+    }) sats[12];
     uint16_t crc;
-}) RS41_SubFrame7D;
+}) RS41_SubFrameGpsRaw;
 
 
 typedef struct {
     uint8_t prn;
-    int8_t info;
-    uint32_t reserved000;
-    uint32_t reserved001;
-    int32_t reserved004;
+    uint8_t cno;
+    uint8_t mesQI;
+    double pseudorange;
+    int32_t doppler;
 } RS41_SatInfo;
 
 
@@ -114,8 +129,15 @@ typedef struct {
     double gpstime;
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+    float dop;
     uint8_t visibleSats;
+    uint8_t usedSats;
 } RS41_CookedGps;
+
+
+typedef struct {
+    RS41_SatInfo sats[12];
+} RS41_RawGps;
 
 
 /* Data that needs to be stored for every RS41 instance. */
@@ -126,11 +148,13 @@ typedef struct _RS41_InstanceData {
     uint64_t fragmentValidFlags;                /* The 52 bits (if set) indicate validity of the corresponding fragment */
     uint32_t lastUpdated;
     float rxFrequencyMHz;
+    float batteryVoltage;                       /* Battery voltage [V] */
     uint16_t frameCounter;
     bool encrypted;                             /* Set for RS41-SGM military version */
-
+    bool onDescent;                             /* Descent phase detected */
     RS41_CookedGps gps;
     RS41_CookedMetrology metro;
+    RS41_LogMode logMode;
 
     __PACKED(union {
         uint8_t rawData[RS41_CALIBRATION_MAX_INDEX + 1][16];
@@ -185,12 +209,18 @@ LPCLIB_Result _RS41_processConfigBlock (
         RS41_InstanceData **instancePointer);
 
 
+/* Read 24-bit little-endian integer from memory */
+uint32_t _RS41_readU24 (const uint8_t *p24);
+int32_t _RS41_readS24 (const uint8_t *p24);
+
+
 /* Check if the calibration block contains valid data for a given purpose */
 #define CALIB_FREQUENCY             0x0000000000000001ll
 #define CALIB_TEMPERATURE1          0x0000000000000078ll
 #define CALIB_TEMPERATURE2          0x00000000000C0018ll
 #define CALIB_PRESSURE              0x000007E000000000ll
 #define CALIB_KILLTIMER             0x0000000000000004ll
+#define CALIB_MODELNAME             0x0000000600000000ll
 
 bool _RS41_checkValidCalibration(RS41_InstanceData *instance, uint64_t purpose);
 
@@ -219,6 +249,14 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
  */
 LPCLIB_Result _RS41_processGpsInfoBlock (
         const RS41_SubFrameGpsInfo *rawGps,
-        RS41_CookedGps *cookedGps);
+        RS41_CookedGps *cookedGps,
+        RS41_RawGps *raw);
+
+
+/* Process the GPS raw satellite data.
+ */
+LPCLIB_Result _RS41_processGpsRawBlock (
+        const RS41_SubFrameGpsRaw *p,
+        RS41_RawGps *raw);
 
 #endif

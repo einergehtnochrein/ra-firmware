@@ -25,7 +25,8 @@ void GPS_findPositionSolutionAllSats (
     ECEF_Coordinate *startPos,
     double *rxClockOffset,
     float *hdop,
-    float pressureAltitude
+    float pressureAltitude,
+    uint8_t *pUsedSats
     );
 
 /* Determine suitability of satellite selection for a position solution. */

@@ -12,7 +12,7 @@ MAKEFILE = Makefile_m4
 vpath %.c $(PDL)/libs/graphics/swim
 
 C_SRCS = \
-    main.c bspra1.c linregression.c config.c \
+    main.c bspra1.c config.c \
     adf7021.c sys.c scanner.c ephemupdate.c \
     gps/gps.c \
     reedsolomon/reedsolomon.c bch/bch.c \
