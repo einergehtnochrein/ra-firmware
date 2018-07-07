@@ -174,15 +174,35 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
-    double longitude = instance->gps.observerLLA.lon;
-    float direction = instance->gps.observerLLA.direction;
-    float velocity = instance->gps.observerLLA.velocity;
-    if (!isnan(latitude) && !isnan(longitude)) {
+    if (!isnan(latitude)) {
         latitude *= 180.0 / M_PI;
+    }
+    double longitude = instance->gps.observerLLA.lon;
+    if (!isnan(longitude)) {
         longitude *= 180.0 / M_PI;
+    }
+    float direction = instance->gps.observerLLA.direction;
+    if (!isnan(direction)) {
         direction *= 180.0 / M_PI;
+    }
+    float velocity = instance->gps.observerLLA.velocity;
+    if (!isnan(velocity)) {
         velocity *= 3.6f;
+    }
 
+    if (instance->encrypted) {
+        length = sprintf((char *)s, "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,%.1f,",
+                        instance->id,
+                        instance->rxFrequencyMHz,               /* RX frequency [MHz] */
+                        SYS_getFrameRssi(sys),
+                        offset,    /* RX frequency offset [kHz] */
+                        instance->gps.visibleSats,              /* # satellites */
+                        instance->frameCounter,                 /* Current frame number */
+                        sKillTimer,                             /* Kill timer (frame) */
+                        instance->batteryVoltage                /* Battery voltage [V] */
+                        );
+    }
+    else {
         length = sprintf((char *)s, "%ld,1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,%.2f,%.1f,%.1f,%d,%d,%s,%.1f,",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
@@ -199,18 +219,6 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->gps.dop,
                         SYS_getFrameRssi(sys),
                         offset,                                 /* RX frequency offset [kHz] */
-                        instance->gps.visibleSats,              /* # satellites */
-                        instance->frameCounter,                 /* Current frame number */
-                        sKillTimer,                             /* Kill timer (frame) */
-                        instance->batteryVoltage                /* Battery voltage [V] */
-                        );
-    }
-    else if (instance->encrypted) {
-        length = sprintf((char *)s, "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,%.1f,",
-                        instance->id,
-                        instance->rxFrequencyMHz,               /* RX frequency [MHz] */
-                        SYS_getFrameRssi(sys),
-                        offset,    /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
                         sKillTimer,                             /* Kill timer (frame) */
