@@ -16,6 +16,7 @@ struct _SyncDetectorContext {
     int activeBuffer;
     int detectedType;           /* 0=RS92, 1=RS41, 2=DFM06, 3=DFM09 */
     int frameLength;
+    int rxCounter;
     int bitCounter;
     int writeIndex;
     PostProcessFunc postProcess;
@@ -69,9 +70,6 @@ void PIN_INT3_IRQHandler (void)
                     if (nDifferences <= handle->config->conf[i].nMaxDifference) {
                         /* SYNC! Start frame reception */
 
-                        /* Tell M4 to keep current RSSI value */
-                        LPC_MAILBOX->IRQ1SET = (1u << 1);
-
                         /* Find available buffer */
                         for (j = 0; j < IPC_S2M_NUM_BUFFERS; j++) {
                             if (!ipc_s2m[j].valid) {
@@ -81,6 +79,7 @@ void PIN_INT3_IRQHandler (void)
                         if (j < IPC_S2M_NUM_BUFFERS) {
                             handle->activeBuffer = j;
                             handle->frameLength = handle->config->conf[i].frameLength;
+                            handle->rxCounter = handle->config->conf[i].frameLength;
                             handle->bitCounter = 0;
                             handle->writeIndex = handle->config->conf[i].startOffset;
                             handle->postProcess = handle->config->conf[i].postProcess;
@@ -99,7 +98,7 @@ void PIN_INT3_IRQHandler (void)
                 if (++handle->bitCounter >= 8) {
                     handle->bitCounter = 0;
                     ++handle->writeIndex;
-                    if (--handle->frameLength <= 0) {
+                    if (--handle->rxCounter <= 0) {
                         handle->state = 0;
                         handle->writeIndex = 0;
                         if (handle->postProcess) {
@@ -108,6 +107,10 @@ void PIN_INT3_IRQHandler (void)
                         ipc_s2m[handle->activeBuffer].valid = 1;
 
                         LPC_MAILBOX->IRQ1SET = (1u << 0);
+                    }
+                    else if (handle->rxCounter == handle->frameLength / 2) {
+                        /* Tell M4 to keep current RSSI value */
+                        LPC_MAILBOX->IRQ1SET = (1u << 1);
                     }
                 }
                 break;
