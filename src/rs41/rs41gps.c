@@ -39,6 +39,13 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
     cookedGps->usedSats = rawGps->usedSats;
     cookedGps->dop = rawGps->dop / 10.0f;
 
+    /* Invalidate position if this is not a valid position solution */
+    if (cookedGps->usedSats == 0) {
+        cookedGps->observerLLA.lat = NAN;
+        cookedGps->observerLLA.lon = NAN;
+        cookedGps->observerLLA.alt = NAN;
+    }
+
     return LPCLIB_SUCCESS;
 }
 
