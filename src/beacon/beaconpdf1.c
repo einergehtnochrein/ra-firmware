@@ -29,6 +29,10 @@
 #define PDF1_LOC_STANDARD_LATITUDE              ((65 << 8)  | 10)
 #define PDF1_LOC_STANDARD_LONGITUDE             ((75 << 8)  | 11)
 
+#define PDF1_LOC_NATIONAL_ID                    ((41 << 8)  | 18)
+#define PDF1_LOC_NATIONAL_LATITUDE              ((59 << 8)  | 13)
+#define PDF1_LOC_NATIONAL_LONGITUDE             ((72 << 8)  | 14)
+
 
 /* Modified Baudot Code */
 static const char _BEACON_modifiedBaudot[64] = {
@@ -112,6 +116,29 @@ LPCLIB_Result _BEACON_processPDF1 (BEACON_CookedPDF1 *cooked)
                 cooked->longitudeCoarse = (coordinateCoarse / 32.0f) * 0.25f;
                 isLocationProtocol = true;
                 break;
+
+            case PDF1_LOCATION_PROTOCOL_NATIONAL_PLB:
+                _BEACON_getField(PDF1_LOC_NATIONAL_ID, (uint8_t *)&cooked->serialNumber);
+                _BEACON_getField(PDF1_LOC_NATIONAL_LATITUDE, (uint8_t *)&coordinateCoarse);
+                if (coordinateCoarse == 0x0FE0){
+                    cooked->latitudeCoarse = NAN;
+                }
+                else {
+                    coordinateCoarse <<= 3; /* Shift sign bit into MSB */
+                    cooked->latitudeCoarse = coordinateCoarse / 128.0f;
+                    cooked->latitudeCoarse += ((coordinateCoarse >> 3) & 0x1F) / 30.0f;
+                }
+                _BEACON_getField(PDF1_LOC_NATIONAL_LONGITUDE, (uint8_t *)&coordinateCoarse);
+                if (coordinateCoarse == 0x1FE0){
+                    cooked->longitudeCoarse = NAN;
+                }
+                else {
+                    coordinateCoarse <<= 2; /* Shift sign bit into MSB */
+                    cooked->longitudeCoarse = coordinateCoarse / 128.0f;
+                    cooked->longitudeCoarse += ((coordinateCoarse >> 3) & 0x1F) / 30.0f;
+                }
+                isLocationProtocol = true;
+                break;
         }
     }
     else {                          /* User Protocols */
@@ -134,7 +161,7 @@ LPCLIB_Result _BEACON_processPDF1 (BEACON_CookedPDF1 *cooked)
                 break;
             case PDF1_USER_PROTOCOL_SERIAL:
                 _BEACON_getField(PDF1_USER_SERIAL_TYPE, &cooked->userSerialType);
-                _BEACON_getField(PDF1_USER_SERIAL_NUMBER, (uint8_t *)&cooked->userSerialNumber);
+                _BEACON_getField(PDF1_USER_SERIAL_NUMBER, (uint8_t *)&cooked->serialNumber);
                 break;
             case PDF1_USER_PROTOCOL_TEST:
                 break;
