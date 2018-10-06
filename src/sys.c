@@ -1136,6 +1136,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 int command;
                 int enableValue;
                 int extra1;
+                float floatExtra;
 
                 if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
                     switch (command) {
@@ -1156,6 +1157,14 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                     mode = RS41_LOGMODE_RAW;
                                 }
                                 RS41_setLogMode(handle->rs41, extra1, mode);
+                            }
+                            break;
+                        }
+
+                        case 6:
+                        {
+                            if (sscanf(cl, "#%*d,%*d,%*d,%f", &floatExtra) == 1) {
+                                RS92_setSatelliteSnrThreshold(handle->rs92, floatExtra);
                             }
                             break;
                         }
