@@ -39,6 +39,7 @@
 #include "imet.h"
 #include "m10.h"
 #include "pdm.h"
+#include "pilot.h"
 #include "rinex.h"
 #include "rs41.h"
 #include "rs92.h"
@@ -120,6 +121,7 @@ struct SYS_Context {
     DFM_Handle dfm;
     IMET_Handle imet;
     M10_Handle m10;
+    PILOT_Handle pilot;
     SRSC_Handle srsc;
     PDM_Handle pdm;
 
@@ -360,6 +362,9 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
         case SONDE_M10:
             length = (100+1) * 2;
             break;
+        case SONDE_PILOT:
+            length = 50-4;
+            break;
         case SONDE_BEACON:
         case SONDE_C34:
         case SONDE_C50:
@@ -568,6 +573,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
             LPC_MAILBOX->IRQ0SET = (1u << 3); //TODO
+            break;
+
+        case SONDE_DETECTOR_PILOT:
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setBitRate(radio, 4800);
+            ADF7021_ioctl(radio, radioModePilot);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+            LPC_MAILBOX->IRQ0SET = (1u << 4); //TODO
             break;
 
         default:
@@ -1065,6 +1081,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     IMET_resendLastPositions(handle->imet);
                     M10_resendLastPositions(handle->m10);
                     BEACON_resendLastPositions(handle->beacon);
+                    PILOT_resendLastPositions(handle->pilot);
                 }
             }
             break;
@@ -1096,6 +1113,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 4:     detector = SONDE_DETECTOR_MODEM; break;
                         case 5:     detector = SONDE_DETECTOR_BEACON; break;
                         case 6:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
+                        case 7:     detector = SONDE_DETECTOR_PILOT; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -1152,6 +1170,10 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                     case SONDE_DECODER_BEACON:
                                         BEACON_removeFromList(handle->beacon, id, &frequency);
                                         detector = SONDE_DETECTOR_BEACON;
+                                        break;
+                                    case SONDE_DECODER_PILOT:
+                                        PILOT_removeFromList(handle->pilot, id, &frequency);
+                                        detector = SONDE_DETECTOR_PILOT;
                                         break;
                                     default:
                                         /* ignore */
@@ -1375,6 +1397,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     SRSC_open(&handle->srsc);
     IMET_open(&handle->imet);
     M10_open(&handle->m10);
+    PILOT_open(&handle->pilot);
     PDM_open(0, &handle->pdm);
 
 #if SEMIHOSTING
@@ -1451,6 +1474,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             case 2: sondeType = SONDE_DFM09; break;
                             case 3: sondeType = SONDE_DFM06; break;
                             case 4: sondeType = SONDE_M10; break;
+                            case 7: sondeType = SONDE_PILOT; break;
                         }
 
                         /* Process buffer */
@@ -1459,6 +1483,16 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     handle->m10,
                                     ipc[bufferIndex].data8,
                                     _SYS_getSondeBufferLength(SONDE_M10),
+                                    handle->currentFrequency);
+
+                            /* Let scanner prepare for next frequency */
+                            SCANNER_notifyValidFrame(scanner);
+                        }
+                        else if (sondeType == SONDE_PILOT) {
+                            PILOT_processBlock(
+                                    handle->pilot,
+                                    ipc[bufferIndex].data8,
+                                    _SYS_getSondeBufferLength(SONDE_PILOT),
                                     handle->currentFrequency);
 
                             /* Let scanner prepare for next frequency */

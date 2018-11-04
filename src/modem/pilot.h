@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, DF9DQ
+/* Copyright (c) 2018, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -24,61 +24,21 @@
  */
 
 
-#ifndef __SONDE_H
-#define __SONDE_H
+#ifndef __PILOT_H
+#define __PILOT_H
 
 #include "lpclib.h"
 #include "pt.h"
 
-/* Common interface for all sonde types */
-typedef enum {
-    SONDE_UNDEFINED = 0,
-    SONDE_RS41,
-    SONDE_RS92,
-    SONDE_DFM06,
-    SONDE_DFM09,
-    SONDE_C34,
-    SONDE_C50,
-    SONDE_IMET_RSB,
-    SONDE_PS15,
-    SONDE_M10,
-    SONDE_BEACON,
-    SONDE_PILOT,
-} SONDE_Type;
 
 
-/* Decoder: Group of sondes that can be decoded the same way */
-typedef enum {
-    SONDE_DECODER_RS41 = 0,
-    SONDE_DECODER_RS92 = 1,
-    SONDE_DECODER_DFM = 2,
-    SONDE_DECODER_C34_C50 = 3,
-    SONDE_DECODER_IMET = 4,
-    SONDE_DECODER_MODEM = 5,
-    SONDE_DECODER_BEACON = 6,
-    SONDE_DECODER_PILOT = 7,
-    _SONDE_DECODER_UNDEFINED_ = -1,
-} SONDE_Decoder;
+typedef struct PILOT_Context *PILOT_Handle;
 
 
-/* Detector: Types of sondes the receiver can detect in parallel */
-typedef enum {
-    SONDE_DETECTOR_RS41_RS92 = 0,
-    SONDE_DETECTOR_DFM = 1,
-    SONDE_DETECTOR_C34_C50 = 2,
-    SONDE_DETECTOR_IMET = 3,
-    SONDE_DETECTOR_MODEM = 4,
-    SONDE_DETECTOR_BEACON = 5,
-    SONDE_DETECTOR_RS41_RS92_DFM = 6,
-    SONDE_DETECTOR_PILOT = 7,
-    _SONDE_DETECTOR_UNDEFINED_ = -1,
-} SONDE_Detector;
+LPCLIB_Result PILOT_open (PILOT_Handle *pHandle);
+LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz);
+LPCLIB_Result PILOT_resendLastPositions (PILOT_Handle handle);
+LPCLIB_Result PILOT_removeFromList (PILOT_Handle handle, uint32_t id, float *frequency);
 
-
-typedef struct _SONDE_Context *SONDE_Handle;
-
-LPCLIB_Result SONDE_open (SONDE_Handle *pHandle);
-LPCLIB_Result SONDE_initID (SONDE_Handle handle, uint32_t startID);
-uint32_t SONDE_getNewID (SONDE_Handle handle);
 
 #endif

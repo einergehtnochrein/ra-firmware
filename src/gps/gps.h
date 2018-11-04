@@ -203,5 +203,9 @@ void GPS_computeSatelliteElevationAndAzimuth (
         float *azimuth
      );
 
+void GPS_applyGeoidHeightCorrection (
+        LLA_Coordinate *lla
+       );
+
 #endif
 
