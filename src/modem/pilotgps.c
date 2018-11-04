@@ -63,6 +63,7 @@ LPCLIB_Result _PILOT_processGpsBlock (
 
     cookedGps->observerECEF = ecef;
     cookedGps->observerLLA = lla;
+    cookedGps->usedSats = payload->numSats;
 
     return LPCLIB_SUCCESS;
 }

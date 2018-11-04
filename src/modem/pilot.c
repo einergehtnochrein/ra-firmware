@@ -100,7 +100,7 @@ static void _PILOT_sendKiss (PILOT_InstanceData *instance)
                     velocity,                               /* Horizontal speed [km/h] */
                     SYS_getFrameRssi(sys),
                     offset,    /* RX frequency offset [kHz] */
-                    0          /* # satellites */
+                    instance->gps.usedSats                  /* # satellites */
                     );
 
     if (length > 0) {

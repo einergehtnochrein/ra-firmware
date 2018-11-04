@@ -53,6 +53,7 @@ typedef struct {
     double gpstime;
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+    uint8_t usedSats;
 } PILOT_CookedGps;
 
 
