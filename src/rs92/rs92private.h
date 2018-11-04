@@ -125,6 +125,7 @@ typedef struct {
 
     uint8_t snrRaw[32][RS92_SNR_FILTER_LENGTH];     /* Maintain short-term SNR average for all 32 PRN */
     uint8_t snrRawWrIndex;
+    float satelliteSnrThreshold;
 } RS92_CookedGps;
 
 

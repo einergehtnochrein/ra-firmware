@@ -281,3 +281,13 @@ void GPS_computeSatelliteElevationAndAzimuth (
     }
 }
 
+
+void GPS_applyGeoidHeightCorrection (
+        LLA_Coordinate *lla
+       )
+{
+    if (lla) {
+        lla->alt += GEOID_HEIGHT;
+    }
+}
+

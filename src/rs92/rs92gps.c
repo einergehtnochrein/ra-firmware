@@ -179,7 +179,7 @@ LPCLIB_Result _RS92_processGpsBlock (
                 }
                 cookedGps->sats[i].snr = f / RS92_SNR_FILTER_LENGTH;
 
-                if (cookedGps->sats[i].snr < 3.0f) {
+                if (cookedGps->sats[i].snr < cookedGps->satelliteSnrThreshold) {
                     cookedGps->sats[i].ignore = true;
                 }
             }

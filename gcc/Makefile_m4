@@ -24,6 +24,7 @@ C_SRCS = \
     srsc/srsc.c srsc/srscconfig.c srsc/srscdsp.c srsc/srscgps.c \
     imet/imet.c imet/imetconfig.c imet/imetdsp.c imet/imetgps.c \
     modem/m10.c modem/m10calibconfig.c modem/m10gps.c modem/m10metrology.c \
+    modem/pilot.c modem/pilotconfig.c modem/pilotgps.c \
     \
     semihosting/syscalls.c semihosting/t32term.c semihosting/t32term_memory.c
 

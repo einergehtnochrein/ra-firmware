@@ -21,6 +21,9 @@
 #define PDF2_LOC_STANDARD_LONGITUDE_DELTA_MIN   ((124 << 8) | 5)
 #define PDF2_LOC_STANDARD_LONGITUDE_DELTA_SEC   ((129 << 8) | 4)
 
+#define PDF2_LOC_ADDITIONAL_DATA                ((110 << 8) | 1)
+#define PDF2_LOC_121MHZ_HOMING                  ((112 << 8) | 1)
+
 #define PDF2_LOC_USER_LATITUDE_SIGN             ((108 << 8) | 1)
 #define PDF2_LOC_USER_LATITUDE_DEG              ((109 << 8) | 7)
 #define PDF2_LOC_USER_LATITUDE_MIN              ((116 << 8) | 4)
@@ -33,6 +36,7 @@
 LPCLIB_Result _BEACON_processPDF2 (const BEACON_CookedPDF1 *pdf1, BEACON_CookedPDF2 *cooked)
 {
     LPCLIB_Result result = LPCLIB_SUCCESS;
+    uint8_t flag;
     uint8_t sign;
     uint8_t deg;
     int8_t min;
@@ -47,29 +51,42 @@ LPCLIB_Result _BEACON_processPDF2 (const BEACON_CookedPDF1 *pdf1, BEACON_CookedP
             case PDF1_LOCATION_PROTOCOL_STANDARD_EPIRB_SERIAL:
             case PDF1_LOCATION_PROTOCOL_STANDARD_PLB_SERIAL:
             case PDF1_LOCATION_PROTOCOL_STANDARD_SHIP_SECURITY:
-                _BEACON_getField(PDF2_LOC_STANDARD_LATITUDE_DELTA_SIGN, &sign);
-                _BEACON_getField(PDF2_LOC_STANDARD_LATITUDE_DELTA_MIN, (uint8_t *)&min);
-                if (sign == 1) {
-                    min = -min;
-                }
-                cooked->latitude = pdf1->latitudeCoarse + min / 60.0f;
-                _BEACON_getField(PDF2_LOC_STANDARD_LATITUDE_DELTA_SEC, (uint8_t *)&sec);
-                if (sign == 1) {
-                    sec = -sec;
-                }
-                cooked->latitude += sec / (60.0 * 15.0);
+            case PDF1_LOCATION_PROTOCOL_NATIONAL_PLB:
+                _BEACON_getField(((107 << 8) | 1), &flag);
+                _BEACON_getField(((108 << 8) | 1), &flag);
+                _BEACON_getField(((109 << 8) | 1), &flag);
+                _BEACON_getField(PDF2_LOC_ADDITIONAL_DATA, &flag);
+                cooked->have121MHzHoming = (flag == 1);
+                _BEACON_getField(PDF2_LOC_ADDITIONAL_DATA, &flag);
+                if (flag == 1) {
+                    _BEACON_getField(PDF2_LOC_STANDARD_LATITUDE_DELTA_SIGN, &sign);
+                    _BEACON_getField(PDF2_LOC_STANDARD_LATITUDE_DELTA_MIN, (uint8_t *)&min);
+                    if (sign == 1) {
+                        min = -min;
+                    }
+                    cooked->latitude = pdf1->latitudeCoarse + min / 60.0f;
+                    _BEACON_getField(PDF2_LOC_STANDARD_LATITUDE_DELTA_SEC, (uint8_t *)&sec);
+                    if (sign == 1) {
+                        sec = -sec;
+                    }
+                    cooked->latitude += sec / (60.0 * 15.0);
 
-                _BEACON_getField(PDF2_LOC_STANDARD_LONGITUDE_DELTA_SIGN, &sign);
-                _BEACON_getField(PDF2_LOC_STANDARD_LONGITUDE_DELTA_MIN, (uint8_t *)&min);
-                if (sign == 1) {
-                    min = -min;
+                    _BEACON_getField(PDF2_LOC_STANDARD_LONGITUDE_DELTA_SIGN, &sign);
+                    _BEACON_getField(PDF2_LOC_STANDARD_LONGITUDE_DELTA_MIN, (uint8_t *)&min);
+                    if (sign == 1) {
+                        min = -min;
+                    }
+                    cooked->longitude = pdf1->longitudeCoarse + min / 60.0f;
+                    _BEACON_getField(PDF2_LOC_STANDARD_LONGITUDE_DELTA_SEC, (uint8_t *)&sec);
+                    if (sign == 1) {
+                        sec = -sec;
+                    }
+                    cooked->longitude += sec / (60.0 * 15.0);
                 }
-                cooked->longitude = pdf1->longitudeCoarse + min / 60.0f;
-                _BEACON_getField(PDF2_LOC_STANDARD_LONGITUDE_DELTA_SEC, (uint8_t *)&sec);
-                if (sign == 1) {
-                    sec = -sec;
+                else {
+                    cooked->latitude = NAN;
+                    cooked->longitude = NAN;
                 }
-                cooked->longitude += sec / (60.0 * 15.0);
                 break;
         }
     }

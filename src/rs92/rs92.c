@@ -22,6 +22,7 @@ typedef struct RS92_Context {
     bool crcOK[4];
 
     float rxFrequencyHz;
+    int nSymbolErrors;
 
     RS92_InstanceData *instance;
 
@@ -278,16 +279,34 @@ static uint32_t _RS92_read24 (const uint8_t *p24)
 #endif
 
 
+
+LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    if ((threshold < 0) || (threshold > 15.0f)) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    if (handle->instance != NULL) {
+        handle->instance->gps.satelliteSnrThreshold = threshold;
+    }
+
+    return LPCLIB_SUCCESS;
+}
+
+
+
 LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
 {
-    int nErrors;
-
     if (length > 1) {  //TODO
         /* Convert to byte array */
         _RS92_buffer2raw(handle, buffer);
 
         /* Reed-Solomon decoder */
-        LPCLIB_Result result = REEDSOLOMON_process(_RS92_getDataAddress, &nErrors); 
+        LPCLIB_Result result = REEDSOLOMON_process(_RS92_getDataAddress, &handle->nSymbolErrors);
         if (result != LPCLIB_SUCCESS) {
             /* Try harder. Guess some elements of the code word and try again. */
             handle->packet.config.frameType = RS92_SUBFRAME_CALIB_CONFIG;
@@ -310,7 +329,7 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
             handle->packet.unknown.length = 2;
             handle->packet.unknown.nn[0] = 2;
             handle->packet.unknown.nn[1] = 2;
-            result = REEDSOLOMON_process(_RS92_getDataAddress, &nErrors);
+            result = REEDSOLOMON_process(_RS92_getDataAddress, &handle->nSymbolErrors);
         }
 
         if (result == LPCLIB_SUCCESS) {

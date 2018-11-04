@@ -28,7 +28,7 @@ typedef enum {
     RS41_SUBFRAME_CRYPT80 = 0x80,
 } RS41_SubFrameType;
 
-#define RS41_CALIBRATION_MAX_INDEX      51
+#define RS41_CALIBRATION_MAX_INDEX      50
 
 
 
@@ -38,7 +38,10 @@ typedef __PACKED(struct {
     uint8_t batteryVoltage100mV;            /* Battery voltage in multiples of 100 mV */
     uint8_t reserved00B[2];
     uint8_t flags;                          /* Bit 1: 0=Ascent, 1=Descent */
-    uint8_t reserved00E[8];
+    uint8_t reserved00E[2];
+    uint8_t cpuTemperature;                 /* CPU temperature [°C] */
+    uint8_t reserved011[4];
+    uint8_t txPower;                        /* TX power level (0...7, see Si4032 data sheet) */
     uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
     uint8_t thisCalibIndex;                 /* Index of calibration fragment in this frame */
     uint8_t calibFragment[16];
@@ -150,6 +153,8 @@ typedef struct _RS41_InstanceData {
     float rxFrequencyMHz;
     float batteryVoltage;                       /* Battery voltage [V] */
     uint16_t frameCounter;
+    uint8_t cpuTemperature;
+    int8_t txPower_dBm;
     bool encrypted;                             /* Set for RS41-SGM military version */
     bool onDescent;                             /* Descent phase detected */
     RS41_CookedGps gps;
@@ -163,7 +168,8 @@ typedef struct _RS41_InstanceData {
             uint16_t frequency;                 /* TX is on 400 MHz + (frequency / 64) * 10 kHz */
             uint8_t reserved004[0x00D-0x004];
             uint8_t serial[8];                  /* Sonde ID, 8 char, not terminated */
-            uint8_t reserved015[0x027-0x015];
+            uint16_t firmwareVersion;
+            uint8_t reserved017[0x027-0x017];
             uint16_t killTimer;                 /* (probably) max frame counter before kill */
             uint8_t reserved029[0x02B-0x029];
             uint8_t burstKill;                  /* Burst kill (0=disabled, 1=enabled) */

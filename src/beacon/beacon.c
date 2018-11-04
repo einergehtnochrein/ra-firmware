@@ -82,9 +82,11 @@ static void _BEACON_sendKiss (BEACON_InstanceData *instance)
     }
 
     /* Beacon 15 Hex ID */
-    snprintf(s, sizeof(s), "%ld,9,0,%s",
+    snprintf(s, sizeof(s), "%ld,9,0,%s,%ld",
                 instance->id,
-                instance->pdf1.hexID);
+                instance->pdf1.hexID,
+                instance->pdf1.serialNumber
+            );
     SYS_send2Host(HOST_CHANNEL_INFO, s);
 }
 

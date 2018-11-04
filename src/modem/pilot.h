@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, DF9DQ
+/* Copyright (c) 2018, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -24,22 +24,21 @@
  */
 
 
-#ifndef __RS92_H
-#define __RS92_H
+#ifndef __PILOT_H
+#define __PILOT_H
 
 #include "lpclib.h"
 #include "pt.h"
 
 
 
-typedef struct RS92_Context *RS92_Handle;
-typedef uint8_t RS92_RawData[234];
+typedef struct PILOT_Context *PILOT_Handle;
 
 
-LPCLIB_Result RS92_open (RS92_Handle *pHandle);
-LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz);
-LPCLIB_Result RS92_resendLastPositions (RS92_Handle handle);
-LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id, float *frequency);
-LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold);
+LPCLIB_Result PILOT_open (PILOT_Handle *pHandle);
+LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz);
+LPCLIB_Result PILOT_resendLastPositions (PILOT_Handle handle);
+LPCLIB_Result PILOT_removeFromList (PILOT_Handle handle, uint32_t id, float *frequency);
+
 
 #endif

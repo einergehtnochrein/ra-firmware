@@ -43,6 +43,7 @@ typedef enum {
     SONDE_PS15,
     SONDE_M10,
     SONDE_BEACON,
+    SONDE_PILOT,
 } SONDE_Type;
 
 
@@ -55,6 +56,7 @@ typedef enum {
     SONDE_DECODER_IMET = 4,
     SONDE_DECODER_MODEM = 5,
     SONDE_DECODER_BEACON = 6,
+    SONDE_DECODER_PILOT = 7,
     _SONDE_DECODER_UNDEFINED_ = -1,
 } SONDE_Decoder;
 
@@ -68,6 +70,7 @@ typedef enum {
     SONDE_DETECTOR_MODEM = 4,
     SONDE_DETECTOR_BEACON = 5,
     SONDE_DETECTOR_RS41_RS92_DFM = 6,
+    SONDE_DETECTOR_PILOT = 7,
     _SONDE_DETECTOR_UNDEFINED_ = -1,
 } SONDE_Detector;
 

@@ -16,8 +16,12 @@ struct _SyncDetectorContext {
     int activeBuffer;
     int detectedType;           /* 0=RS92, 1=RS41, 2=DFM06, 3=DFM09 */
     int frameLength;
+    int rxCounter;
     int bitCounter;
     int writeIndex;
+    int uartBitCounter;
+    SYNC_BitFormat bitFormat;
+    bool inverted;
     PostProcessFunc postProcess;
 } syncContext;
 
@@ -32,6 +36,7 @@ void PIN_INT3_IRQHandler (void)
     int i, j;
     int nDifferences;
     int bit;
+    bool skipBit;
 
     LPC_PINT->IST = (1u << 3);
 
@@ -69,9 +74,6 @@ void PIN_INT3_IRQHandler (void)
                     if (nDifferences <= handle->config->conf[i].nMaxDifference) {
                         /* SYNC! Start frame reception */
 
-                        /* Tell M4 to keep current RSSI value */
-                        LPC_MAILBOX->IRQ1SET = (1u << 1);
-
                         /* Find available buffer */
                         for (j = 0; j < IPC_S2M_NUM_BUFFERS; j++) {
                             if (!ipc_s2m[j].valid) {
@@ -81,7 +83,11 @@ void PIN_INT3_IRQHandler (void)
                         if (j < IPC_S2M_NUM_BUFFERS) {
                             handle->activeBuffer = j;
                             handle->frameLength = handle->config->conf[i].frameLength;
+                            handle->rxCounter = handle->config->conf[i].frameLength;
                             handle->bitCounter = 0;
+                            handle->bitFormat = handle->config->conf[i].bitFormat;
+                            handle->inverted = handle->config->conf[i].inverted;
+                            handle->uartBitCounter = 0;
                             handle->writeIndex = handle->config->conf[i].startOffset;
                             handle->postProcess = handle->config->conf[i].postProcess;
                             handle->state = 1;
@@ -93,21 +99,55 @@ void PIN_INT3_IRQHandler (void)
                 break;
 
             case 1:           /* Data reception */
-                ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] =
-                    (ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] << 1) | bit;
+                skipBit = false;
 
-                if (++handle->bitCounter >= 8) {
-                    handle->bitCounter = 0;
-                    ++handle->writeIndex;
-                    if (--handle->frameLength <= 0) {
-                        handle->state = 0;
-                        handle->writeIndex = 0;
-                        if (handle->postProcess) {
-                            handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                if (handle->bitFormat == SYNC_BITFORMAT_UART_8N1) {
+                    /* Strip start and stop bit */
+                    if (handle->uartBitCounter == 0) {
+                        skipBit = true;
+                    }
+                    if (handle->uartBitCounter == 9) {
+                        skipBit = true;
+                    }
+
+                    /* 8N1: 10 bits per character */
+                    ++handle->uartBitCounter;
+                    if (handle->uartBitCounter >= 10) {
+                        handle->uartBitCounter = 0;
+                    }
+                }
+
+                if (!skipBit) {
+                    if (handle->inverted) {
+                        bit = bit ^ 1;
+                    }
+
+                    if (handle->bitFormat == SYNC_BITFORMAT_UART_8N1) {
+                        ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] =
+                            (ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] >> 1) | (bit << 7);
+                    }
+                    else {
+                        ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] =
+                            (ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] << 1) | bit;
+                    }
+
+                    if (++handle->bitCounter >= 8) {
+                        handle->bitCounter = 0;
+                        ++handle->writeIndex;
+                        if (--handle->rxCounter <= 0) {
+                            handle->state = 0;
+                            handle->writeIndex = 0;
+                            if (handle->postProcess) {
+                                handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                            }
+                            ipc_s2m[handle->activeBuffer].valid = 1;
+
+                            LPC_MAILBOX->IRQ1SET = (1u << 0);
                         }
-                        ipc_s2m[handle->activeBuffer].valid = 1;
-
-                        LPC_MAILBOX->IRQ1SET = (1u << 0);
+                        else if (handle->rxCounter == handle->frameLength / 2) {
+                            /* Tell M4 to keep current RSSI value */
+                            LPC_MAILBOX->IRQ1SET = (1u << 1);
+                        }
                     }
                 }
                 break;
