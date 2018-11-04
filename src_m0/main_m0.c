@@ -20,6 +20,8 @@ static const SYNC_Config configVaisala = {
             .nMaxDifference = 5,
             .frameLength = (234 * 10 * 2) / 8,
             .startOffset = 0,
+            .bitFormat = SYNC_BITFORMAT_RAW,
+            .inverted = false,
         },
         {
             .id = 1,
@@ -28,6 +30,8 @@ static const SYNC_Config configVaisala = {
             .nMaxDifference = 3,
             .frameLength = 510,
             .startOffset = 0,
+            .bitFormat = SYNC_BITFORMAT_RAW,
+            .inverted = false,
         },
     },
 };
@@ -43,6 +47,8 @@ static const SYNC_Config configGraw = {
             .nMaxDifference = 2,
             .frameLength = 66,
             .startOffset = 0,
+            .bitFormat = SYNC_BITFORMAT_RAW,
+            .inverted = false,
         },
         {
             .id = 3,
@@ -51,6 +57,8 @@ static const SYNC_Config configGraw = {
             .nMaxDifference = 2,
             .frameLength = 66,
             .startOffset = 0,
+            .bitFormat = SYNC_BITFORMAT_RAW,
+            .inverted = false,
         },
     },
 };
@@ -86,6 +94,8 @@ static const SYNC_Config configModem = {
             .nMaxDifference = 1,
             .frameLength = 100 * 2,
             .startOffset = 2,
+            .bitFormat = SYNC_BITFORMAT_RAW,
+            .inverted = false,
             .postProcess = _m10PostProcess100Normal,
         },
         {
@@ -95,7 +105,27 @@ static const SYNC_Config configModem = {
             .nMaxDifference = 1,
             .frameLength = 100 * 2,
             .startOffset = 2,
+            .bitFormat = SYNC_BITFORMAT_RAW,
+            .inverted = false,
             .postProcess = _m10PostProcess100Inverse,
+        },
+    },
+};
+
+
+static const SYNC_Config configModemPilot = {
+    .nPatterns = 1,
+    .conf = {
+        {
+            .id = 7,
+            .nSyncLen = 30,
+            .pattern = {0x00000000354D52FELL, 0},
+            .nMaxDifference = 1,
+            .frameLength = 50-4,
+            .startOffset = 0,
+            .bitFormat = SYNC_BITFORMAT_UART_8N1,
+            .inverted = true,
+            .postProcess = NULL,
         },
     },
 };
@@ -121,6 +151,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & 8) {
         newMode = 4;
         LPC_MAILBOX->IRQ0CLR = 8;
+    }
+    else if (requests & (1u << 4)) {
+        newMode = 5;
+        LPC_MAILBOX->IRQ0CLR = (1u << 4);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -166,6 +200,9 @@ int main (void)
                     break;
                 case 4:
                     syncConfig = &configModem;
+                    break;
+                case 5:
+                    syncConfig = &configModemPilot;
                     break;
                 default:
                     syncConfig = NULL;
