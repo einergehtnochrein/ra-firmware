@@ -104,6 +104,7 @@ typedef enum ADF7021_Opcode {
     ADF7021_OPCODE_SET_DEMODULATOR,
     ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
     ADF7021_OPCODE_SET_AGC,                 /** Set AGC mode and parameters */
+    ADF7021_OPCODE_SET_AGC_CLOCK,           /** Set AGC clock frequency (default: 8 kHz) */
     ADF7021_OPCODE_CONFIGURE,               /** Apply all configuration settings */
 } ADF7021_Opcode;
 
@@ -136,6 +137,7 @@ typedef struct ADF7021_Config {
         ADF7021_DemodulatorType demodType;
         struct ADF7021_ConfigDemodulatorParams demodParams;
         struct ADF7021_ConfigAGC agc;
+        float agcClockFrequency;
     };
 } ADF7021_Config;
 

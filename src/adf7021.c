@@ -51,6 +51,7 @@ typedef struct ADF7021_Context {
     float frequency;
     int bitRate;
     uint32_t ifBandwidthSelect;
+    float agcClockFrequency;            /* Default is 8 kHz */
 
     uint8_t currentFG;                  /* Last known state of filter gain (Reg9 FG1,FG2) */
     uint8_t currentLG;                  /* Last known state of LNA gain (Reg9 LG1,LG2) */
@@ -194,7 +195,7 @@ static void _ADF7021_setClocks (ADF7021_Handle handle)
 {
     uint32_t bbos_clk_divide = lrintf(log2f(handle->referenceFrequency / 1.5e6f) - 2.0f);
     uint32_t seq_clk_divide = lrintf(handle->referenceFrequency / 100e3f);
-    uint32_t agc_clk_divide = lrintf(handle->referenceFrequency / (seq_clk_divide * 8e3f));
+    uint32_t agc_clk_divide = lrintf(handle->referenceFrequency / (seq_clk_divide * handle->agcClockFrequency));
     uint32_t cdr_clk_divide = 1;
     if ((handle->demodClockDivider > 0) && (handle->bitRate > 0) && !(handle->interfaceMode & (1u << 16))) {
         cdr_clk_divide = lrintf(handle->referenceFrequency / (handle->demodClockDivider * 32 * handle->bitRate));
@@ -283,6 +284,7 @@ LPCLIB_Result ADF7021_open (LPC_SPI_Type *spi, int ssel, GPIO_Pin muxoutPin, ADF
     handle->muxoutPin = muxoutPin;
     handle->muxout = ADF7021_MUXOUT_REGULATOR_READY;
     handle->demodClockDivider = 4;
+    handle->agcClockFrequency = 8e3f;
 
     spi->CFG = 0
             | (1u << 2)                     /* Master */
@@ -395,6 +397,10 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
                 | (0 << 28)
                 ;
             ADF7021_write(handle, ADF7021_REGISTER_9, regval);
+            break;
+
+        case ADF7021_OPCODE_SET_AGC_CLOCK:
+            handle->agcClockFrequency = pConfig->agcClockFrequency;
             break;
 
         case ADF7021_OPCODE_CONFIGURE:
