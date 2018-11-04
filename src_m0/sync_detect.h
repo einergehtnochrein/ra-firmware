@@ -16,6 +16,11 @@ typedef struct {
 } IPC_S2M;
 /************************************************************/
 
+typedef enum {
+    SYNC_BITFORMAT_RAW = 0,
+    SYNC_BITFORMAT_UART_8N1,
+} SYNC_BitFormat;
+
 
 typedef void (*PostProcessFunc)(volatile IPC_S2M *buffer);
 
@@ -29,6 +34,8 @@ typedef struct {
         int nMaxDifference;                 /* Maximum # differences to received pattern */
         int frameLength;                    /* Number of payload bytes to read after sync detect */
         int startOffset;                    /* Start offset in buffer for storing first payload byte */
+        SYNC_BitFormat bitFormat;           /* E.g. strip framing bits from UART format */
+        bool inverted;                      /* Invert bits if set */
         PostProcessFunc postProcess;        /* Called after frame has been received */
     } conf[];
 } SYNC_Config;
