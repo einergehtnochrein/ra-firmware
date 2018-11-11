@@ -28,7 +28,7 @@ LPCLIB_Result _PILOT_processGpsBlock (
 
     /* Sanity check */
     bool ok = true;
-    if (payload->numSats < 4) ok = false;
+    if (payload->usedSats < 4) ok = false;
     if (payload->latitude >= 90000000) ok = false;
     if (payload->latitude <= -90000000) ok = false;
     if (payload->longitude >= 180000000) ok = false;
@@ -63,7 +63,27 @@ LPCLIB_Result _PILOT_processGpsBlock (
 
     cookedGps->observerECEF = ecef;
     cookedGps->observerLLA = lla;
-    cookedGps->usedSats = payload->numSats;
+    cookedGps->usedSats = payload->usedSats;
+    if (payload->hdop == 9998) {
+        cookedGps->hdop = NAN;
+    }
+    else {
+        cookedGps->hdop = (float)payload->hdop / 100.0f;
+    }
+    if (payload->vdop == 9998) {
+        cookedGps->vdop = NAN;
+    }
+    else {
+        cookedGps->vdop = (float)payload->vdop / 100.0f;
+    }
+
+    uint8_t n = 0;
+    for (int i = 0; i < 12; i++) {
+        if (payload->unk36[i] > 0) {
+            ++n;
+        }
+    }
+    cookedGps->visibleSats = n;
 
     return LPCLIB_SUCCESS;
 }
