@@ -25,14 +25,12 @@ typedef struct {
         uint8_t rawData[50];
 
         __PACKED(struct {
-            uint8_t sync[3];        /* First byte (0xAA) uses to allow for bit synchronisation.
-                                     * Second and third byte used as first 20 bits of sync sequence.
+            uint8_t sync[4];        /* First byte (0xAA) uses to allow for bit synchronisation.
+                                     * Second to fourth byte (0xAA 0xAA 0x01) used as sync sequence.
                                      */
-            uint8_t unk3;   //TODO Used as additional 10 bits of sync sequence. Assumed constant 0x01
-
             __PACKED(struct _PILOT_Payload {
-                uint8_t numSats;    /* Number of sats (used/visible?) */
-                uint8_t unk5;
+                uint8_t usedSats;   /* Number of used sats */
+                uint8_t status;     /* 1=no fix, 2=2D fix, 3=3D fix */
                 int32_t latitude;   /* Degrees * 10e6 */
                 int32_t longitude;  /* Degrees * 10e6 */
                 int32_t altitude;   /* Meters * 10e2 */
@@ -41,19 +39,23 @@ typedef struct {
                 int16_t climbRate;  /* m/s * 10e2 */
                 uint32_t daytime;   /* 1000 * (10000*h + 100*m + s) */
                 uint32_t date;      /* 10000*d + 100*m + y, year last two digits only (18 = 2018) */
-                uint8_t unk32[16];
+                uint16_t hdop;      /* m * 100 (9998 = invalid) TODO: only a guess... */
+                uint16_t vdop;      /* m * 100 (9998 = invalid) TODO:  " */
+                uint8_t unk36[12];
                 uint16_t crc;
             }) payload;
         });
-    }) frame50;
+    });
 } PILOT_Packet;
 
 
 typedef struct {
-    double gpstime;
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+    float hdop;
+    float vdop;
     uint8_t usedSats;
+    uint8_t visibleSats;
 } PILOT_CookedGps;
 
 
