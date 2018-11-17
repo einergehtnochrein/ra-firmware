@@ -12,3 +12,15 @@
 #include "m10private.h"
 
 
+LPCLIB_Result _M10_processMetrologyBlock (
+        const struct _M10_ConfigBlock *rawConfig,
+        M10_CookedMetrology *cookedMetro)
+{
+    cookedMetro->batteryVoltage = rawConfig->vbat * 0.00668f;  /* Factor from SPDXL */
+
+    // Temperature calculation taken from SPDXL
+    ;
+
+    return LPCLIB_SUCCESS;
+}
+
