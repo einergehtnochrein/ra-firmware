@@ -1112,7 +1112,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 3:     detector = SONDE_DETECTOR_IMET; break;
                         case 4:     detector = SONDE_DETECTOR_MODEM; break;
                         case 5:     detector = SONDE_DETECTOR_BEACON; break;
-                        case 6:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                         case 7:     detector = SONDE_DETECTOR_PILOT; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
