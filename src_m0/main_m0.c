@@ -4,8 +4,18 @@
 #include "lpclib.h"
 #include "sync_detect.h"
 
-int currentMode;
-volatile int newMode;
+
+typedef enum {
+    MODE_VAISALA = 1,
+    MODE_GRAW = 2,
+    MODE_AFSK = 3,  /* FSK sync detector inactive in this mode */
+    MODE_MODEM_M10 = 4,
+    MODE_MODEM_PILOTSONDE = 5,
+} SYNC_Mode;
+
+
+SYNC_Mode currentMode;
+volatile SYNC_Mode newMode;
 volatile bool resetSync;
 SYNC_Handle sync;
 
@@ -131,29 +141,30 @@ static const SYNC_Config configModemPilot = {
 };
 
 
+
 void MAILBOX_IRQHandler (void)
 {
     uint32_t requests = LPC_MAILBOX->IRQ0;
 
     if (requests & 1) {
-        newMode = 1;
+        newMode = MODE_VAISALA;
         LPC_MAILBOX->IRQ0CLR = 1;
     }
     else if (requests & 2) {
-        newMode = 2;
+        newMode = MODE_GRAW;
         LPC_MAILBOX->IRQ0CLR = 2;
     }
     else if (requests & 4) {
-        newMode = 3;
+        newMode = MODE_AFSK;
         LPC_MAILBOX->IRQ0CLR = 4;
         NVIC_DisableIRQ(PIN_INT3_IRQn);
     }
     else if (requests & 8) {
-        newMode = 4;
+        newMode = MODE_MODEM_M10;
         LPC_MAILBOX->IRQ0CLR = 8;
     }
     else if (requests & (1u << 4)) {
-        newMode = 5;
+        newMode = MODE_MODEM_PILOTSONDE;
         LPC_MAILBOX->IRQ0CLR = (1u << 4);
     }
     else if (requests & (1u << 30)) {
@@ -192,25 +203,22 @@ int main (void)
         if (newMode != currentMode) {
             //TODO configure detector
             switch (newMode) {
-                case 1:
+                case MODE_VAISALA:
                     syncConfig = &configVaisala;
                     break;
-                case 2:
+                case MODE_GRAW:
                     syncConfig = &configGraw;
                     break;
-                case 4:
+                case MODE_MODEM_M10:
                     syncConfig = &configModem;
                     break;
-                case 5:
+                case MODE_MODEM_PILOTSONDE:
                     syncConfig = &configModemPilot;
                     break;
+                case MODE_AFSK:
                 default:
                     syncConfig = NULL;
                     break;
-            }
-            if (syncConfig != NULL) {
-                SYNC_configure(sync, syncConfig);
-                NVIC_EnableIRQ(PIN_INT3_IRQn);
             }
 
             currentMode = newMode;
