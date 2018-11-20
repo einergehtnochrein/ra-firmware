@@ -144,7 +144,7 @@ static void _M10_sendKiss (M10_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%ld,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,,%.1f,%.1f,%d,,,%.3f",
+    length = sprintf((char *)s, "%ld,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,%.1f,%d,,,%.3f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -153,6 +153,7 @@ static void _M10_sendKiss (M10_InstanceData *instance)
                     instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
                     direction,                              /* Direction [degrees} */
                     velocity,                               /* Velocity [km/h] */
+                    instance->metro.temperature,            /* Temperature [°C] */
                     SYS_getFrameRssi(sys),
                     offset,    /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,              /* # satellites */

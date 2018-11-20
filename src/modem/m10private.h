@@ -45,9 +45,12 @@ typedef struct {
                 }) gps;
 
                 __PACKED(struct _M10_ConfigBlock {
-                    uint8_t nnc0[23];
-                    uint16_t vbat;
-                    uint8_t nnc1[22];
+                    uint8_t nnc0[16];
+                    uint8_t adc_temperature_range;
+                    uint16_t adc_temperature;
+                    uint8_t nnc1[4];
+                    uint16_t adc_vbat;
+                    uint8_t nnc2[22];
                     uint8_t serial[5];
                     uint8_t nn1[1];
                 }) config;
