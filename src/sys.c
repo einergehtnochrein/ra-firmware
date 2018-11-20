@@ -23,7 +23,6 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -427,6 +426,14 @@ static void _SYS_reportRadioFrequency (SYS_Handle handle)
 {
     char s[20];
     sprintf(s, "1,%.3f", handle->currentFrequency / 1e6f);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
+static void _SYS_reportVbat (SYS_Handle handle)
+{
+    char s[20];
+    sprintf(s, "6,%.2f", handle->vbat);
     SYS_send2Host(HOST_CHANNEL_GUI, s);
 }
 
@@ -1571,6 +1578,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
 
                             rate1 = 0;
 SYS_controlAutoAttenuator(handle, handle->currentRssi);
+
                         }
                     }
                     else {
@@ -1582,6 +1590,13 @@ SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         if (++rate2 >= 100) {
                             rate2 = 0;
                         }
+                    }
+
+                    /* Low frequency VBAT reports */
+                    static int rate3 = 0;
+                    if (++rate3 >= 200) {
+                        rate3 = 0;
+                        _SYS_reportVbat(handle);
                     }
 
 #if (BOARD_RA == 2)
