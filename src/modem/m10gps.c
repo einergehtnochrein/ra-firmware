@@ -52,6 +52,7 @@ LPCLIB_Result _M10_processGpsBlock (
         }
         lla.direction = direction;
         lla.climbRate = (float)rawGps->speedVertical / 200.0f;
+        GPS_applyGeoidHeightCorrection(&lla);
     }
 
     GPS_convertLLA2ECEF(&lla, &ecef);
