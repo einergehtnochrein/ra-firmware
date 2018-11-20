@@ -128,23 +128,37 @@ static void _M10_sendKiss (M10_InstanceData *instance)
 
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
-    double longitude = instance->gps.observerLLA.lon;
-    if (!isnan(latitude) && !isnan(longitude)) {
+    if (!isnan(latitude)) {
         latitude *= 180.0 / M_PI;
-        longitude *= 180.0 / M_PI;
-
-        length = sprintf((char *)s, "%ld,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,,,,,,,,,%.1f,%.1f,%d",
-                        instance->id,
-                        instance->rxFrequencyMHz,              /* Nominal sonde frequency [MHz] */
-                        latitude,  /* Latitude [degrees] */
-                        longitude, /* Longitude [degrees] */
-                        instance->gps.observerLLA.alt,         /* Altitude [m] */
-                        instance->gps.observerLLA.climbRate,   /* Climb rate [m/s] */
-                        SYS_getFrameRssi(sys),
-                        offset,    /* RX frequency offset [kHz] */
-                        0          /* # satellites */
-                        );
     }
+    double longitude = instance->gps.observerLLA.lon;
+    if (!isnan(longitude)) {
+        longitude *= 180.0 / M_PI;
+    }
+    float direction = instance->gps.observerLLA.direction;
+    if (!isnan(direction)) {
+        direction *= 180.0 / M_PI;
+    }
+    float velocity = instance->gps.observerLLA.velocity;
+    if (!isnan(velocity)) {
+        velocity *= 3.6f;
+    }
+
+    length = sprintf((char *)s, "%ld,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,%.1f,%d,,,%.3f",
+                    instance->id,
+                    instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
+                    latitude,                               /* Latitude [degrees] */
+                    longitude,                              /* Longitude [degrees] */
+                    instance->gps.observerLLA.alt,          /* Altitude [m] */
+                    instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
+                    direction,                              /* Direction [degrees} */
+                    velocity,                               /* Velocity [km/h] */
+                    instance->metro.temperature,            /* Temperature [°C] */
+                    SYS_getFrameRssi(sys),
+                    offset,    /* RX frequency offset [kHz] */
+                    instance->gps.visibleSats,              /* # satellites */
+                    instance->metro.batteryVoltage
+                    );
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
@@ -158,6 +172,27 @@ static void _M10_sendKiss (M10_InstanceData *instance)
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_INFO, s);
     }
+}
+
+
+
+static char _m10_raw[300];    //TODO
+
+static void _M10_sendRaw (M10_InstanceData *instance, uint8_t *buffer, uint32_t length)
+{
+    uint32_t n;
+    int slen = 0;
+
+
+    slen += snprintf(&_m10_raw[slen], sizeof(_m10_raw) - slen, "%ld,7,1,,",
+                     instance->id
+                    );
+
+    for (n = 0; n < length; n++) {
+        slen += snprintf(&_m10_raw[slen], sizeof(_m10_raw) - slen, "%02X", buffer[n]);
+    }
+
+    SYS_send2Host(HOST_CHANNEL_INFO, _m10_raw);
 }
 
 
@@ -180,10 +215,14 @@ LPCLIB_Result M10_processBlock (M10_Handle handle, void *buffer, uint32_t length
                 if (handle->instance) {
                     handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
-                    _M10_fromBigEndianGps(&handle->packet.packet100.data.gps);
-                    if (_M10_processGpsBlock(&handle->packet.packet100.data.gps, &handle->instance->gps) == LPCLIB_SUCCESS) {
-                        _M10_sendKiss(handle->instance);
+if(1){//                    if (handle->instance->logMode == M10_LOGMODE_RAW) {
+                        _M10_sendRaw(handle->instance, (uint8_t *)&handle->packet.packet100, handle->packetLength);
                     }
+
+                    _M10_fromBigEndianGps(&handle->packet.packet100.data.gps);
+                    _M10_processGpsBlock(&handle->packet.packet100.data.gps, &handle->instance->gps);
+                    _M10_processMetrologyBlock(&handle->packet.packet100.data.config, &handle->instance->metro);
+                    _M10_sendKiss(handle->instance);
                 }
             }
         }

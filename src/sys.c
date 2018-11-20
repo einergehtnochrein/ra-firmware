@@ -23,7 +23,6 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,6 +101,8 @@ static IPC_S2M ipc[IPC_S2M_NUM_BUFFERS];
 
 #define INACTIVITY_TIMEOUT  20000
 
+#define VBAT_FILTER_LENGTH  50
+
 
 struct SYS_Context {
     struct pt pt;
@@ -134,7 +135,11 @@ struct SYS_Context {
     float currentRssi;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
     float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
-    float vbat;
+
+    float vbatFilter[VBAT_FILTER_LENGTH];               /**< Taps for VBAT filter */
+    int vbatFilterIndex;                                /**< Index for writing to VBAT filter */
+    float vbat;                                         /**< Consolidated VBAT measurement */
+
     bool attenuatorActive;
 
     char commandLine[COMMAND_LINE_SIZE];
@@ -421,6 +426,14 @@ static void _SYS_reportRadioFrequency (SYS_Handle handle)
 {
     char s[20];
     sprintf(s, "1,%.3f", handle->currentFrequency / 1e6f);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
+static void _SYS_reportVbat (SYS_Handle handle)
+{
+    char s[20];
+    sprintf(s, "6,%.2f", handle->vbat);
     SYS_send2Host(HOST_CHANNEL_GUI, s);
 }
 
@@ -1112,7 +1125,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 3:     detector = SONDE_DETECTOR_IMET; break;
                         case 4:     detector = SONDE_DETECTOR_MODEM; break;
                         case 5:     detector = SONDE_DETECTOR_BEACON; break;
-                        case 6:     detector = SONDE_DETECTOR_RS41_RS92_DFM; break;
                         case 7:     detector = SONDE_DETECTOR_PILOT; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
@@ -1566,6 +1578,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
 
                             rate1 = 0;
 SYS_controlAutoAttenuator(handle, handle->currentRssi);
+
                         }
                     }
                     else {
@@ -1579,12 +1592,58 @@ SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         }
                     }
 
+                    /* Low frequency VBAT reports */
+                    static int rate3 = 0;
+                    if (++rate3 >= 200) {
+                        rate3 = 0;
+                        _SYS_reportVbat(handle);
+                    }
+
 #if (BOARD_RA == 2)
                     //TODO
                     /* Get frequency offset from PDM DC bias (only AFSK modes) */
                     SRSC_setRxOffset(handle->srsc, PDM_getDcOffset(handle->pdm) / 1.32f); //TODO factor
 #endif
-handle->vbat = _SYS_measureVbat(handle);
+
+                    /* On Ra hardware prior to Ra2fix the VBAT measurement has a systematic error.
+                     * The measurement can be too low if there is a voltage drop on a resistor
+                     * in series with the battery.
+                     * Therefore the following filter is implemented:
+                     * Several consecutive raw VBAT measurements are stored in the 'vbatFilter'.
+                     * Then the average of all these samples is calculated. This average is expected to be
+                     * below the real value, because it includes samples taken where the systematic error
+                     * caused the result to be too low.
+                     * Now a second average value is taken including only those samples lying above the
+                     * previously calculated average over all samples. This new average ideally uses only
+                     * 'valid' samples, and the result is used as the consolidated VBAT result.
+                     */
+                    /* Store new sample */
+                    handle->vbatFilter[handle->vbatFilterIndex] = _SYS_measureVbat(handle);
+                    ++handle->vbatFilterIndex;
+                    if (handle->vbatFilterIndex >= VBAT_FILTER_LENGTH) {
+                        handle->vbatFilterIndex = 0;
+                    }
+
+                    /* Calculate first average (includes invalid samples) */
+                    float f = 0;
+                    int i;
+                    for (i = 0; i < VBAT_FILTER_LENGTH; i++) {
+                        f += handle->vbatFilter[i];
+                    }
+                    float favg = f / VBAT_FILTER_LENGTH;
+
+                    /* Do it again, but now drop all samples below the average */
+                    f = 0;
+                    int nValid = 0;
+                    for (i = 0; i < VBAT_FILTER_LENGTH; i++) {
+                        if (handle->vbatFilter[i] >= favg) {
+                            f += handle->vbatFilter[i];
+                            ++nValid;
+                        }
+                    }
+
+                    /* This is our consolidated result */
+                    handle->vbat = f / nValid;
                 }
                 break;
 

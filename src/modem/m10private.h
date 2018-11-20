@@ -37,12 +37,20 @@ typedef struct {
                     int32_t latitude;
                     int32_t longitude;
                     int32_t altitude;
-                    uint8_t reserved[6];
+                    uint8_t reserved1[4];
+                    uint8_t visibleSats;
+                    uint8_t reserved2[1];
                     uint16_t week;
+                    uint8_t prn[12];
                 }) gps;
 
                 __PACKED(struct _M10_ConfigBlock {
-                    uint8_t nn3[59];
+                    uint8_t nnc0[16];
+                    uint8_t adc_temperature_range;
+                    uint16_t adc_temperature;
+                    uint8_t nnc1[4];
+                    uint16_t adc_vbat;
+                    uint8_t nnc2[22];
                     uint8_t serial[5];
                     uint8_t nn1[1];
                 }) config;
@@ -58,7 +66,14 @@ typedef struct {
     double gpstime;
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+    uint8_t visibleSats;
 } M10_CookedGps;
+
+
+typedef struct {
+    float batteryVoltage;
+    float temperature;
+} M10_CookedMetrology;
 
 
 /* Data that needs to be stored for every instance. */
@@ -71,6 +86,7 @@ typedef struct _M10_InstanceData {
     uint16_t frameCounter;
 
     M10_CookedGps gps;
+    M10_CookedMetrology metro;
 } M10_InstanceData;
 
 
@@ -81,6 +97,10 @@ LPCLIB_Result _M10_processConfigBlock (
 LPCLIB_Result _M10_processGpsBlock (
         const struct _M10_GpsBlock *rawGps,
         M10_CookedGps *cookedGps);
+
+LPCLIB_Result _M10_processMetrologyBlock (
+        const struct _M10_ConfigBlock *rawConfig,
+        M10_CookedMetrology *cookedMetro);
 
 /* Iterate through instances */
 bool _M10_iterateInstance (M10_InstanceData **instance);

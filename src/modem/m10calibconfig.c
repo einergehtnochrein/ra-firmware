@@ -111,9 +111,6 @@ LPCLIB_Result _M10_processConfigBlock (
         instance->lastUpdated = os_time;
     }
 
-    /* Cook some other values */
-//    instance->frameCounter = rawConfig->frameCounter;
-
     return LPCLIB_SUCCESS;
 }
 
