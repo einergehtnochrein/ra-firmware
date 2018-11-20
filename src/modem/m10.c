@@ -214,13 +214,14 @@ LPCLIB_Result M10_processBlock (M10_Handle handle, void *buffer, uint32_t length
                 if (handle->instance) {
                     handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
+if(1){//                    if (handle->instance->logMode == M10_LOGMODE_RAW) {
+                        _M10_sendRaw(handle->instance, (uint8_t *)&handle->packet.packet100, handle->packetLength);
+                    }
+
                     _M10_fromBigEndianGps(&handle->packet.packet100.data.gps);
                     _M10_processGpsBlock(&handle->packet.packet100.data.gps, &handle->instance->gps);
                     _M10_processMetrologyBlock(&handle->packet.packet100.data.config, &handle->instance->metro);
                     _M10_sendKiss(handle->instance);
-if(1){//                    if (handle->instance->logMode == M10_LOGMODE_RAW) {
-                        _M10_sendRaw(handle->instance, (uint8_t *)&handle->packet.packet100, handle->packetLength);
-                    }
                 }
             }
         }
