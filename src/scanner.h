@@ -16,6 +16,7 @@ void SCANNER_setManualSondeDetector (SCANNER_Handle handle, SONDE_Detector sonde
 SONDE_Detector SCANNER_getManualSondeDetector (SCANNER_Handle handle);
 void SCANNER_addListenFrequency (SCANNER_Handle handle, float frequency, SONDE_Detector sondeDetector);
 void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency, SONDE_Detector detector);
+LPCLIB_Result SCANNER_setSpectrumRange (SCANNER_Handle handle, float startFrequency, float endFrequency);
 
 /** Notify scanner engine that a valid frame was received */
 void SCANNER_notifyValidFrame (SCANNER_Handle handle);

@@ -86,13 +86,13 @@ struct SCANNER_Context {
     SONDE_Detector manualSondeDetector;
     bool scannerNeedInit;
 
-    int preferredIndex;
-
     SCANNER_Mode mode;
     SCANNER_Mode previousMode;
     osTimerId scanTick;
     bool scanTickTimeout;
 
+    uint32_t spectrumStartFrequency;
+    uint32_t spectrumEndFrequency;
     uint32_t spectrumFrequency;
 } scannerContext;
 
@@ -117,13 +117,13 @@ static void _SCANNER_getSpectrum (void)
 
     for (n = 0; n < N; n++) {
         /* Adjust next RX frequency */
-        if ((handle->spectrumFrequency < 400000000) || (handle->spectrumFrequency >= 406100000)) {
-            handle->spectrumFrequency = 400000000;
+        if ((handle->spectrumFrequency < handle->spectrumStartFrequency) || (handle->spectrumFrequency >= handle->spectrumEndFrequency)) {
+            handle->spectrumFrequency = handle->spectrumStartFrequency;
             break;
         }
  
         /* Set radio frequency */
-        if (ADF7021_setPLL(radio, handle->spectrumFrequency - 100000) == LPCLIB_SUCCESS) {
+        if (ADF7021_setPLL(radio, handle->spectrumFrequency + grid/2 - 100000) == LPCLIB_SUCCESS) {
             /* Measure channel power */
             avgLevel = 0;
             for (i = 0; i < OVER; i++) {
@@ -237,7 +237,15 @@ osMailQDef(scannerQueueDef, SCANNER_QUEUE_LENGTH, SCANNER_Message);
 
 LPCLIB_Result SCANNER_open (SCANNER_Handle *pHandle)
 {
-    *pHandle = &scannerContext;
+    SCANNER_Handle handle = &scannerContext;
+
+    if (pHandle == NULL) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+    *pHandle = handle;
+
+    handle->spectrumStartFrequency = 400000000;
+    handle->spectrumEndFrequency = 406000000;
 
     return LPCLIB_SUCCESS;
 }
@@ -376,6 +384,30 @@ void SCANNER_removeListenFrequency (SCANNER_Handle handle, float frequency, SOND
         item = item->next;
     }
 }
+
+
+LPCLIB_Result SCANNER_setSpectrumRange (SCANNER_Handle handle, float startFrequency, float endFrequency)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    /* Check for frequency range allowed by hardware */
+    if (startFrequency < 395.0f) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+    if (endFrequency > 410.0f) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    /* Align to grid */
+    const uint32_t grid = 10000;
+    handle->spectrumStartFrequency = lrintf(floorf((startFrequency * 1e6f) / grid)) * grid;
+    handle->spectrumEndFrequency = lrintf(ceilf((endFrequency * 1e6f) / grid)) * grid;
+
+    return LPCLIB_SUCCESS;
+}
+
 
 
 void SCANNER_notifyValidFrame (SCANNER_Handle handle)

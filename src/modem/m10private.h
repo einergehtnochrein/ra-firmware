@@ -25,11 +25,12 @@ typedef struct {
         uint8_t rawData[100];
 
         __PACKED(struct {
-            uint8_t packetType[2];
-            uint8_t unknown;
+            uint8_t packetType;
 
             __PACKED(struct {
                 __PACKED(struct _M10_GpsBlock {
+                    uint8_t unknown1;
+                    uint8_t unknown2;
                     int16_t speedEast;
                     int16_t speedNorth;
                     int16_t speedVertical;
