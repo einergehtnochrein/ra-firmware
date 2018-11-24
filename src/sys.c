@@ -1207,22 +1207,25 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 int command;
                 int enableValue;
                 int extra1;
-                float floatExtra;
+                float floatExtra1;
+                float floatExtra2;
 
-                if (sscanf(cl, "#%*d,%d,%d", &command, &enableValue) == 2) {
+                if (sscanf(cl, "#%*d,%d", &command) == 1) {
                     switch (command) {
                         case 3:
-                            SCANNER_setMode(scanner, enableValue);
-                            if ((enableValue == 2) || (enableValue == 3)) {     /* Spectrum scan mode */
-                                handle->currentFrequency = 0;
-                                _SYS_reportRadioFrequency(handle);
+                            if (sscanf(cl, "#%*d,%*d,%d", &enableValue) == 1) {
+                                SCANNER_setMode(scanner, enableValue);
+                                if ((enableValue == 2) || (enableValue == 3)) {     /* Spectrum scan mode */
+                                    handle->currentFrequency = 0;
+                                    _SYS_reportRadioFrequency(handle);
+                                }
+                                osTimerStart(handle->rssiTick, 20);
                             }
-                            osTimerStart(handle->rssiTick, 20);
                             break;
 
                         case 5:
                         {
-                            if (sscanf(cl, "#%*d,%*d,%*d,%d", &extra1) == 1) {
+                            if (sscanf(cl, "#%*d,%*d,%d,%d", &enableValue, &extra1) == 2) {
                                 RS41_LogMode mode = RS41_LOGMODE_NONE;
                                 if (enableValue == 1) {
                                     mode = RS41_LOGMODE_RAW;
@@ -1234,8 +1237,16 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
 
                         case 6:
                         {
-                            if (sscanf(cl, "#%*d,%*d,%*d,%f", &floatExtra) == 1) {
-                                RS92_setSatelliteSnrThreshold(handle->rs92, floatExtra);
+                            if (sscanf(cl, "#%*d,%*d,%d,%f", &enableValue, &floatExtra2) == 2) {
+                                RS92_setSatelliteSnrThreshold(handle->rs92, floatExtra2);
+                            }
+                            break;
+                        }
+
+                        case 7:
+                        {
+                            if (sscanf(cl, "#%*d,%*d,%f,%f", &floatExtra1, &floatExtra2) == 2) {
+                                SCANNER_setSpectrumRange(scanner, floatExtra1, floatExtra2);
                             }
                             break;
                         }
