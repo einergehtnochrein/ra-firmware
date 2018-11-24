@@ -209,7 +209,7 @@ LPCLIB_Result M10_processBlock (M10_Handle handle, void *buffer, uint32_t length
             /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
             handle->rxFrequencyHz = rxFrequencyHz;
 
-            if (handle->packet.packet100.packetType[0] == 0x9F) {
+            if (handle->packet.packet100.packetType == 0x9F) {
                 _M10_processConfigBlock(&handle->packet.packet100.data.config, &handle->instance);
 
                 if (handle->instance) {

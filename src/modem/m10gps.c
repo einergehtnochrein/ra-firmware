@@ -29,6 +29,7 @@ LPCLIB_Result _M10_processGpsBlock (
     /* Sanity check */
     bool ok = true;
     if (cookedGps->visibleSats < 4) ok = false;
+    if ((rawGps->unknown1 & 0x0F) != 0) ok = false; //TODO  bits 0,1 seem to be set when GPS position is invalid
 
     if (!ok) {
         lla.lat = NAN;
