@@ -342,7 +342,7 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
 
             ADF7021_write(handle, ADF7021_REGISTER_1, 0
                             | (1u << 25)        /* External L */
-                            | (3u << 19)        /* VCO bias = 0.75 mA */
+                            | (8u << 19)        /* VCO bias = 2.00 mA */
                             | (1u << 17)        /* VCO on */
                             | (1u << 12)        /* XOSC on */
                             | (0u << 7)         /* CLKOUT off */
