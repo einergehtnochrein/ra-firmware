@@ -6,6 +6,9 @@
 #include "config.h"
 
 static const Config_t _factorySettingsDefault = {
+    .version = 2,
+    .baudrate = 115200,
+
 #if (BOARD_RA == 1)
     .referenceFrequency = 13.0e6,
     .rssiCorrectionLnaOn = -16.0,
