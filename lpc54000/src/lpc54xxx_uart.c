@@ -629,6 +629,37 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
                     ;
             break;
 
+        case UART_OPCODE_SET_BREAK:                     /* TXD break condition */
+            if (pConfig->enableBreak) {
+#if (__CORTEX_M == 4)
+                /* Clean TX disable to allow current character to be sent completely */
+                LPCLIB_BITBAND(&uart->CTL, UART_CTL_TXDIS_Pos) = 1;
+                while (!LPCLIB_BITBAND(&uart->STAT, UART_STAT_TXDISSTAT_Pos))
+                    ;
+
+                /* Enter TXD break */
+                LPCLIB_BITBAND(&uart->CTL, UART_CTL_TXBRKEN_Pos) = 1;
+
+                /* Re-enable TX */
+                LPCLIB_BITBAND(&uart->CTL, UART_CTL_TXDIS_Pos) = 0;
+#else
+                /* Clean TX disable to allow current character to be sent completely */
+                uart->CTL |= UART_CTL_TXDIS_Msk;
+                while (!(uart->STAT & UART_STAT_TXDISSTAT_Msk))
+                    ;
+
+                /* Enter TXD break */
+                uart->CTL |= UART_CTL_TXBRKEN_Msk;
+
+                /* Re-enable TX */
+                uart->CTL &= ~UART_CTL_TXDIS_Msk;
+#endif
+            }
+            else {
+                uart->CTL &= ~UART_CTL_TXBRKEN_Msk;     /* Back to normal operation */
+            }
+            break;
+
         case UART_OPCODE_INVALID:
         default:
             /* ignore */
