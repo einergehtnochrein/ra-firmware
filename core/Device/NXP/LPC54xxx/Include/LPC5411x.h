@@ -237,7 +237,7 @@ typedef struct {
 
 typedef struct {
     union {
-        __IO uint8_t B[41];
+        __IO uint8_t B[50];
         struct {
             __IO uint8_t B0;
             __IO uint8_t B1;
@@ -280,11 +280,20 @@ typedef struct {
             __IO uint8_t B38;
             __IO uint8_t B39;
             __IO uint8_t B40;
+            __IO uint8_t B41;
+            __IO uint8_t B42;
+            __IO uint8_t B43;
+            __IO uint8_t B44;
+            __IO uint8_t B45;
+            __IO uint8_t B46;
+            __IO uint8_t B47;
+            __IO uint8_t B48;
+            __IO uint8_t B49;
         };
     };
-         uint8_t _RESERVED0_[4096-41];
-    __IO uint32_t W[41];
-         uint32_t _RESERVED1_[1024-41];
+         uint8_t _RESERVED0_[4096-50];
+    __IO uint32_t W[50];
+         uint32_t _RESERVED1_[1024-50];
     union {
         __IO uint32_t DIR[2];
         struct {
