@@ -44,6 +44,7 @@
 #include "lpc54xxx_gpio.h"
 #include "lpc54xxx_iap.h"
 #include "lpc54xxx_iocon.h"
+#include "lpc54xxx_mrt.h"
 #include "lpc54xxx_romhandler.h"
 #include "lpc54xxx_timer.h"
 #include "lpc54xxx_uart.h"
