@@ -1077,17 +1077,23 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 if (sscanf(cl, "#%*d,%ld", &timestamp) == 1) {
                     /* Send application and version */
                     char s[80];
-                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s",
-                            FIRMWARE_VERSION_MAJOR,
+                    int hardwareVersion = 0;
 #if (BOARD_RA == 1)
-                            1,
-#elif (BOARD_RA == 2)
-                            2,
-#else
-                            0,
+                    hardwareVersion = 1;        /* Ra1 */
 #endif
+#if (BOARD_RA == 2)
+                    hardwareVersion = 2;        /* Ra2 */
+                    if (GPIO_readBit(GPIO_DETECT_RA2FIX) == 0) {
+                        hardwareVersion = 3;    /* Ra2fix */
+                    }
+#endif
+                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d",
+                            FIRMWARE_VERSION_MAJOR,
+                            hardwareVersion,
                             FIRMWARE_VERSION_MINOR,
-                            FIRMWARE_NAME);
+                            FIRMWARE_NAME,
+                            config_g->serialNumber
+                            );
                     SYS_send2Host(HOST_CHANNEL_PING, s);
 
                     /* Send status */
