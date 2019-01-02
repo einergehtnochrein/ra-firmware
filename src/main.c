@@ -19,6 +19,7 @@ SYS_Handle sys;
 SCANNER_Handle scanner;
 SONDE_Handle sonde;
 EPHEMUPDATE_Handle euTask;
+MRT_Handle mrt;
 
 char s[100];
 volatile struct mallinfo heapinfo;
@@ -34,6 +35,7 @@ int main (void)
 
     //TODO: need mailbox driver
     CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_MAILBOX);
+    MRT_open(&mrt);
 
     BSP_init();
 
@@ -145,6 +147,7 @@ void SystemInit (void)
     NVIC_EnableIRQ(UART0_IRQn);
     NVIC_EnableIRQ(UART2_IRQn);
     NVIC_EnableIRQ(SPI1_IRQn);
+    NVIC_EnableIRQ(MRT_IRQn);
 #endif
 #if (BOARD_RA == 2)
     NVIC_EnableIRQ(PIN_INT2_IRQn);
@@ -153,6 +156,7 @@ void SystemInit (void)
     NVIC_EnableIRQ(SPI7_IRQn);
     NVIC_SetPriority(USB_IRQn, 6);     //TODO: Only a workaround. Don't do DSP in IRQ38!
     NVIC_EnableIRQ(USB_IRQn);
+    NVIC_EnableIRQ(MRT_IRQn);
 #endif
 }
 
