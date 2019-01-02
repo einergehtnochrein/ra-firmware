@@ -7,7 +7,7 @@
 
 static const Config_t _factorySettingsDefault = {
     .version = 2,
-    .baudrate = 115200,
+    .baudrate = 115200.0f,
 
 #if (BOARD_RA == 1)
     .referenceFrequency = 13.0e6,
