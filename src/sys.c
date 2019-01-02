@@ -827,6 +827,9 @@ static float _SYS_measureVbat (SYS_Handle handle)
         | (1 << 8)                          /* Seq A: Select channel 8 */
         | (3 << 12)                         /* Seq A: Trigger source 3 (unused source) */
         ;
+    if (GPIO_readBit(GPIO_0_19) == 0) {     /* Board Ra2fix */
+        LPC_ADC0->SEQA_CTRL |= (1u << 7);   /* ADC0_7 probes negative battery node */
+    }
     LPC_ADC0->SEQA_CTRL |= (1u << 18);      /* Seq A: Positive edge trigger */
     LPC_ADC0->SEQA_CTRL |= (1u << 31);      /* Seq A: Enable */
     LPC_ADC0->SEQA_CTRL |= (1u << 26);      /* Seq A: Start single sequence */
@@ -836,7 +839,12 @@ static float _SYS_measureVbat (SYS_Handle handle)
     } while (!(vbatAdcDat & (1u << 31)));   /* Wait until there is a valid result */
 
     /* Convert to real battery voltage */
-    vbat = (float)(vbatAdcDat & 0xFFFF) / 65536.0f * 3.0f * 2;
+    if (GPIO_readBit(GPIO_0_19) == 0) {     /* Board Ra2fix */
+        vbat = ((float)(vbatAdcDat & 0xFFFF) - (float)(LPC_ADC0->DAT7 & 0xFFFF)) / 65536.0f * 3.0f * 2;
+    }
+    else {
+        vbat = (float)(vbatAdcDat & 0xFFFF) / 65536.0f * 3.0f * 2;
+    }
 
     CLKPWR_unitPowerDown(CLKPWR_UNIT_VREFP);
     CLKPWR_unitPowerDown(CLKPWR_UNIT_VDDA);
