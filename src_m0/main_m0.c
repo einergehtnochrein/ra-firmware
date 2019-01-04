@@ -58,7 +58,7 @@ static const SYNC_Config configGraw = {
             .frameLength = 66,
             .startOffset = 0,
             .bitFormat = SYNC_BITFORMAT_RAW,
-            .inverted = false,
+            .inverted = true,
         },
         {
             .id = 3,

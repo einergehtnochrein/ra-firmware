@@ -205,7 +205,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* DFM type indicator */
     special = 0;
-    if (instance->platform == SONDE_DFM09) {
+    if (instance->platform == SONDE_DFM_INVERTED) {
         if (instance->gps.inBurkinaFaso) {
             special += 4;
         }

@@ -67,7 +67,7 @@ LPCLIB_Result _DFM_processMetrologyBlock (
                 ;
 //        uint8_t fragment = rawConfig->h[5];
 
-        if (instance->platform == SONDE_DFM06) {
+        if (instance->platform == SONDE_DFM_NORMAL) {
             instance->metro.batteryVoltage = NAN;
             instance->metro.cpuTemperature = NAN;
 
@@ -77,7 +77,7 @@ LPCLIB_Result _DFM_processMetrologyBlock (
                     break;
             }
         }
-        if (instance->platform == SONDE_DFM09) {
+        if (instance->platform == SONDE_DFM_INVERTED) {
             switch (channel - (int)instance->maxConfigChannel) {
                 case DFM09_CHANNEL_CONFIG_BATTERY_VOLTAGE:
                     instance->metro.batteryVoltage = u16value / 1000.0f;

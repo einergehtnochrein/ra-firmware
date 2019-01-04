@@ -359,9 +359,8 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
         case SONDE_RS92:
             length = 585;
             break;
-        case SONDE_DFM06:
-        case SONDE_DFM09:
-        case SONDE_PS15:
+        case SONDE_DFM_NORMAL:
+        case SONDE_DFM_INVERTED:
             length = 66;
             break;
         case SONDE_M10:
@@ -1417,7 +1416,6 @@ static bool _SYS_checkEvent (SYS_Handle handle)
 PT_THREAD(SYS_thread (SYS_Handle handle))
 {
     static SYS_Message *pMessage;
-    static uint32_t n;
 
 
     PT_BEGIN(&handle->pt);
@@ -1508,8 +1506,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                         switch (ipc[bufferIndex].param) {
                             case 0: sondeType = SONDE_RS92; break;
                             case 1: sondeType = SONDE_RS41; break;
-                            case 2: sondeType = SONDE_DFM09; break;
-                            case 3: sondeType = SONDE_DFM06; break;
+                            case 2: sondeType = SONDE_DFM_INVERTED; break;
+                            case 3: sondeType = SONDE_DFM_NORMAL; break;
                             case 4: sondeType = SONDE_M10; break;
                             case 7: sondeType = SONDE_PILOT; break;
                         }
@@ -1555,27 +1553,23 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             /* Let scanner prepare for next frequency */
                             SCANNER_notifyValidFrame(scanner);
                         }
-                        else if (sondeType == SONDE_DFM06) {
+                        else if (sondeType == SONDE_DFM_NORMAL) {
                             if (DFM_processBlock(
                                     handle->dfm,
                                     sondeType,
                                     ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_DFM06),
+                                    _SYS_getSondeBufferLength(SONDE_DFM_NORMAL),
                                     handle->currentFrequency) == LPCLIB_SUCCESS) {
                                 /* Frame complete. Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
                             }
                         }
-                        else if (sondeType == SONDE_DFM09) {
-                            // DFM-09 uses inverted data (or inverted FSK modulation)
-                            for (n = 0; n < _SYS_getSondeBufferLength(SONDE_DFM09); n++) {
-                                ipc[bufferIndex].data8[n] ^= 0xFF;
-                            }
+                        else if (sondeType == SONDE_DFM_INVERTED) {
                             if (DFM_processBlock(
                                     handle->dfm,
                                     sondeType,
                                     ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_DFM09),
+                                    _SYS_getSondeBufferLength(SONDE_DFM_INVERTED),
                                     handle->currentFrequency) == LPCLIB_SUCCESS) {
                                 /* Frame complete. Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
