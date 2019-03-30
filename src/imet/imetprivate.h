@@ -117,7 +117,6 @@ typedef struct _IMET_InstanceData {
         uint32_t lastTime;
         uint8_t maxChannel;
         uint8_t nDetections;
-        uint8_t numAnalog;
         uint8_t prevChannel;
 
         uint32_t prevSondeType;
