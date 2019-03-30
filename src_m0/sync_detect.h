@@ -11,6 +11,7 @@ typedef struct {
     volatile uint8_t valid;
     uint8_t opcode;
     uint16_t param;
+    uint32_t rxTime;
 
     uint8_t data8[IPC_S2M_DATA_SIZE];
 } IPC_S2M;
