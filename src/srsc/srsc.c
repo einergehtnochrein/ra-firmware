@@ -164,7 +164,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    if (1) { //TODO must check for C50
+    if (1) { //TODO must check for C50 (NOTE: Every sonde must send a HOST_CHANNEL_INFO packet!)
         length = sprintf(s, "%ld,8,0,%s,,%.1f,%.1f,%.1f,%.1f,%.3f,,%ld,%ld,%d,%ld,%.2f,%d",
                     instance->id,
                     instance->name,
