@@ -144,6 +144,12 @@ LPCLIB_Result _RS41_processConfigBlock (
         if (_RS41_checkValidCalibration(instance, CALIB_FREQUENCY)) {
             instance->rxFrequencyMHz = 400.0f + (instance->frequency * 10) / 64000.0f;
         }
+
+        /* Last fragment contains volatile data */
+        if (fragmentIndex == RS41_CALIBRATION_MAX_INDEX) {
+            instance->killCounterRefFrame = instance->frameCounter;
+            instance->killCounterRefCount = instance->killCountdown;
+        }
     }
 
     return LPCLIB_SUCCESS;

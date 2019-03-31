@@ -57,11 +57,11 @@ LPCLIB_Result _RS41_processMetrologyBlock (
         float res = instance->refResistorLow
             + (instance->refResistorHigh - instance->refResistorLow) * current[0];
 
-        float x = res * instance->f045[5];
+        float x = res * instance->polyT1[3];
         cookedMetro->temperature = 0
-            + instance->f045[2]
-            + instance->f045[3] * x
-            + instance->f045[4] * x * x
+            + instance->polyT1[0]
+            + instance->polyT1[1] * x
+            + instance->polyT1[2] * x * x
             ;
     }
 
@@ -69,7 +69,7 @@ LPCLIB_Result _RS41_processMetrologyBlock (
 
     /* Result is invalid until we have enough calibration data */
     if (!_RS41_checkValidCalibration(instance, CALIB_TEMPERATURE2)) {
-        cookedMetro->temperature2 = NAN;
+        cookedMetro->temperatureUSensor = NAN;
     }
     else {
         /* Reference values for temperature are two known resistors.
@@ -78,11 +78,11 @@ LPCLIB_Result _RS41_processMetrologyBlock (
         float res = instance->refResistorLow
             + (instance->refResistorHigh - instance->refResistorLow) * current[2];
 
-        float x = res * instance->f045[59];
-        cookedMetro->temperature2 = 0
-            + instance->f045[56]
-            + instance->f045[57] * x
-            + instance->f045[58] * x * x
+        float x = res * instance->polyT2[3];
+        cookedMetro->temperatureUSensor = 0
+            + instance->polyT2[0]
+            + instance->polyT2[1] * x
+            + instance->polyT2[2] * x * x
             ;
     }
 

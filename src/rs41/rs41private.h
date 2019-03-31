@@ -37,7 +37,9 @@ typedef __PACKED(struct {
     char name[8];
     uint8_t batteryVoltage100mV;            /* Battery voltage in multiples of 100 mV */
     uint8_t reserved00B[2];
-    uint8_t flags;                          /* Bit 1: 0=Ascent, 1=Descent */
+    uint8_t flags;                          /* Bit 0: 0=Start phase, 1=Flight mode
+                                             * Bit 1: 0=Ascent, 1=Descent
+                                             */
     uint8_t reserved00E[2];
     uint8_t cpuTemperature;                 /* CPU temperature [°C] */
     uint8_t reserved011[4];
@@ -119,7 +121,7 @@ typedef struct {
 
 typedef struct {
     float temperature;
-    float temperature2;
+    float temperatureUSensor;
     float humidity;
     float pressure;
     float pressureAltitude;
@@ -157,6 +159,8 @@ typedef struct _RS41_InstanceData {
     int8_t txPower_dBm;
     bool encrypted;                             /* Set for RS41-SGM military version */
     bool onDescent;                             /* Descent phase detected */
+    int16_t killCounterRefFrame;                /* Last reference frame for kill counter */
+    int16_t killCounterRefCount;                /* Kill counter in last reference frame */
     RS41_CookedGps gps;
     RS41_CookedMetrology metro;
     RS41_LogMode logMode;
@@ -165,18 +169,23 @@ typedef struct _RS41_InstanceData {
         uint8_t rawData[RS41_CALIBRATION_MAX_INDEX + 1][16];
         __PACKED(struct {
             uint16_t reserved000;
-            uint16_t frequency;                 /* TX is on 400 MHz + (frequency / 64) * 10 kHz */
+            uint16_t frequency;                 /* 0x002: TX is on 400 MHz + (frequency / 64) * 10 kHz */
             uint8_t reserved004[0x00D-0x004];
-            uint8_t serial[8];                  /* Sonde ID, 8 char, not terminated */
-            uint16_t firmwareVersion;
-            uint8_t reserved017[0x027-0x017];
-            uint16_t killTimer;                 /* (probably) max frame counter before kill */
+            uint8_t serial[8];                  /* 0x00D: Sonde ID, 8 char, not terminated */
+            uint16_t firmwareVersion;           /* 0x015: */
+            uint16_t reserved017;
+            uint16_t minHeight4Flight;          /* 0x019: Height (meter above ground) where flight mode begins */
+            uint8_t reserved01B[0x027-0x01B];
+            int16_t flightKillFrames;           /* 0x027: Number of frames in flight until kill (-1 = disabled) */
             uint8_t reserved029[0x02B-0x029];
-            uint8_t burstKill;                  /* Burst kill (0=disabled, 1=enabled) */
+            uint8_t burstKill;                  /* 0x02B: Burst kill (0=disabled, 1=enabled) */
             uint8_t reserved02C[0x03D-0x02C];
-            float refResistorLow;               /* Reference resistor low (750 Ohms) */
-            float refResistorHigh;              /* Reference resistor high (1100 Ohms) */
-            float f045[62];
+            float refResistorLow;               /* 0x03D: Reference resistor low (750 Ohms) */
+            float refResistorHigh;              /* 0x041: Reference resistor high (1100 Ohms) */
+            float f045[2];
+            float polyT1[6];                    /* 0x04D: Coefficients for temperature (1) calculation */
+            float f065[48];
+            float polyT2[6];                    /* 0x125: Coefficients for temperature (2) calculation */
             uint8_t reserved13D[0x152-0x13D];
             float f152;
             uint8_t u156;
@@ -185,19 +194,25 @@ typedef struct _RS41_InstanceData {
             float f160[35];
             uint8_t reserved1EC[0x1F0-0x1EC];
             float f1F0[8];
-            float pressureLaunchSite[2];        /* Pressure [hPa] at launch site */
-            uint8_t modelname218[10];           /* "RS41-SG" */
-            uint8_t modelname222[10];           /* "RSM412" */
-            uint8_t serial22C[9];               /* "L1123553" */
-            uint8_t text235[14];                /* "0000000000" */
-            uint8_t text243[10];                /* "00000000" */
+            float pressureLaunchSite[2];        /* 0x210: Pressure [hPa] at launch site */
+            uint8_t nameVariant[10];            /* 0x218: Sonde variant (e.g. "RS41-SG") */
+            uint8_t nameMainboard[10];          /* 0x222: Name of mainboard (e.g. "RSM412") */
+            uint8_t serialMainboard[9];         /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
+            uint8_t text235[14];                /* 0x235: "0000000000" */
+            uint8_t serialPressureSensor[10];   /* 0x243: Serial number of pressure sensor (e.g. "N1310487") */
             uint8_t c24D;
             uint32_t u24E[(0x25E - 0x24E)/4];
             float pressurePoly[18];             /* 0x25E: Coefficients for pressure sensor polynomial */
             float f2A6[17];
             uint8_t reserved2EA[0x2FA-0x2EA];
             uint16_t halfword2FA[9];
-            uint8_t reserved30C[0x330-0x30C];
+            uint8_t reserved30C[0x316-0x30C];
+            int16_t burstKillFrames;            /* 0x316: Number of active frames after burst kill */
+            uint8_t reserved318[0x320-0x318];
+            int16_t killCountdown;              /* 0x320: Counts frames remaining until kill (-1 = inactive) */
+            uint8_t reserved322[0x328-0x322];
+            int8_t intAdcRadio[3];              /* 0x328: */
+            uint8_t reserved32B[0x330-0x32B];
         });
     });
 } RS41_InstanceData;
@@ -225,7 +240,9 @@ int32_t _RS41_readS24 (const uint8_t *p24);
 #define CALIB_TEMPERATURE1          0x0000000000000078ll
 #define CALIB_TEMPERATURE2          0x00000000000C0018ll
 #define CALIB_PRESSURE              0x000007E000000000ll
-#define CALIB_KILLTIMER             0x0000000000000004ll
+#define CALIB_FLIGHTKILLTIMER       0x0000000000000004ll
+#define CALIB_BURSTKILLTIMER        0x0002000000000000ll
+#define CALIB_KILLCOUNTDOWN         0x0004000000000000ll
 #define CALIB_MODELNAME             0x0000000600000000ll
 
 bool _RS41_checkValidCalibration(RS41_InstanceData *instance, uint64_t purpose);
