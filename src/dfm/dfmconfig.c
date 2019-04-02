@@ -100,7 +100,7 @@ dfm_config_unknown[channel].n++;
                             /* TODO: Assume PS15 in case of a very high number of fast channels */
                             if (instance->numAnalog >= 7) {
                                 instance->detectorState = DFM_DETECTOR_FIND_NAME;
-                                instance->maxConfigChannel = instance->numAnalog - 1;
+                                instance->maxConfigChannel = instance->numAnalog;
                                 instance->model = DFM_MODEL_PS15;
                             }
                             else {
@@ -149,6 +149,12 @@ dfm_config_unknown[channel].n++;
                                 /* We expect a serial number if the max channel is 6 or higher */
                                 if (instance->maxConfigChannel >= 6) {
                                     instance->detectorState = DFM_DETECTOR_FIND_NAME;
+                                    if (instance->maxConfigChannel >= 11) { //TODO: Any other way to detect DFM-17?
+                                        instance->model = DFM_MODEL_DFM17;
+                                    }
+                                    else {
+                                        instance->model = DFM_MODEL_DFM09_OLD;  //TODO: Could be DFM-06 new as well
+                                    }
                                 }
                                 else {
                                     /* Otherwise there is no serial number (DFM06 old) and we use a generic name */
@@ -177,7 +183,7 @@ dfm_config_unknown[channel].n++;
         /* Get the sonde name (and sonde type, DFM-06/DFM-09) from the highest config channel */
         case DFM_DETECTOR_FIND_NAME:
             {
-                if (instance->maxConfigChannelNibble0 == 12) {
+                if ((instance->maxConfigChannelNibble0 == 12) || (instance->model == DFM_MODEL_PS15)) {
                     if (channel == instance->maxConfigChannel) {
                         if ((u32 & 0xF) == 0) {
                             instance->confDetect.sondeNumber = ((u32 >> 4) & 0xFFFF) << 16;
@@ -212,12 +218,8 @@ dfm_config_unknown[channel].n++;
                     if (channel == instance->maxConfigChannel) {
                         instance->confDetect.sondeNumber = 0;
                         for (i = 0; i < 6; i++) {
-                            /* Detect illegal characters (must be a decimal number) */
-                            if (((u32 >> ((6 - i) * 4)) & 0xF) > 9) {
-                                break;
-                            }
-
-                            instance->confDetect.sondeNumber = (10 * instance->confDetect.sondeNumber) + rawConfig->h[i];
+                            instance->confDetect.sondeNumber *= 10;
+                            instance->confDetect.sondeNumber += (u32 >> ((5 - i) * 4)) & 0x0F;
                         }
                         if ((i == 6) && (instance->confDetect.sondeNumber == instance->confDetect.prevSondeNumber)) {
                             ++instance->confDetect.nDetections;

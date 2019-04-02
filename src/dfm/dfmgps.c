@@ -333,34 +333,42 @@ LPCLIB_Result _DFM_processGpsBlock (
                 return LPCLIB_ERROR;
             }
 
-            /* Check for the Burkina Faso syndrom... */
-            int africaEvidence = 0;
-            if ((p->fragment[4].i32 == 0) && (p->fragment[4].i16 == 0)) {
-                ++africaEvidence;
-            }
-            if (p->fragment[1].i32 == p->fragment[5].i32) {
-                ++africaEvidence;
-            }
-            if (p->fragment[2].i32 == p->fragment[6].i32) {
-                ++africaEvidence;
-            }
-            if (p->fragment[1].i16 == p->fragment[6].i16) {
-                ++africaEvidence;
-            }
-            if (p->fragment[3].i32 == p->fragment[7].i32) {
-                ++africaEvidence;
-            }
+            if (sondeType == SONDE_DFM_INVERTED) {
+                /* Check for the Burkina Faso syndrom... */
+                int africaEvidence = 0;
+                if ((p->fragment[4].i32 == 0) && (p->fragment[4].i16 == 0)) {
+                    ++africaEvidence;
+                }
+                if (p->fragment[1].i32 == p->fragment[5].i32) {
+                    ++africaEvidence;
+                }
+                if (p->fragment[2].i32 == p->fragment[6].i32) {
+                    ++africaEvidence;
+                }
+                if (p->fragment[1].i16 == p->fragment[6].i16) {
+                    ++africaEvidence;
+                }
+                if (p->fragment[3].i32 == p->fragment[7].i32) {
+                    ++africaEvidence;
+                }
 
-            instance->gps.inBurkinaFaso = africaEvidence >= 3;
+                if (africaEvidence >= 3) {
+                    instance->gps.inBurkinaFaso = true;
+                    instance->model = DFM_MODEL_DFM09_AFRICA;
+                }
+                else {
+                    instance->gps.inBurkinaFaso = false;
+                    instance->model = DFM_MODEL_DFM09_NEW;
+                }
+            }
+            else {
+                instance->gps.inBurkinaFaso = false;
+            }
 
             if (instance->gps.inBurkinaFaso) {
-                instance->model = DFM_MODEL_DFM09_AFRICA;
                 _DFM_processGpsBurkinaFaso(instance, p);
             }
             else {
-                if (sondeType == SONDE_DFM_INVERTED) {
-                    instance->model = DFM_MODEL_DFM09_NEW;
-                }
                 _DFM_processGpsNormal(instance, p);
             }
         }
