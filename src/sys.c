@@ -37,6 +37,7 @@
 #include "dfm.h"
 #include "imet.h"
 #include "m10.h"
+#include "meisei.h"
 #include "pdm.h"
 #include "pilot.h"
 #include "rinex.h"
@@ -124,6 +125,7 @@ struct SYS_Context {
     M10_Handle m10;
     PILOT_Handle pilot;
     SRSC_Handle srsc;
+    MEISEI_Handle meisei;
     PDM_Handle pdm;
 
     _Bool sleeping;                                     /**< Low-power mode activated */
@@ -282,6 +284,31 @@ static const ADF7021_Config radioModePilot[] = {
     ADF7021_CONFIG_END
 };
 
+static const ADF7021_Config radioModeMeisei[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 1800, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
 static const ADF7021_Config radioModeC34C50[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
@@ -362,6 +389,10 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
         case SONDE_DFM_NORMAL:
         case SONDE_DFM_INVERTED:
             length = 66;
+            break;
+        case SONDE_MEISEI_CONFIG:
+        case SONDE_MEISEI_GPS:
+            length = 48;
             break;
         case SONDE_M10:
             length = (100+1) * 2;
@@ -563,6 +594,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
             LPC_MAILBOX->IRQ0SET = (1u << 1); //TODO
+            break;
+
+        case SONDE_DETECTOR_MEISEI:
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setBitRate(radio, 2400);
+            ADF7021_ioctl(radio, radioModeMeisei);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+            LPC_MAILBOX->IRQ0SET = (1u << 5); //TODO
             break;
 
         case SONDE_DETECTOR_RS41_RS92:
@@ -1108,6 +1150,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     M10_resendLastPositions(handle->m10);
                     BEACON_resendLastPositions(handle->beacon);
                     PILOT_resendLastPositions(handle->pilot);
+                    MEISEI_resendLastPositions(handle->meisei);
                 }
             }
             break;
@@ -1138,6 +1181,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         case 3:     detector = SONDE_DETECTOR_IMET; break;
                         case 4:     detector = SONDE_DETECTOR_MODEM; break;
                         case 5:     detector = SONDE_DETECTOR_BEACON; break;
+                        case 6:     detector = SONDE_DETECTOR_MEISEI; break;
                         case 7:     detector = SONDE_DETECTOR_PILOT; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
@@ -1199,6 +1243,10 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                                     case SONDE_DECODER_PILOT:
                                         PILOT_removeFromList(handle->pilot, id, &frequency);
                                         detector = SONDE_DETECTOR_PILOT;
+                                        break;
+                                    case SONDE_DECODER_MEISEI:
+                                        MEISEI_removeFromList(handle->meisei, id, &frequency);
+                                        detector = SONDE_DETECTOR_MEISEI;
                                         break;
                                     default:
                                         /* ignore */
@@ -1432,6 +1480,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     SRSC_open(&handle->srsc);
     IMET_open(&handle->imet);
     M10_open(&handle->m10);
+    MEISEI_open(&handle->meisei);
     PILOT_open(&handle->pilot);
     PDM_open(0, &handle->pdm);
 
@@ -1500,85 +1549,100 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                     /* Find out which buffer to use */
                     int bufferIndex = pMessage->bufferIndex;
 
-                    /* Ignore glitches (packets arriving while switching to/from scanner mode) */
-                    if (handle->currentFrequency != 0) {
-                        SONDE_Type sondeType = SONDE_UNDEFINED;
-                        switch (ipc[bufferIndex].param) {
-                            case 0: sondeType = SONDE_RS92; break;
-                            case 1: sondeType = SONDE_RS41; break;
-                            case 2: sondeType = SONDE_DFM_INVERTED; break;
-                            case 3: sondeType = SONDE_DFM_NORMAL; break;
-                            case 4: sondeType = SONDE_M10; break;
-                            case 7: sondeType = SONDE_PILOT; break;
-                        }
+                    if (ipc[bufferIndex].valid) {
+                        /* Ignore glitches (packets arriving while switching to/from scanner mode) */
+                        if (handle->currentFrequency != 0) {
+                            SONDE_Type sondeType = SONDE_UNDEFINED;
+                            switch (ipc[bufferIndex].param) {
+                                case 0: sondeType = SONDE_RS92; break;
+                                case 1: sondeType = SONDE_RS41; break;
+                                case 2: sondeType = SONDE_DFM_INVERTED; break;
+                                case 3: sondeType = SONDE_DFM_NORMAL; break;
+                                case 4: sondeType = SONDE_M10; break;
+                                case 7: sondeType = SONDE_PILOT; break;
+                                case 8: sondeType = SONDE_MEISEI_CONFIG; break;
+                                case 9: sondeType = SONDE_MEISEI_GPS; break;
+                            }
 
-                        /* Process buffer */
-                        if (sondeType == SONDE_M10) {
-                            M10_processBlock(
-                                    handle->m10,
-                                    ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_M10),
-                                    handle->currentFrequency);
+                            /* Process buffer */
+                            if (sondeType == SONDE_M10) {
+                                M10_processBlock(
+                                        handle->m10,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_M10),
+                                        handle->currentFrequency);
 
-                            /* Let scanner prepare for next frequency */
-                            SCANNER_notifyValidFrame(scanner);
-                        }
-                        else if (sondeType == SONDE_PILOT) {
-                            PILOT_processBlock(
-                                    handle->pilot,
-                                    ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_PILOT),
-                                    handle->currentFrequency);
-
-                            /* Let scanner prepare for next frequency */
-                            SCANNER_notifyValidFrame(scanner);
-                        }
-                        else if (sondeType == SONDE_RS41) {
-                            RS41_processBlock(
-                                    handle->rs41,
-                                    ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_RS41),
-                                    handle->currentFrequency);
-
-                            /* Let scanner prepare for next frequency */
-                            SCANNER_notifyValidFrame(scanner);
-                        }
-                        else if (sondeType == SONDE_RS92) {
-                            RS92_processBlock(
-                                    handle->rs92,
-                                    ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_RS92),
-                                    handle->currentFrequency);
-
-                            /* Let scanner prepare for next frequency */
-                            SCANNER_notifyValidFrame(scanner);
-                        }
-                        else if (sondeType == SONDE_DFM_NORMAL) {
-                            if (DFM_processBlock(
-                                    handle->dfm,
-                                    sondeType,
-                                    ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_DFM_NORMAL),
-                                    handle->currentFrequency) == LPCLIB_SUCCESS) {
-                                /* Frame complete. Let scanner prepare for next frequency */
+                                /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
                             }
-                        }
-                        else if (sondeType == SONDE_DFM_INVERTED) {
-                            if (DFM_processBlock(
-                                    handle->dfm,
-                                    sondeType,
-                                    ipc[bufferIndex].data8,
-                                    _SYS_getSondeBufferLength(SONDE_DFM_INVERTED),
-                                    handle->currentFrequency) == LPCLIB_SUCCESS) {
-                                /* Frame complete. Let scanner prepare for next frequency */
+                            else if (sondeType == SONDE_PILOT) {
+                                PILOT_processBlock(
+                                        handle->pilot,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_PILOT),
+                                        handle->currentFrequency);
+
+                                /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
                             }
+                            else if (sondeType == SONDE_RS41) {
+                                RS41_processBlock(
+                                        handle->rs41,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_RS41),
+                                        handle->currentFrequency);
+
+                                /* Let scanner prepare for next frequency */
+                                SCANNER_notifyValidFrame(scanner);
+                            }
+                            else if (sondeType == SONDE_RS92) {
+                                RS92_processBlock(
+                                        handle->rs92,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_RS92),
+                                        handle->currentFrequency);
+
+                                /* Let scanner prepare for next frequency */
+                                SCANNER_notifyValidFrame(scanner);
+                            }
+                            else if (sondeType == SONDE_DFM_NORMAL) {
+                                if (DFM_processBlock(
+                                        handle->dfm,
+                                        sondeType,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_DFM_NORMAL),
+                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_DFM_INVERTED) {
+                                if (DFM_processBlock(
+                                        handle->dfm,
+                                        sondeType,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_DFM_INVERTED),
+                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if ((sondeType == SONDE_MEISEI_CONFIG) || (sondeType == SONDE_MEISEI_GPS)) {
+                                if (MEISEI_processBlock(
+                                        handle->meisei,
+                                        sondeType,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(sondeType),
+                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
                         }
+
+                        /* Buffer may now be reused */
+                        ipc[bufferIndex].valid = 0;
                     }
-
-                    /* Buffer may now be reused */
-                    ipc[bufferIndex].valid = 0;
                 }
                 break;
 
