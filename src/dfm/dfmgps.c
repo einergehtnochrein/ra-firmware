@@ -51,8 +51,19 @@ static DFM_InstanceData *_DFM_getInstanceDataStructure (float frequencyMHz, LLA_
     p = instanceList;
     while (p) {
         if (p->rxFrequencyMHz == frequencyMHz) {
-            /* Found it! */
-            return p;
+            /* Do we know the sonde position? */
+            if (!pObserverLLA) {
+                /* No. Match the sonde based on RX frequency alone. */
+                return p;
+
+                /* Sonde is a match if it is within 10km in either direction (assuming latitude 50°) */
+                float hdist = 4094.6f * fabs(pObserverLLA->lon - p->gps.observerLLA.lon);
+                float vdist = 6370.0f * fabs(pObserverLLA->lat - p->gps.observerLLA.lat);
+                if ((hdist < 10000.0f) && (vdist < 10000.0f)) {
+                    /* This must be the sonde we already know! */
+                    return p;
+                }
+            }
         }
 
         ++numSondes;

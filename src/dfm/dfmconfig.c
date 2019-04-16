@@ -13,10 +13,10 @@ struct {
 
 #define DFM_DATA_FIFO_LENGTH    10
 
-static struct _DFM_DataChannelFifo {
+/*static*/ struct _DFM_DataChannelFifo {
     struct {
-        uint32_t data;
         uint8_t channel;
+        uint32_t data;
         uint32_t timestamp;
     } fifo[DFM_DATA_FIFO_LENGTH];
     int numEntries;
@@ -60,8 +60,8 @@ dfm_config_unknown[channel].n++;
     }
 
     /* Add new entry */
-    _dfmDataChannelFifo.fifo[_dfmDataChannelFifo.numEntries].data = u32;
     _dfmDataChannelFifo.fifo[_dfmDataChannelFifo.numEntries].channel = channel;
+    _dfmDataChannelFifo.fifo[_dfmDataChannelFifo.numEntries].data = u32;
     _dfmDataChannelFifo.fifo[_dfmDataChannelFifo.numEntries].timestamp = rxTime;
     ++_dfmDataChannelFifo.numEntries;
 
@@ -78,8 +78,7 @@ dfm_config_unknown[channel].n++;
         /* Time markers */
         uint32_t thisTime = _dfmDataChannelFifo.fifo[n].timestamp;
         float delta = 10.0f * (thisTime - instance->confDetect.lastTime);
-        float delta0 = 10.0f * (thisTime - instance->confDetect.lastCh0Time);
-        instance->confDetect.lastTime = thisTime;
+        volatile float delta0 = 10.0f * (thisTime - instance->confDetect.lastCh0Time);
         u32 = _dfmDataChannelFifo.fifo[n].data;
 
         /* See if the detector still needs to work out the exact type of sonde */
@@ -87,26 +86,35 @@ dfm_config_unknown[channel].n++;
         /* Determine the number of fast analog channels */
         case DFM_DETECTOR_FIND_NANALOG:
             {
+                instance->confDetect.lastTime = thisTime;
+
                 /* Compare the interval between channel 0 transmissions */
                 if (channel == 0) {
                     /* If interval appears reasonable, remember config frame length */
                     if ((delta0 > 1.5f*DFM_FRAME_LENGTH_MILLISEC) && (delta0 < 16.5*DFM_FRAME_LENGTH_MILLISEC)) {
-                        instance->confDetect.numAnalog = lrintf(delta0 / DFM_FRAME_LENGTH_MILLISEC) - 1;
-                        if (++instance->confDetect.nDetections >= 3) {
-                            instance->numAnalog = instance->confDetect.numAnalog;
-                            instance->confDetect.maxChannel = 0;
-                            instance->confDetect.nDetections = 0;
+                        uint32_t numAnalog = lrintf(delta0 / DFM_FRAME_LENGTH_MILLISEC) - 1;
+                        if (numAnalog == instance->confDetect.numAnalog) {
+                            if (++instance->confDetect.nDetections >= 3) {
+                                instance->numAnalog = instance->confDetect.numAnalog;
+                                instance->confDetect.maxChannel = 0;
+                                instance->confDetect.nDetections = 0;
 
-                            /* TODO: Assume PS15 in case of a very high number of fast channels */
-                            if (instance->numAnalog >= 7) {
-                                instance->detectorState = DFM_DETECTOR_FIND_NAME;
-                                instance->maxConfigChannel = instance->numAnalog;
-                                instance->model = DFM_MODEL_PS15;
-                            }
-                            else {
-                                instance->detectorState = DFM_DETECTOR_FIND_CONFIG_STRUCTURE;
+                                /* TODO: Assume PS15 in case of a very high number of fast channels */
+                                if (instance->numAnalog >= 7) {
+                                    instance->detectorState = DFM_DETECTOR_FIND_NAME;
+                                    instance->maxConfigChannel = instance->numAnalog;
+                                    instance->model = DFM_MODEL_PS15;
+                                }
+                                else {
+                                    instance->detectorState = DFM_DETECTOR_FIND_CONFIG_STRUCTURE;
+                                }
                             }
                         }
+                        else {
+                            instance->confDetect.nDetections = 0;
+                        }
+
+                        instance->confDetect.numAnalog = numAnalog;
                     }
                     else {
                         instance->confDetect.nDetections = 0;
@@ -130,52 +138,58 @@ dfm_config_unknown[channel].n++;
                     instance->confDetect.lastCh0Time = thisTime;
                 }
 
-                /* The slow channels must appear at a certain distance from channel 0 */
+                /* The slow channels must appear at a specific distance from channel 0 */
                 if ((channel >= instance->numAnalog) &&
                     (delta0 < (instance->numAnalog + 0.5f) * DFM_FRAME_LENGTH_MILLISEC) &&
                     (delta0 > (instance->numAnalog - 0.5f) * DFM_FRAME_LENGTH_MILLISEC)) {
 
-                    if (channel < instance->confDetect.prevChannel) {
-                        /* Previous channel was the maximum. Wait until it's the same for a few cycles. */
+                    /* We only look at consecutive slow channels (exactly numAnalogChannels apart) */
+                    if ((delta < (instance->numAnalog + 1.5f) * DFM_FRAME_LENGTH_MILLISEC) &&
+                        (delta > (instance->numAnalog - 1.5f) * DFM_FRAME_LENGTH_MILLISEC)) {
 
-                        if ((instance->confDetect.prevChannel == instance->confDetect.maxChannel) &&
-                            (instance->confDetect.prevNibble0 == instance->confDetect.maxChannelNibble0)) {
-                            ++instance->confDetect.nDetections;
+                        if (channel < instance->confDetect.prevChannel) {
+                            /* Previous channel was the maximum. Wait until it's the same for a few cycles. */
 
-                            if (instance->confDetect.nDetections >= 2) {
-                                instance->maxConfigChannel = instance->confDetect.maxChannel;
-                                instance->maxConfigChannelNibble0 = instance->confDetect.maxChannelNibble0;
+                            if ((instance->confDetect.prevChannel == instance->confDetect.maxChannel) &&
+                                (instance->confDetect.prevNibble0 == instance->confDetect.maxChannelNibble0)) {
+                                ++instance->confDetect.nDetections;
 
-                                /* We expect a serial number if the max channel is 6 or higher */
-                                if (instance->maxConfigChannel >= 6) {
-                                    instance->detectorState = DFM_DETECTOR_FIND_NAME;
-                                    if (instance->maxConfigChannel >= 11) { //TODO: Any other way to detect DFM-17?
-                                        instance->model = DFM_MODEL_DFM17;
+                                if (instance->confDetect.nDetections >= 3) {
+                                    instance->maxConfigChannel = instance->confDetect.maxChannel;
+                                    instance->maxConfigChannelNibble0 = instance->confDetect.maxChannelNibble0;
+
+                                    /* We expect a serial number if the max channel is 6 or higher */
+                                    if (instance->maxConfigChannel >= 6) {
+                                        instance->detectorState = DFM_DETECTOR_FIND_NAME;
+                                        if (instance->maxConfigChannel >= 11) { //TODO: Any other way to detect DFM-17?
+                                            instance->model = DFM_MODEL_DFM17;
+                                        }
+                                        else {
+                                            instance->model = DFM_MODEL_DFM09_OLD;  //TODO: Could be DFM-06 new as well
+                                        }
                                     }
                                     else {
-                                        instance->model = DFM_MODEL_DFM09_OLD;  //TODO: Could be DFM-06 new as well
+                                        /* Otherwise there is no serial number (DFM06 old) and we use a generic name */
+                                        instance->config.sondeNumber = 0;
+                                        strcpy(instance->name, "DFM-06");
+                                        instance->config.sondeNameKnown = true;
+                                        instance->model = DFM_MODEL_DFM06_OLD;
+                                        instance->detectorState = DFM_DETECTOR_READY;
                                     }
-                                }
-                                else {
-                                    /* Otherwise there is no serial number (DFM06 old) and we use a generic name */
-                                    instance->config.sondeNumber = 0;
-                                    strcpy(instance->name, "DFM-06");
-                                    instance->config.sondeNameKnown = true;
-                                    instance->model = DFM_MODEL_DFM06_OLD;
-                                    instance->detectorState = DFM_DETECTOR_READY;
-                                }
 
+                                    instance->confDetect.nDetections = 0;
+                                }
+                            }
+                            else {
+                                instance->confDetect.maxChannel = instance->confDetect.prevChannel;
+                                instance->confDetect.maxChannelNibble0 = instance->confDetect.prevNibble0;
                                 instance->confDetect.nDetections = 0;
                             }
-                        }
-                        else {
-                            instance->confDetect.maxChannel = instance->confDetect.prevChannel;
-                            instance->confDetect.maxChannelNibble0 = instance->confDetect.prevNibble0;
-                            instance->confDetect.nDetections = 1;
                         }
                     }
                     instance->confDetect.prevChannel = channel;
                     instance->confDetect.prevNibble0 = (u32 >> 20) & 0xF;
+                    instance->confDetect.lastTime = thisTime;
                 }
             }
             break;
@@ -244,9 +258,12 @@ dfm_config_unknown[channel].n++;
             break;
 
         case DFM_DETECTOR_READY:
+            break;
+        }
+
+        if (instance->detectorState >= DFM_DETECTOR_FIND_NAME) {
             /* process metrology */
             result = _DFM_processMetrologyBlock(rawConfig, instance);
-            break;
         }
     }
 
