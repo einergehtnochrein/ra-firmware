@@ -108,32 +108,13 @@ LPCLIB_Result _MEISEI_processConfigFrame (
 
     /* Cook some other values */
     instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
+    /* Read frame number to determine where to store the packet */
     instance->frameCounter = _MEISEI_getPayloadHalfWord(packet->fields, 0);
     if ((instance->frameCounter % 2) == 0) {
-        instance->_even1 = _MEISEI_getPayloadHalfWord(packet->fields, 1);
-        instance->_even2 = _MEISEI_getPayloadHalfWord(packet->fields, 2);
-        instance->_even3 = _MEISEI_getPayloadHalfWord(packet->fields, 3);
-        instance->_even4 = _MEISEI_getPayloadHalfWord(packet->fields, 4);
-        instance->_even5 = _MEISEI_getPayloadHalfWord(packet->fields, 5);
-        instance->_even6 = _MEISEI_getPayloadHalfWord(packet->fields, 6);
-        instance->_even7 = _MEISEI_getPayloadHalfWord(packet->fields, 7);
-        instance->_even8 = _MEISEI_getPayloadHalfWord(packet->fields, 8);
-        instance->_even9 = _MEISEI_getPayloadHalfWord(packet->fields, 9);
-        instance->_even10 = _MEISEI_getPayloadHalfWord(packet->fields, 10);
-        instance->_even11 = _MEISEI_getPayloadHalfWord(packet->fields, 11);
+        instance->configPacketEven = *packet;
     }
     else {
-        instance->_odd1 = _MEISEI_getPayloadHalfWord(packet->fields, 1);
-        instance->_odd2 = _MEISEI_getPayloadHalfWord(packet->fields, 2);
-        instance->_odd3 = _MEISEI_getPayloadHalfWord(packet->fields, 3);
-        instance->_odd4 = _MEISEI_getPayloadHalfWord(packet->fields, 4);
-        instance->_odd5 = _MEISEI_getPayloadHalfWord(packet->fields, 5);
-        instance->_odd6 = _MEISEI_getPayloadHalfWord(packet->fields, 6);
-        instance->_odd7 = _MEISEI_getPayloadHalfWord(packet->fields, 7);
-        instance->_odd8 = _MEISEI_getPayloadHalfWord(packet->fields, 8);
-        instance->_odd9 = _MEISEI_getPayloadHalfWord(packet->fields, 9);
-        instance->_odd10 = _MEISEI_getPayloadHalfWord(packet->fields, 10);
-        instance->_odd11 = _MEISEI_getPayloadHalfWord(packet->fields, 11);
+        instance->configPacketOdd = *packet;
     }
 
     return result;

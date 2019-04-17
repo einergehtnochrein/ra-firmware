@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -94,6 +95,49 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_INFO, s);
     }
+}
+
+
+static void _MEISEI_sendRaw (MEISEI_Handle handle, MEISEI_Packet *p1, MEISEI_Packet *p2)
+{
+    char s[200];
+
+
+    snprintf(s, sizeof(s),
+                     "%ld,11,1,"
+                     "%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16
+                     "%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16
+                     ","
+                     "%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16
+                     "%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16,
+                     handle->instance->id,
+                     _MEISEI_getPayloadHalfWord(p1->fields, 0),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 1),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 2),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 3),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 4),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 5),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 6),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 7),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 8),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 9),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 10),
+                     _MEISEI_getPayloadHalfWord(p1->fields, 11),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 0),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 1),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 2),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 3),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 4),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 5),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 6),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 7),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 8),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 9),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 10),
+                     _MEISEI_getPayloadHalfWord(p2->fields, 11)
+                    );
+
+    SYS_send2Host(HOST_CHANNEL_INFO, s);
 }
 
 
@@ -202,10 +246,25 @@ LPCLIB_Result MEISEI_processBlock (
 
             if (result == LPCLIB_SUCCESS) {
                 _MEISEI_processConfigFrame(&handle->configPacket, &handle->instance, rxFrequencyHz);
-                _MEISEI_processGpsFrame(&handle->gpsPacket, handle->instance);
-                //TODO Only send a packt when we have a new position. Send in odd or even frames??
+
+                /* Store GPS data depending on frame number even/odd */
                 if ((handle->instance->frameCounter % 2) == 0) {
-                    _MEISEI_sendKiss(handle->instance);
+                    handle->instance->gpsPacketEven = handle->gpsPacket;
+                    handle->instance->frameCounterEven = handle->instance->frameCounter;
+                }
+                else {
+                    handle->instance->gpsPacketOdd = handle->gpsPacket;
+                }
+
+                //TODO Logging
+                _MEISEI_sendRaw(handle, &handle->configPacket, &handle->gpsPacket);
+
+                //TODO Process in odd frames (or even?)
+                if ((handle->instance->frameCounter % 2) == 1) {
+                    if (handle->instance->frameCounter == handle->instance->frameCounterEven + 1) {
+                        _MEISEI_processGpsFrame(handle->instance);
+                        _MEISEI_sendKiss(handle->instance);
+                    }
                 }
             }
         }
