@@ -168,7 +168,12 @@ typedef struct ADF7021_Context *ADF7021_Handle;
  *  \param[out] pHandle Device handle
  *  \retval LPCLIB_SUCCESS Success. \ref pHandle contains a valid handle.
  */
-LPCLIB_Result ADF7021_open (LPC_SPI_Type *spi, int ssel, GPIO_Pin muxoutPin, ADF7021_Handle *pHandle);
+LPCLIB_Result ADF7021_open (
+        LPC_SPI_Type *spi,
+        int ssel,
+        GPIO_Pin muxoutPin,
+        MRT_Handle mrt,
+        ADF7021_Handle *pHandle);
 
 
 /** Close device.

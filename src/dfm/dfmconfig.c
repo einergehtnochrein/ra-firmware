@@ -231,7 +231,7 @@ dfm_config_unknown[rawConfig->type].n++;
     /* Get the sonde name (and sonde type, DFM-06/DFM-09) from the highest config channel */
     case DFM_DETECTOR_FIND_NAME:
         {
-            if ((instance->platform == SONDE_DFM09) || instance->config.isPS15) {
+            if ((instance->platform == SONDE_DFM_INVERTED) || instance->config.isPS15) {
                 if (channel == instance->maxConfigChannel) {
                     if (rawConfig->h[5] == 0) {
                         instance->confDetect.sondeNumber = 0
@@ -272,7 +272,7 @@ dfm_config_unknown[rawConfig->type].n++;
                     }
                 }
             }
-            else if (instance->platform == SONDE_DFM06) {
+            else if (instance->platform == SONDE_DFM_NORMAL) {
                 if (channel == instance->maxConfigChannel) {
                     instance->confDetect.sondeNumber = 0;
                     for (i = 0; i < 6; i++) {

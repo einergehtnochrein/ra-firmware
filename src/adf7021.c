@@ -55,6 +55,10 @@ typedef struct ADF7021_Context {
 
     uint8_t currentFG;                  /* Last known state of filter gain (Reg9 FG1,FG2) */
     uint8_t currentLG;                  /* Last known state of LNA gain (Reg9 LG1,LG2) */
+
+    MRT_Handle mrt;
+    volatile bool timeout;
+    uint8_t mrtChannel;
 } ADF7021_Context;
 
 
@@ -275,7 +279,12 @@ void ADF7021_handleSpiEvent (void)
 
 
 /* Open access to device */
-LPCLIB_Result ADF7021_open (LPC_SPI_Type *spi, int ssel, GPIO_Pin muxoutPin, ADF7021_Handle *pHandle)
+LPCLIB_Result ADF7021_open (
+        LPC_SPI_Type *spi,
+        int ssel,
+        GPIO_Pin muxoutPin,
+        MRT_Handle mrt,
+        ADF7021_Handle *pHandle)
 {
     ADF7021_Context *handle = &_adf7021Context;
 
@@ -285,6 +294,7 @@ LPCLIB_Result ADF7021_open (LPC_SPI_Type *spi, int ssel, GPIO_Pin muxoutPin, ADF
     handle->muxout = ADF7021_MUXOUT_REGULATOR_READY;
     handle->demodClockDivider = 4;
     handle->agcClockFrequency = 8e3f;
+    handle->mrt = mrt;
 
     spi->CFG = 0
             | (1u << 2)                     /* Master */
@@ -419,6 +429,17 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
 }
 
 
+static LPCLIB_Result _ADF7021_accessTimeoutCallback (LPCLIB_Event event)
+{
+    (void)event;
+    ADF7021_Handle handle = &_adf7021Context;
+
+    handle->timeout = true;
+
+    return LPCLIB_SUCCESS;
+}
+
+
 /* Set PLL frequency */
 LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency)
 {
@@ -426,12 +447,26 @@ LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency)
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    handle->frequency = frequency;
-    _ADF7021_setMuxout(handle, ADF7021_MUXOUT_DIGITAL_LOCK_DETECT, true);
-    while (GPIO_readBit(handle->muxoutPin) == 0)
-        ;
+    LPCLIB_Result result = LPCLIB_SUCCESS;
 
-    return LPCLIB_SUCCESS;
+    handle->timeout = false;
+    MRT_oneshot_millisecs(handle->mrt, 50, &handle->mrtChannel, _ADF7021_accessTimeoutCallback);
+
+    handle->frequency = frequency;
+    /* NOTE: Selecting the MUXOUT function requires writing to register 0 of the ADF7021.
+     * This register also contains the PLL feedback divider, and therefore changing MUXOUT
+     * also updates the PLL setting!
+     */
+    _ADF7021_setMuxout(handle, ADF7021_MUXOUT_DIGITAL_LOCK_DETECT, true);
+    while ((GPIO_readBit(handle->muxoutPin) == 0) && !handle->timeout)
+        ;
+    if (handle->timeout) {
+        result = LPCLIB_TIMEOUT;
+    }
+
+    MRT_stopChannel(handle->mrt, handle->mrtChannel);
+
+    return result;
 }
 
 
@@ -505,11 +540,17 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, float *rssi_dBm)
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
+    *rssi_dBm = -174.0f;
+
+    handle->timeout = false;
+    MRT_oneshot_millisecs(handle->mrt, 2, &handle->mrtChannel, _ADF7021_accessTimeoutCallback);
+
     _ADF7021_setMuxout(handle, ADF7021_MUXOUT_RSSI_READY, false);
-    while (GPIO_readBit(handle->muxoutPin) == 0)
+    while ((GPIO_readBit(handle->muxoutPin) == 0) && !handle->timeout)
         ;
 
-    *rssi_dBm = -174.0f;
+    MRT_stopChannel(handle->mrt, handle->mrtChannel);
+
     if (_ADF7021_read(handle, ADF7021_READBACK_RSSI, &rawdata) == LPCLIB_SUCCESS) {
         *rssi_dBm = -130.0f + (((int)rawdata & 0x7F) + _ADF7021_rssiGainCorrection[(rawdata >> 7) & 0x0F]) * 0.5f;
 
@@ -517,7 +558,9 @@ LPCLIB_Result ADF7021_readRSSI (ADF7021_Handle handle, float *rssi_dBm)
         handle->currentFG = (rawdata >> 7) & 0x03;
         handle->currentLG = (rawdata >> 9) & 0x03;
 
-        return LPCLIB_SUCCESS;
+        if (!handle->timeout) {
+            return LPCLIB_SUCCESS;
+        }
     }
 
     return LPCLIB_ERROR;
@@ -614,6 +657,8 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
     ADF7021_write(handle, ADF7021_REGISTER_6, regval);
 
     /* Start calibration */
+    handle->timeout = false;
+    MRT_oneshot_millisecs(handle->mrt, 50, &handle->mrtChannel, _ADF7021_accessTimeoutCallback);
     handle->muxoutEvent = false;
     regval = 0
             | (1u << 4)                     /* Do calibration */
@@ -623,8 +668,10 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
     ADF7021_write(handle, ADF7021_REGISTER_5, regval);
 
     /* Wait for end of calibration */
-    while (!handle->muxoutEvent)
+    while (!handle->muxoutEvent && !handle->timeout)
         ;
+
+    MRT_stopChannel(handle->mrt, handle->mrtChannel);
 
     _muxoutEdgeDisable[0].pinInterrupt.pin = handle->muxoutPin;
     GPIO_ioctl(_muxoutEdgeDisable);

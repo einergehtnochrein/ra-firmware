@@ -79,6 +79,7 @@ typedef enum UART_Opcode {
     UART_OPCODE_SET_FIFO_THRESHOLD,         /**< Set RX FIFO threshold */
     UART_OPCODE_SET_TX_BLOCKING,            /**< TX blocking mode */
     UART_OPCODE_SET_HARDWARE_HANDSHAKE,     /**< Hardware handshake CTS (RTS) */
+    UART_OPCODE_SET_BREAK,                  /**< TXD break condition */
 } UART_Opcode;
 
 
@@ -195,6 +196,7 @@ typedef struct UART_Config {
         UART_BlockingMode txBlocking;       /**< TX blocking mode */
         struct UART_ConfigIrDA irda;        /**< IrDA operating mode */
         LPCLIB_Switch hardwareHandshake;
+        LPCLIB_Switch enableBreak;
     };
 } UART_Config;
 

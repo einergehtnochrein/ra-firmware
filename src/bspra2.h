@@ -11,10 +11,10 @@
 #define GPIO_BLE_MODESEL                    GPIO_0_2
 #define GPIO_BLE_RESET                      GPIO_1_12
 #define GPIO_BLE_RXD                        GPIO_0_12
-#define GPIO_CHARGER_LED1                   GPIO_0_7
 #define GPIO_ENABLE_VDDA                    GPIO_0_6
 #define GPIO_LNA_GAIN                       GPIO_1_9
 #define GPIO_VBAT_ADC_ENABLE                GPIO_0_0
+#define GPIO_DETECT_RA2FIX                  GPIO_0_19
 
 extern GPIO_Pin GPIO_ADF7021_CE;
 

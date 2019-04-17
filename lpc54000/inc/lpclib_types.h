@@ -81,7 +81,7 @@ typedef enum LPCLIB_Result {
     LPCLIB_ILLEGAL_PARAMETER = -3,          /**< Illegal or out-of-range parameter */
     LPCLIB_NOT_IMPLEMENTED = -4,            /**< Requested feature not implemented */
     LPCLIB_OUT_OF_MEMORY = -5,              /**< Memory exhausted */
-    LPCLIB_NO_RESPONSE = -6,                /**< No response from slave (I2C bus) */
+    LPCLIB_TIMEOUT = -6,                    /**< Timeout (no response) */
     LPCLIB_UNDEFINED = -7,                  /**< unspecified */
     LPCLIB_NOT_PREPARED = -8,               /**< Device/block not prepared for this operation */
     LPCLIB_CRC_FAILURE = -9,                /**< CRC failure */
@@ -125,6 +125,7 @@ enum LPCLIB_EventId {
     LPCLIB_EVENTID_USBAUDIO,                /**< USB audio class event */
     LPCLIB_EVENTID_USBHID,                  /**< USB HID class event */
     LPCLIB_EVENTID_USBCDC,                  /**< USB CDC class event */
+    LPCLIB_EVENTID_MRT,
 
     LPCLIB_EVENTID_BUTTON,                  /**< Button/Switch event (from BSP) */
 

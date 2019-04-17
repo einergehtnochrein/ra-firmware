@@ -130,7 +130,7 @@ void BSP_init (void)
                     ;
     /* Install IRQ handler */
     FLEXCOMM_installHandler(FLEXCOMM7, (FLEXCOMM_IRQHandler_t)ADF7021_handleSpiEvent);
-    ADF7021_open(LPC_SPI7, 2, GPIO_1_2, &radio);
+    ADF7021_open(LPC_SPI7, 2, GPIO_1_2, mrt, &radio);
     radioConfig[0].referenceFrequency = config_g->referenceFrequency;
     ADF7021_ioctl(radio, radioConfig);
 }
@@ -173,12 +173,23 @@ static void BSP_initPins (void)
 //    IOCON_configurePinDefault(PIN_P1_1,  PIN_FUNCTION_2, PIN_PULL_REPEATER);    /* SWO          SWO */
     IOCON_configurePinDefault(PIN_P1_2,  PIN_FUNCTION_0, PIN_PULL_REPEATER);    /* GPIO_1_2     MUXOUT */
     IOCON_configurePinDefault(PIN_P1_3,  PIN_FUNCTION_2, PIN_PULL_NONE);        /* FC7_SSEL2    SLE_C */
-    IOCON_configurePinDefault(PIN_P1_4,  PIN_FUNCTION_0, PIN_PULL_NONE);        /* GPIO_1_4     ADF7021_CE */
+    if (GPIO_readBit(GPIO_0_19) == 0) {
+        /* Ra2fix */
+        IOCON_configurePin(PIN_P1_4, IOCON_makeConfigA(PIN_FUNCTION_0,          /* ADC0_7       VBAT_M_ADC */
+                                                    PIN_PULL_NONE,
+                                                    PIN_INPUT_NOT_INVERTED,
+                                                    PIN_ADMODE_ANALOG,
+                                                    PIN_FILTER_OFF,
+                                                    PIN_OPENDRAIN_OFF));
+    }
+    else {
+        /* Ra2 */
+        IOCON_configurePinDefault(PIN_P1_4,  PIN_FUNCTION_0, PIN_PULL_NONE);    /* GPIO_1_4     ADF7021_CE */
+    }
         /* Leave ADC input in digital mode until needed for measurement.
          * Pin draws 300µA in analog mode!
          */
-    IOCON_configurePinDefault(PIN_P1_5,  PIN_FUNCTION_0, PIN_PULL_NONE);        /* ADC0_8       VBAT_ADC */
-    IOCON_configurePin(PIN_P1_5, IOCON_makeConfigA(PIN_FUNCTION_0,              /* ADC0_8       VBAT_ADC */
+    IOCON_configurePin(PIN_P1_5, IOCON_makeConfigA(PIN_FUNCTION_0,              /* ADC0_8       VBAT_P_ADC */
                                                    PIN_PULL_NONE,
                                                    PIN_INPUT_NOT_INVERTED,
                                                    PIN_ADMODE_ANALOG,

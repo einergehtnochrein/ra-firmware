@@ -139,11 +139,12 @@ LPCLIB_Result RS41_open (RS41_Handle *pHandle)
 /* Send position as a KISS packet */
 static void _RS41_sendKiss (RS41_InstanceData *instance)
 {
-    char s[100];
+    static char s[160];
     int length = 0;
     float offset;
     char sPressure[10];
-    char sKillTimer[6];
+    char sFlightKillTimer[6];
+    char sBurstKillTimer[6];
     uint32_t special;
     char sModelName[10+1];
 
@@ -156,11 +157,23 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         snprintf(sPressure, sizeof(sPressure), "%.1f", instance->metro.pressure);
     }
 
-    /* Kill timer (if active) */
-    sKillTimer[0] = 0;
-    if (_RS41_checkValidCalibration(instance, CALIB_KILLTIMER)) {
-        if (instance->killTimer != (uint16_t)-1) {
-            snprintf(sKillTimer, sizeof(sKillTimer), "%d", instance->killTimer);
+    /* Kill timers (if active) */
+    sFlightKillTimer[0] = 0;
+    if (_RS41_checkValidCalibration(instance, CALIB_FLIGHTKILLTIMER)) {
+        if (instance->flightKillFrames != -1) {
+            snprintf(sFlightKillTimer, sizeof(sFlightKillTimer), "%d", instance->flightKillFrames);
+        }
+    }
+    sBurstKillTimer[0] = 0;
+    if (_RS41_checkValidCalibration(instance, CALIB_BURSTKILLTIMER)) {
+        if (instance->burstKillFrames != -1) {
+            snprintf(sBurstKillTimer, sizeof(sBurstKillTimer), "%d", instance->burstKillFrames);
+        }
+    }
+    int16_t killer = -1;
+    if (_RS41_checkValidCalibration(instance, CALIB_KILLCOUNTDOWN | CALIB_BURSTKILLTIMER | CALIB_FLIGHTKILLTIMER)) {
+        if (instance->killCountdown != -1) {
+            killer = instance->killCounterRefCount - (instance->frameCounter - instance->killCounterRefFrame);
         }
     }
 
@@ -191,19 +204,19 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     }
 
     if (instance->encrypted) {
-        length = sprintf((char *)s, "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,%.1f,",
+        length = snprintf((char *)s, sizeof(s), "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,%.1f",
                         instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         SYS_getFrameRssi(sys),
                         offset,    /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
-                        sKillTimer,                             /* Kill timer (frame) */
+                        sFlightKillTimer,                       /* Flight kill timer (frames) */
                         instance->batteryVoltage                /* Battery voltage [V] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%ld,1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,%.2f,%.1f,%.1f,%d,%d,%s,%.1f,",
+        length = snprintf((char *)s, sizeof(s), "%ld,1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,%.2f,%.1f,%.1f,%d,%d,%s,%.1f",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         instance->gps.usedSats,                 /* # sats in position solution */
@@ -221,7 +234,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         offset,                                 /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
-                        sKillTimer,                             /* Kill timer (frame) */
+                        sFlightKillTimer,                       /* Kill timer (frame) */
                         instance->batteryVoltage                /* Battery voltage [V] */
                         );
     }
@@ -232,14 +245,16 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     sModelName[0] = 0;
     if (_RS41_checkValidCalibration(instance, CALIB_MODELNAME)) {
-        memcpy(sModelName, instance->modelname218, 10);
+        memcpy(sModelName, instance->nameVariant, 10);
         sModelName[10] = 0;
     }
-    length = sprintf(s, "%ld,1,0,%s,%.1f,%s",
+    length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,,,,,%s,%d,",
                 instance->id,
                 instance->name,
-                instance->metro.temperature2,
-                instance->modelname218
+                instance->metro.temperatureUSensor,
+                instance->nameVariant,
+                sBurstKillTimer,                        /* Burst kill timer (frames) */
+                killer                                  /* Kill countdown (frames remaining) */
                 );
 
     if (length > 0) {

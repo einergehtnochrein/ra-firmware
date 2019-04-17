@@ -107,7 +107,7 @@ void BSP_init (void)
     UART_ioctl(blePort, blePortConfig);
 
     CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_SPI1);
-    ADF7021_open(LPC_SPI1, 0, GPIO_0_23, &radio);
+    ADF7021_open(LPC_SPI1, 0, GPIO_0_23, mrt, &radio);
     ADF7021_ioctl(radio, radioConfig);
 }
 

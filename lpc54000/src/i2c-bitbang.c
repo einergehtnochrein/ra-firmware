@@ -337,7 +337,7 @@ LPCLIB_Result I2CEMU_submitJob (I2C_Handle handle, I2C_Job *pJob)
         }
 
         if (!ack) {
-            result = LPCLIB_NO_RESPONSE;
+            result = LPCLIB_TIMEOUT;
             break;
         }
 

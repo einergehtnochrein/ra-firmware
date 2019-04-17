@@ -701,6 +701,51 @@ typedef struct
 
 
 // ------------------------------------------------------------------------------------------------
+// -----                                         MRT                                          -----
+// ------------------------------------------------------------------------------------------------
+
+typedef struct {
+
+    union {     /* 0x000 */
+        struct {
+            __IO uint32_t INTVAL0;
+            __I  uint32_t TIMER0;
+            __IO uint32_t CTRL0;
+            __IO uint32_t STAT0;
+
+            __IO uint32_t INTVAL1;
+            __I  uint32_t TIMER1;
+            __IO uint32_t CTRL1;
+            __IO uint32_t STAT1;
+
+            __IO uint32_t INTVAL2;
+            __I  uint32_t TIMER2;
+            __IO uint32_t CTRL2;
+            __IO uint32_t STAT2;
+
+            __IO uint32_t INTVAL3;
+            __I  uint32_t TIMER3;
+            __IO uint32_t CTRL3;
+            __IO uint32_t STAT3;
+        };
+
+        struct {
+            __IO uint32_t INTVAL;
+            __I  uint32_t TIMER;
+            __IO uint32_t CTRL;
+            __IO uint32_t STAT;
+        } channel[4];
+    };
+
+    __I  uint32_t RESERVED040[(0x0F0-0x040)/4];
+
+    __IO uint32_t MODCFG;
+    __I  uint32_t IDLE_CH;
+    __IO uint32_t IRQ_FLAG;
+} LPC_MRT_t;
+
+
+// ------------------------------------------------------------------------------------------------
 // -----                                          RTC                                         -----
 // ------------------------------------------------------------------------------------------------
 
@@ -1156,7 +1201,7 @@ typedef struct
 #define LPC_INPUTMUX          ((LPC_INPUTMUX_t          *) LPC_INPUTMUX_BASE )
 #define LPC_IOCON             ((LPC_IOCON_Type          *) LPC_IOCON_BASE    )
 #define LPC_MAILBOX           ((LPC_MAILBOX_Type        *) LPC_MAILBOX_BASE  )
-#define LPC_MRT               ((LPC_MRT_TypeDef         *) LPC_MRT_BASE      )
+#define LPC_MRT               ((LPC_MRT_t               *) LPC_MRT_BASE      )
 #define LPC_OSTIMER           ((LPC_OSTIMER_Type        *) LPC_OSTIMER_BASE  )
 #define LPC_PINT              ((LPC_PINT_Type           *) LPC_PINT_BASE     )
 #define LPC_RTC               ((LPC_RTC_Type            *) LPC_RTC_BASE      )

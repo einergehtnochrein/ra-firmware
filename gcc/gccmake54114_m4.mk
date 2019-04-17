@@ -106,7 +106,7 @@ PDL_LIBRARY_SRCS = \
     $(RTOS_SRCS) \
     \
     lpc54xxx_clkpwr.c lpc54xxx_crc.c lpc54xxx_flexcomm.c lpc54xxx_gpio.c lpc54xxx_iap.c \
-    lpc54xxx_iocon.c lpc54xxx_timer.c lpc54xxx_uart.c
+    lpc54xxx_iocon.c lpc54xxx_mrt.c lpc54xxx_timer.c lpc54xxx_uart.c
 
 
 

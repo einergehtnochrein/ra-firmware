@@ -38,20 +38,14 @@
 
 #include "lpc54xxx_libconfig.h"
 
-//#include "lpc17xx_adc.h"
 #include "lpc54xxx_clkpwr.h"
 #include "lpc54xxx_crc.h"
-//#include "lpc17xx_dac.h"
-//#include "lpc17xx_dma.h"
 #include "lpc54xxx_flexcomm.h"
 #include "lpc54xxx_gpio.h"
-//#include "lpc54xxx_i2c.h"
-//#include "lpc17xx_i2s.h"
 #include "lpc54xxx_iap.h"
 #include "lpc54xxx_iocon.h"
+#include "lpc54xxx_mrt.h"
 #include "lpc54xxx_romhandler.h"
-//#include "lpc17xx_rtc.h"
-//#include "lpc54xxx_spi.h"
 #include "lpc54xxx_timer.h"
 #include "lpc54xxx_uart.h"
 

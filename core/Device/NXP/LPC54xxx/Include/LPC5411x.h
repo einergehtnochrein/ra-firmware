@@ -237,7 +237,7 @@ typedef struct {
 
 typedef struct {
     union {
-        __IO uint8_t B[41];
+        __IO uint8_t B[50];
         struct {
             __IO uint8_t B0;
             __IO uint8_t B1;
@@ -280,11 +280,20 @@ typedef struct {
             __IO uint8_t B38;
             __IO uint8_t B39;
             __IO uint8_t B40;
+            __IO uint8_t B41;
+            __IO uint8_t B42;
+            __IO uint8_t B43;
+            __IO uint8_t B44;
+            __IO uint8_t B45;
+            __IO uint8_t B46;
+            __IO uint8_t B47;
+            __IO uint8_t B48;
+            __IO uint8_t B49;
         };
     };
-         uint8_t _RESERVED0_[4096-41];
-    __IO uint32_t W[41];
-         uint32_t _RESERVED1_[1024-41];
+         uint8_t _RESERVED0_[4096-50];
+    __IO uint32_t W[50];
+         uint32_t _RESERVED1_[1024-50];
     union {
         __IO uint32_t DIR[2];
         struct {
@@ -604,6 +613,51 @@ typedef struct
     __I  uint32_t RESERVED01C[(0x0F8-0x01C)/4];
     __IO uint32_t MUTEX;
 } LPC_MAILBOX_Type;
+
+
+// ------------------------------------------------------------------------------------------------
+// -----                                         MRT                                          -----
+// ------------------------------------------------------------------------------------------------
+
+typedef struct {
+
+    union {     /* 0x000 */
+        struct {
+            __IO uint32_t INTVAL0;
+            __I  uint32_t TIMER0;
+            __IO uint32_t CTRL0;
+            __IO uint32_t STAT0;
+
+            __IO uint32_t INTVAL1;
+            __I  uint32_t TIMER1;
+            __IO uint32_t CTRL1;
+            __IO uint32_t STAT1;
+
+            __IO uint32_t INTVAL2;
+            __I  uint32_t TIMER2;
+            __IO uint32_t CTRL2;
+            __IO uint32_t STAT2;
+
+            __IO uint32_t INTVAL3;
+            __I  uint32_t TIMER3;
+            __IO uint32_t CTRL3;
+            __IO uint32_t STAT3;
+        };
+
+        struct {
+            __IO uint32_t INTVAL;
+            __I  uint32_t TIMER;
+            __IO uint32_t CTRL;
+            __IO uint32_t STAT;
+        } channel[4];
+    };
+
+    __I  uint32_t RESERVED040[(0x0F0-0x040)/4];
+
+    __IO uint32_t MODCFG;
+    __I  uint32_t IDLE_CH;
+    __IO uint32_t IRQ_FLAG;
+} LPC_MRT_t;
 
 
 // ------------------------------------------------------------------------------------------------
@@ -1198,7 +1252,7 @@ typedef struct {
 #define LPC_INPUTMUX          ((LPC_INPUTMUX_t          *) LPC_INPUTMUX_BASE )
 #define LPC_IOCON             ((LPC_IOCON_Type          *) LPC_IOCON_BASE    )
 #define LPC_MAILBOX           ((LPC_MAILBOX_Type        *) LPC_MAILBOX_BASE  )
-#define LPC_MRT               ((LPC_MRT_TypeDef         *) LPC_MRT_BASE      )
+#define LPC_MRT               ((LPC_MRT_t               *) LPC_MRT_BASE      )
 #define LPC_OSTIMER           ((LPC_OSTIMER_Type        *) LPC_OSTIMER_BASE  )
 #define LPC_PINT              ((LPC_GPIO_PIN_INT_Type   *) LPC_PINT_BASE     )
 #define LPC_RTC               ((LPC_RTC_Type            *) LPC_RTC_BASE      )
