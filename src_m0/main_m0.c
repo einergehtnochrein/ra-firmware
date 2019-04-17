@@ -11,6 +11,7 @@ typedef enum {
     MODE_AFSK = 3,  /* FSK sync detector inactive in this mode */
     MODE_MODEM_M10 = 4,
     MODE_MODEM_PILOTSONDE = 5,
+    MODE_MEISEI = 6,
 } SYNC_Mode;
 
 
@@ -28,9 +29,9 @@ static const SYNC_Config configVaisala = {
             .nSyncLen = 116,
             .pattern = {0x9A6669A6669AA9A9LL, 0x0006669A6669A666LL},
             .nMaxDifference = 5,
-            .frameLength = (234 * 10 * 2) / 8,
+            .frameLengthBits = 234 * 10 * 2,
             .startOffset = 0,
-            .bitFormat = SYNC_BITFORMAT_RAW,
+            .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
         },
         {
@@ -38,9 +39,9 @@ static const SYNC_Config configVaisala = {
             .nSyncLen = 40,
             .pattern = {0x000000884469481FLL, 0},
             .nMaxDifference = 3,
-            .frameLength = 510,
+            .frameLengthBits = 510 * 8,
             .startOffset = 0,
-            .bitFormat = SYNC_BITFORMAT_RAW,
+            .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
         },
     },
@@ -55,9 +56,9 @@ static const SYNC_Config configGraw = {
             .nSyncLen = 32,
             .pattern = {0x000000009A995A55LL, 0},
             .nMaxDifference = 2,
-            .frameLength = 66,
+            .frameLengthBits = 66 * 8,
             .startOffset = 0,
-            .bitFormat = SYNC_BITFORMAT_RAW,
+            .dataState = SYNC_STATE_DATA_RAW,
             .inverted = true,
         },
         {
@@ -65,9 +66,9 @@ static const SYNC_Config configGraw = {
             .nSyncLen = 32,
             .pattern = {0x000000006566A5AALL, 0},
             .nMaxDifference = 2,
-            .frameLength = 66,
+            .frameLengthBits = 66 * 8,
             .startOffset = 0,
-            .bitFormat = SYNC_BITFORMAT_RAW,
+            .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
         },
     },
@@ -102,9 +103,9 @@ static const SYNC_Config configModem = {
             .nSyncLen = 48,
             .pattern = {0x0000CCCCA64CD4D3LL, 0},
             .nMaxDifference = 1,
-            .frameLength = 100 * 2,
+            .frameLengthBits = 100 * 2 * 8,
             .startOffset = 2,
-            .bitFormat = SYNC_BITFORMAT_RAW,
+            .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
             .postProcess = _m10PostProcess100Normal,
         },
@@ -113,9 +114,9 @@ static const SYNC_Config configModem = {
             .nSyncLen = 48,
             .pattern = {0x0000333359B32B2CLL, 0},
             .nMaxDifference = 1,
-            .frameLength = 100 * 2,
+            .frameLengthBits = 100 * 2 * 8,
             .startOffset = 2,
-            .bitFormat = SYNC_BITFORMAT_RAW,
+            .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
             .postProcess = _m10PostProcess100Inverse,
         },
@@ -131,11 +132,66 @@ static const SYNC_Config configModemPilot = {
             .nSyncLen = 30,
             .pattern = {0x00000000354D52FELL, 0},
             .nMaxDifference = 1,
-            .frameLength = 50-4,
+            .frameLengthBits = (50 - 4) * 8,
             .startOffset = 0,
-            .bitFormat = SYNC_BITFORMAT_UART_8N1,
+            .dataState = SYNC_STATE_DATA_UART_8N1,
             .inverted = true,
             .postProcess = NULL,
+        },
+    },
+};
+
+
+static const SYNC_Config configMeisei = {
+    .nPatterns = 4,
+    .conf = {
+        {
+            .id = 8,
+            .nSyncLen = 48,
+            .pattern = {0x0000AAB52B34CACDLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 6 * 46,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_S,
+            .inverted = false,
+            .nSubBlockBits = 46,
+            .nSubBlockBytes = 8,
+        },
+        {
+            .id = 8,
+            .nSyncLen = 48,
+            .pattern = {0x0000554AD4CB3532LL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 6 * 46,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_S,
+            .inverted = false,
+            .nSubBlockBits = 46,
+            .nSubBlockBytes = 8,
+        },
+        {
+            .id = 9,
+            .nSyncLen = 48,
+            .pattern = {0x0000CCD34D52ACAALL, 0},
+            .nMaxDifference = 2,
+            .frameLengthBits = 6 * 46,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_S,
+            .inverted = false,
+            .nSubBlockBits = 46,
+            .nSubBlockBytes = 8,
+        },
+        {
+            .id = 9,
+            .nSyncLen = 48,
+            .pattern = {0x0000332CB2AD5355LL, 0},
+            .nMaxDifference = 2,
+            .frameLengthBits = 6 * 46,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_S,
+            .inverted = false,
+            .nSubBlockBits = 46,
+            .nSubBlockBytes = 8,
         },
     },
 };
@@ -166,6 +222,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 4)) {
         newMode = MODE_MODEM_PILOTSONDE;
         LPC_MAILBOX->IRQ0CLR = (1u << 4);
+    }
+    else if (requests & (1u << 5)) {
+        newMode = MODE_MEISEI;
+        LPC_MAILBOX->IRQ0CLR = (1u << 5);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -214,6 +274,9 @@ int main (void)
                     break;
                 case MODE_MODEM_PILOTSONDE:
                     syncConfig = &configModemPilot;
+                    break;
+                case MODE_MEISEI:
+                    syncConfig = &configMeisei;
                     break;
                 case MODE_AFSK:
                 default:
