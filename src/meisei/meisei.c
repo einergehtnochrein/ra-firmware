@@ -25,6 +25,7 @@ typedef struct MEISEI_Context {
     float rxFrequencyHz;
     float rxOffset;
 
+    uint64_t *pBCH;
 } MEISEI_Context;
 
 static MEISEI_Context _meisei;
@@ -60,14 +61,26 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
     if (!isnan(longitude)) {
         longitude *= 180.0 / M_PI;
     }
+    float direction = instance->gps.observerLLA.direction;
+    if (!isnan(direction)) {
+        direction *= 180.0 / M_PI;
+    }
+    float velocity = instance->gps.observerLLA.velocity;
+    if (!isnan(velocity)) {
+        velocity *= 3.6f;
+    }
 
-    length = snprintf((char *)s, sizeof(s), "%ld,11,%.3f,,%.5lf,%.5lf,%.0f,,,,,,,,,,%.1f,",
+    length = snprintf((char *)s, sizeof(s), "%ld,11,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,,%.1f,,,%d",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
                     longitude,                              /* Longitude [degrees] */
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
-                    SYS_getFrameRssi(sys)
+                    instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
+                    direction,                              /* Direction [°] */
+                    velocity,                               /* [km/h] */
+                    SYS_getFrameRssi(sys),
+                    instance->frameCounter
                     );
 
     if (length > 0) {
@@ -84,61 +97,41 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
 }
 
 
-static int _MEISEI_getDataBCH_x (MEISEI_Packet *packet, int offset, int index)
+/* Index: 0...11 */
+uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index)
+{
+    uint32_t x = 0;
+    if (index % 2) {
+        x = (fields[index / 2] & 0x00000001FFFE0000LL) >> 1;
+    }
+    else {
+        x = (fields[index / 2] & 0x000000000000FFFFLL) << 16;
+    };
+
+    return __RBIT(x);
+}
+
+
+
+static int _MEISEI_getDataBCH (int index)
 {
     MEISEI_Handle handle = &_meisei;
 
-    if (index < 12) {   /* Parity bits */
-        return (packet->rawData[(offset + 34 + index) / 8] >> ((offset + 34 + index) % 8)) & 1;
-    }
-    else if (index < 12+34) {
-        return (packet->rawData[(offset - 12 + index) / 8] >> ((offset - 12 + index) % 8)) & 1;
+    if ((handle->pBCH != NULL) && (index < 12+34)) {
+        return (*handle->pBCH >> (46 - 1 - index)) & 1;
     }
     else {
         return 0;
     }
 }
 
-static int _MEISEI_getDataBCH_0_0 (int index)
-{
-    return _MEISEI_getDataBCH_x(&_meisei.configPacket, 0*46, index);
-}
-
-static int _MEISEI_getDataBCH_0_1 (int index)
-{
-    return _MEISEI_getDataBCH_x(&_meisei.configPacket, 1*46, index);
-}
-
-static int _MEISEI_getDataBCH_0_2 (int index)
-{
-    return _MEISEI_getDataBCH_x(&_meisei.configPacket, 2*46, index);
-}
-
-static int _MEISEI_getDataBCH_0_3 (int index)
-{
-    return _MEISEI_getDataBCH_x(&_meisei.configPacket, 3*46, index);
-}
-
-static int _MEISEI_getDataBCH_0_4 (int index)
-{
-    return _MEISEI_getDataBCH_x(&_meisei.configPacket, 4*46, index);
-}
-
-static int _MEISEI_getDataBCH_0_5 (int index)
-{
-    return _MEISEI_getDataBCH_x(&_meisei.configPacket, 5*46, index);
-}
-
 static void _MEISEI_toggleDataBCH (int index)
 {
     MEISEI_Handle handle = &_meisei;
-#if 0
-    if (index < 21+61) {
-        uint8_t *p = &handle->packet.rawData[(38 + index) / 8];
-        uint8_t bitNo = (38 + index) % 8;
-        *p ^= 1u << bitNo;
+
+    if ((handle->pBCH != NULL) && (index < 12+34)) {
+        *handle->pBCH ^= 1u << (46 - 1 - index);
     }
-#endif
 }
 
 
@@ -151,7 +144,8 @@ LPCLIB_Result MEISEI_processBlock (
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
-//    int nErrors;
+    int nErrors;
+    LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (length == sizeof(MEISEI_Packet)) {
         if (sondeType == SONDE_MEISEI_CONFIG) {
@@ -183,32 +177,41 @@ LPCLIB_Result MEISEI_processBlock (
         }
 #endif
 
-//        nErrors = 0;
+        nErrors = 0;
 
         /* First frame */
         /* Do BCH check for all six codewords */
-#if 0
-        if (BCH_63_51_t2_process(_MEISEI_getDataBCH_0_0, _MEISEI_toggleDataBCH, &nErrors) == LPCLIB_SUCCESS) {
-            if (BCH_63_51_t2_process(_MEISEI_getDataBCH_0_1, _MEISEI_toggleDataBCH, &nErrors) == LPCLIB_SUCCESS) {
-                if (BCH_63_51_t2_process(_MEISEI_getDataBCH_0_2, _MEISEI_toggleDataBCH, &nErrors) == LPCLIB_SUCCESS) {
-                    if (BCH_63_51_t2_process(_MEISEI_getDataBCH_0_3, _MEISEI_toggleDataBCH, &nErrors) == LPCLIB_SUCCESS) {
-                        if (BCH_63_51_t2_process(_MEISEI_getDataBCH_0_4, _MEISEI_toggleDataBCH, &nErrors) == LPCLIB_SUCCESS) {
-                            if (BCH_63_51_t2_process(_MEISEI_getDataBCH_0_5, _MEISEI_toggleDataBCH, &nErrors) == LPCLIB_SUCCESS) {
-#endif
-                                _MEISEI_processConfigFrame(&handle->instance, rxFrequencyHz);
-                                _MEISEI_processGpsFrame(&handle->gpsPacket, handle->instance);
-                                _MEISEI_sendKiss(handle->instance);
-#if 0
-                            }
-                        }
-                    }
+
+        result = LPCLIB_SUCCESS;
+        int i;
+        for (i = 0; i < 6; i++) {
+            handle->pBCH = &handle->gpsPacket.fields[i];
+            result = BCH_63_51_t2_process(_MEISEI_getDataBCH, _MEISEI_toggleDataBCH, &nErrors);
+            if (result != LPCLIB_SUCCESS) {
+                break;
+            }
+        }
+        if (result == LPCLIB_SUCCESS) {
+            for (i = 0; i < 6; i++) {
+                handle->pBCH = &handle->configPacket.fields[i];
+                result = BCH_63_51_t2_process(_MEISEI_getDataBCH, _MEISEI_toggleDataBCH, &nErrors);
+                if (result != LPCLIB_SUCCESS) {
+                    break;
+                }
+            }
+
+            if (result == LPCLIB_SUCCESS) {
+                _MEISEI_processConfigFrame(&handle->configPacket, &handle->instance, rxFrequencyHz);
+                _MEISEI_processGpsFrame(&handle->gpsPacket, handle->instance);
+                //TODO Only send a packt when we have a new position. Send in odd or even frames??
+                if ((handle->instance->frameCounter % 2) == 0) {
+                    _MEISEI_sendKiss(handle->instance);
                 }
             }
         }
-#endif
     }
 
-    return LPCLIB_SUCCESS;
+    return result;
 }
 
 

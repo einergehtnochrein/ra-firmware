@@ -40,14 +40,46 @@ typedef struct _MEISEI_InstanceData {
     float rxOffset;
 
     uint32_t lastUpdated;
-    
+
+    uint16_t frameCounter;
+    uint16_t _even1;
+    uint16_t _even2;
+    uint16_t _even3;
+    uint16_t _even4;
+    uint16_t _even5;
+    uint16_t _even6;
+    uint16_t _even7;
+    uint16_t _even8;
+    uint16_t _even9;
+    uint16_t _even10;
+    uint16_t _even11;
+    uint16_t _odd1;
+    uint16_t _odd2;
+    uint16_t _odd3;
+    uint16_t _odd4;
+    uint16_t _odd5;
+    uint16_t _odd6;
+    uint16_t _odd7;
+    uint16_t _odd8;
+    uint16_t _odd9;
+    uint16_t _odd10;
+    uint16_t _odd11;
+
     MEISEI_CookedGps gps;
+    uint16_t _gps10;
+    uint16_t _gps11;
 } MEISEI_InstanceData;
 
 
 
-LPCLIB_Result _MEISEI_processConfigFrame (MEISEI_InstanceData **instancePointer, float rxFrequencyHz);
-LPCLIB_Result _MEISEI_processGpsFrame (const MEISEI_Packet *packet, MEISEI_InstanceData *instance);
+LPCLIB_Result _MEISEI_processConfigFrame (
+        MEISEI_Packet *packet,
+        MEISEI_InstanceData **instancePointer,
+        float rxFrequencyHz);
+LPCLIB_Result _MEISEI_processGpsFrame (
+        const MEISEI_Packet *packet,
+        MEISEI_InstanceData *instance);
+uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index);
 
 /* Iterate through instances */
 bool _MEISEI_iterateInstance (MEISEI_InstanceData **instance);
