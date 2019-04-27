@@ -16,6 +16,12 @@
 #include "gps.h"
 
 
+typedef enum {
+    MEISEI_MODEL_UNKNOWN = 0,
+    MEISEI_MODEL_RS11G,
+    MEISEI_MODEL_IMS100,
+} MEISEI_Model;
+
 typedef uint8_t MEISEI_RawData[48];
 
 
@@ -36,6 +42,7 @@ typedef struct {
 typedef struct _MEISEI_InstanceData {
     struct _MEISEI_InstanceData *next;
     uint32_t id;
+    MEISEI_Model model;
     float rxFrequencyMHz;
     float rxOffset;
 

@@ -59,6 +59,7 @@ static MEISEI_InstanceData *_MEISEI_getInstanceDataStructure (float frequencyMHz
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
         instance->rxFrequencyMHz = frequencyMHz;
+instance->model = MEISEI_MODEL_IMS100; //TODO
 
         /* Insert into list */
         p = instanceList;

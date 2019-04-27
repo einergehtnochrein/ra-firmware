@@ -17,25 +17,65 @@ LPCLIB_Result _MEISEI_processGpsFrame (
         MEISEI_InstanceData *instance)
 {
     int32_t i32;
+    int32_t pos32;
+    float f;
 
     if (instance == NULL) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 1) << 16)
-            | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 2);
-    instance->gps.observerLLA.lat = (i32 / 1e7) * (M_PI / 180.0);
-    i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 3) << 16)
-            | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 4);
-    instance->gps.observerLLA.lon = (i32 / 1e7) * (M_PI / 180.0);
-    i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 5) << 16)
-            | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 6);
-    instance->gps.observerLLA.alt = (i32 / 1e2);
-    instance->gps.observerLLA.velocity = (int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 7) / 100.0f;
-    instance->gps.observerLLA.direction = ((int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 8) / 100.0f) * M_PI / 180.0f;
-    instance->gps.observerLLA.climbRate = (int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 9) / 100.0f;
+    if (instance->model == MEISEI_MODEL_RS11G) {
+        i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 1) << 16)
+                | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 2);
+        instance->gps.observerLLA.lat = (i32 / 1e7) * (M_PI / 180.0);
+        i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 3) << 16)
+                | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 4);
+        instance->gps.observerLLA.lon = (i32 / 1e7) * (M_PI / 180.0);
+        i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 5) << 16)
+                | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 6);
+        instance->gps.observerLLA.alt = (i32 / 1e2);
+        instance->gps.observerLLA.velocity = (int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 7) / 100.0f;
+        instance->gps.observerLLA.direction = ((int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 8) / 100.0f) * M_PI / 180.0f;
+        instance->gps.observerLLA.climbRate = (int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 9) / 100.0f;
 
-    GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
+        GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
+        GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
+    }
+
+    if (instance->model == MEISEI_MODEL_IMS100) {
+        /* Check if GPS position solution is valid */
+        i32 = _MEISEI_getPayloadHalfWord(instance->gpsPacketOdd.fields, 2);
+        if (i32 & (1u << 9)) {
+            i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 1) << 16)
+                    | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 2);
+            pos32 = (i32 >= 0) ? i32 : -i32;
+            f = pos32 / 1000000;
+            pos32 %= 1000000;
+            f += (pos32 / 1e4f) / 60.0f;
+            f = (i32 >= 0) ? f : -f;
+            instance->gps.observerLLA.lat = f * (M_PI / 180.0);
+            i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 3) << 16)
+                    | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 4);
+            pos32 = (i32 >= 0) ? i32 : -i32;
+            f = pos32 / 1000000;
+            pos32 %= 1000000;
+            f += (pos32 / 1e4f) / 60.0f;
+            f = (i32 >= 0) ? f : -f;
+            instance->gps.observerLLA.lon = f * (M_PI / 180.0);
+            i32 = (_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 5) << 16)
+                    | _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 6);
+            instance->gps.observerLLA.alt = ((i32 >> 8) / 1e2);     /* Altitude is a 24-bit field */
+instance->gps.observerLLA.velocity = NAN;
+//            instance->gps.observerLLA.velocity = (int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 7) / 100.0f;
+instance->gps.observerLLA.direction = NAN;
+//            instance->gps.observerLLA.direction = ((int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 8) / 100.0f) * M_PI / 180.0f;
+instance->gps.observerLLA.climbRate = NAN;
+//            instance->gps.observerLLA.climbRate = (int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 9) / 100.0f;
+
+            GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
+            GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
+        }
+    }
 
     return LPCLIB_SUCCESS;
 }
