@@ -51,6 +51,8 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
 {
     static char s[160];
     int length = 0;
+    uint32_t special;
+    char sSpecial[8];
 
 
     /* Convert lat/lon from radian to decimal degrees */
@@ -71,7 +73,22 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%ld,11,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,,%.1f,,,%d",
+    /* Meisei type indicator */
+    special = 0;
+    switch (instance->model) {
+        case MEISEI_MODEL_IMS100:
+            special |= 1u << 2;
+            break;
+        case MEISEI_MODEL_RS11G:
+            special |= 1u << 3;
+            break;
+        case MEISEI_MODEL_UNKNOWN:
+            /* Nothing to do */
+            break;
+    }
+    snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
+
+    length = snprintf((char *)s, sizeof(s), "%ld,11,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,,,%.1f,,,%d,,,%.1f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -80,16 +97,20 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
                     instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
                     direction,                              /* Direction [°] */
                     velocity,                               /* [km/h] */
+                    instance->metro.temperature,
+                    sSpecial,
                     SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->frameCounter / 2,
+                    instance->metro.cpuTemperature
                     );
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%ld,11,0,",
-                instance->id
+    length = snprintf(s, sizeof(s), "%ld,11,0,%s",
+                instance->id,
+                instance->name
                 );
 
     if (length > 0) {
@@ -174,7 +195,7 @@ static void _MEISEI_toggleDataBCH (int index)
     MEISEI_Handle handle = &_meisei;
 
     if ((handle->pBCH != NULL) && (index < 12+34)) {
-        *handle->pBCH ^= 1u << (46 - 1 - index);
+        *handle->pBCH ^= 1ull << (46 - 1 - index);
     }
 }
 
@@ -208,18 +229,6 @@ LPCLIB_Result MEISEI_processBlock (
         if (diff > 40.0f) {
             return LPCLIB_PENDING;
         }
-
-#if 0
-        /* Log */
-        {
-            char log[120];
-            snprintf(log, sizeof(log), "%ld,11,1,%02X,%02X",
-                        handle->instance->id,
-                        handle->packet.rawData[1],
-                        handle->packet.rawData[0]);
-            SYS_send2Host(HOST_CHANNEL_INFO, log);
-        }
-#endif
 
         nErrors = 0;
 
@@ -263,6 +272,7 @@ LPCLIB_Result MEISEI_processBlock (
                 if ((handle->instance->frameCounter % 2) == 1) {
                     if (handle->instance->frameCounter == handle->instance->frameCounterEven + 1) {
                         _MEISEI_processGpsFrame(handle->instance);
+                        _MEISEI_processMetrology(handle->instance);
                         _MEISEI_sendKiss(handle->instance);
                     }
                 }

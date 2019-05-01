@@ -59,6 +59,12 @@ static MEISEI_InstanceData *_MEISEI_getInstanceDataStructure (float frequencyMHz
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
         instance->rxFrequencyMHz = frequencyMHz;
+instance->model = MEISEI_MODEL_IMS100; //TODO
+        instance->metro.temperature = NAN;
+        instance->metro.cpuTemperature = NAN;
+        instance->gps.observerLLA.lat = NAN;
+        instance->gps.observerLLA.lon = NAN;
+        instance->gps.observerLLA.alt = NAN;
 
         /* Insert into list */
         p = instanceList;
@@ -106,8 +112,6 @@ LPCLIB_Result _MEISEI_processConfigFrame (
     /* Set time marker to be able to identify old records */
     instance->lastUpdated = os_time;
 
-    /* Cook some other values */
-    instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
     /* Read frame number to determine where to store the packet */
     instance->frameCounter = _MEISEI_getPayloadHalfWord(packet->fields, 0);
     if ((instance->frameCounter % 2) == 0) {
@@ -117,7 +121,32 @@ LPCLIB_Result _MEISEI_processConfigFrame (
         instance->configPacketOdd = *packet;
     }
 
+    /* Store calibration data */
+    uint16_t fragment = instance->frameCounter % 64;
+    uint32_t u32configRaw = 
+        (_MEISEI_getPayloadHalfWord(packet->fields, 3) << 16)
+        | _MEISEI_getPayloadHalfWord(packet->fields, 2);
+    instance->config[fragment] = *((float *)&u32configRaw);
+    instance->configValidFlags |= (1ull << fragment);
+
+    /* Cook some other values */
+    instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
+    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_SONDE)) {
+        snprintf(instance->name, sizeof(instance->name), "%.0f", instance->config[4]); //TODO
+    }
+
     return result;
+}
+
+
+/* Check if the calibration block contains valid data for a given purpose */
+bool _MEISEI_checkValidCalibration(MEISEI_InstanceData *instance, uint64_t purpose)
+{
+    if (!instance) {
+        return false;
+    }
+
+    return (instance->configValidFlags & purpose) == purpose;
 }
 
 
