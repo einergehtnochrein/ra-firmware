@@ -40,9 +40,7 @@ typedef __PACKED(struct {
     uint8_t flags;                          /* Bit 0: 0=Start phase, 1=Flight mode
                                              * Bit 1: 0=Ascent, 1=Descent
                                              */
-    uint8_t reserved00E[2];
-    uint8_t cpuTemperature;                 /* CPU temperature [°C] */
-    uint8_t reserved011[4];
+    uint8_t reserved00E[7];
     uint8_t txPower;                        /* TX power level (0...7, see Si4032 data sheet) */
     uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
     uint8_t thisCalibIndex;                 /* Index of calibration fragment in this frame */
@@ -154,8 +152,8 @@ typedef struct _RS41_InstanceData {
     uint32_t lastUpdated;
     float rxFrequencyMHz;
     float batteryVoltage;                       /* Battery voltage [V] */
+    float temperatureTx;                        /* Temperature of Si4032 [°C] */
     uint16_t frameCounter;
-    uint8_t cpuTemperature;
     int8_t txPower_dBm;
     bool encrypted;                             /* Set for RS41-SGM military version */
     bool onDescent;                             /* Descent phase detected */
@@ -195,7 +193,7 @@ typedef struct _RS41_InstanceData {
             uint8_t reserved1EC[0x1F0-0x1EC];
             float f1F0[8];
             float pressureLaunchSite[2];        /* 0x210: Pressure [hPa] at launch site */
-            uint8_t nameVariant[10];            /* 0x218: Sonde variant (e.g. "RS41-SG") */
+            char nameVariant[10];               /* 0x218: Sonde variant (e.g. "RS41-SG") */
             uint8_t nameMainboard[10];          /* 0x222: Name of mainboard (e.g. "RSM412") */
             uint8_t serialMainboard[9];         /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
             uint8_t text235[14];                /* 0x235: "0000000000" */

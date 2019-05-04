@@ -95,6 +95,7 @@ LPCLIB_Result _MEISEI_processConfigFrame (
         float rxFrequencyHz)
 {
     LPCLIB_Result result = LPCLIB_SUCCESS;
+    float f;
 
     /* Valid pointer to take the output value required */
     if (!instancePointer) {
@@ -131,8 +132,27 @@ LPCLIB_Result _MEISEI_processConfigFrame (
 
     /* Cook some other values */
     instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
-    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_SONDE)) {
-        snprintf(instance->name, sizeof(instance->name), "%.0f", instance->config[4]); //TODO
+    f = 0;
+    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_SONDE1)) {
+        f = instance->config[0]; //TODO
+    }
+    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_SONDE2)) {
+        f = instance->config[16]; //TODO
+    }
+    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_SONDE3)) {
+        f = instance->config[32]; //TODO
+    }
+    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_SONDE4)) {
+        f = instance->config[48]; //TODO
+    }
+    if (f != 0) {
+        instance->serialSonde = lrintf(f);
+    }
+    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_SENSOR_BOOM)) {
+        instance->serialSensorBoom = lrintf(instance->config[4]); //TODO
+    }
+    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_PCB)) {
+        instance->serialPcb = lrintf(instance->config[2]); //TODO
     }
 
     return result;
