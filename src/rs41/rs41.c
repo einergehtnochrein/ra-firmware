@@ -248,11 +248,12 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         memcpy(sModelName, instance->nameVariant, 10);
         sModelName[10] = 0;
     }
-    length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,,,,,%s,%d,",
+    length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,%.0f,,,,%s,%d,",
                 instance->id,
                 instance->name,
                 instance->metro.temperatureUSensor,
                 instance->nameVariant,
+                instance->temperatureTx,
                 sBurstKillTimer,                        /* Burst kill timer (frames) */
                 killer                                  /* Kill countdown (frames remaining) */
                 );

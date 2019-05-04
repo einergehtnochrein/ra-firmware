@@ -40,9 +40,7 @@ typedef __PACKED(struct {
     uint8_t flags;                          /* Bit 0: 0=Start phase, 1=Flight mode
                                              * Bit 1: 0=Ascent, 1=Descent
                                              */
-    uint8_t reserved00E[2];
-    uint8_t cpuTemperature;                 /* CPU temperature [°C] */
-    uint8_t reserved011[4];
+    uint8_t reserved00E[7];
     uint8_t txPower;                        /* TX power level (0...7, see Si4032 data sheet) */
     uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
     uint8_t thisCalibIndex;                 /* Index of calibration fragment in this frame */
@@ -154,8 +152,8 @@ typedef struct _RS41_InstanceData {
     uint32_t lastUpdated;
     float rxFrequencyMHz;
     float batteryVoltage;                       /* Battery voltage [V] */
+    float temperatureTx;                        /* Temperature of Si4032 [°C] */
     uint16_t frameCounter;
-    uint8_t cpuTemperature;
     int8_t txPower_dBm;
     bool encrypted;                             /* Set for RS41-SGM military version */
     bool onDescent;                             /* Descent phase detected */
