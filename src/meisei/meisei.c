@@ -53,6 +53,7 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
     int length = 0;
     uint32_t special;
     char sSpecial[8];
+    char sModel[20];
 
 
     /* Convert lat/lon from radian to decimal degrees */
@@ -75,12 +76,15 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
 
     /* Meisei type indicator */
     special = 0;
+    sModel[0] = 0;
     switch (instance->model) {
         case MEISEI_MODEL_IMS100:
             special |= 1u << 2;
+            snprintf(sModel, sizeof(sModel), "iMS-100");
             break;
         case MEISEI_MODEL_RS11G:
             special |= 1u << 3;
+            snprintf(sModel, sizeof(sModel), "RS11G");
             break;
         case MEISEI_MODEL_UNKNOWN:
             /* Nothing to do */
@@ -108,9 +112,12 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",11,0,%"PRIu32,
+    length = snprintf(s, sizeof(s), "%"PRIu32",11,0,%"PRIu32",%"PRIu32",%"PRIu32",%s",
                 instance->id,
-                instance->serialSonde
+                instance->serialSonde,
+                instance->serialSensorBoom,
+                instance->serialPcb,
+                sModel
                 );
 
     if (length > 0) {
