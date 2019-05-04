@@ -171,7 +171,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         }
     }
     int16_t killer = -1;
-    if (_RS41_checkValidCalibration(instance, CALIB_KILLCOUNTDOWN | CALIB_BURSTKILLTIMER | CALIB_FLIGHTKILLTIMER)) {
+    if (_RS41_checkValidCalibration(instance, CALIB_KILLCOUNTDOWN)) {
         if (instance->killCountdown != -1) {
             killer = instance->killCounterRefCount - (instance->frameCounter - instance->killCounterRefFrame);
         }
@@ -180,6 +180,10 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     /* Flags */
     if (instance->metro.hasO3) {
         special += (1u << 0);
+    }
+    if (instance->encrypted) {
+        special += (1u << 1);
+        special += (1u << 7);               /* Inexact location information... */
     }
     if (instance->onDescent) {
         special += (1u << 8);
@@ -204,9 +208,10 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     }
 
     if (instance->encrypted) {
-        length = snprintf((char *)s, sizeof(s), "%ld,1,%.3f,,,,,,,,,,2,,,,%.1f,%.1f,%d,%d,%s,%.1f",
+        length = snprintf((char *)s, sizeof(s), "%ld,1,%.3f,,,,,,,,,,%ld,,,,%.1f,%.1f,%d,%d,%s,%.1f",
                         instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
+                        special,
                         SYS_getFrameRssi(sys),
                         offset,    /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
@@ -523,6 +528,8 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                     handle->instance->gps.observerLLA.lat = NAN;
                     handle->instance->gps.observerLLA.lon = NAN;
                     handle->instance->encrypted = true;
+                    snprintf(handle->instance->nameVariant, sizeof(handle->instance->nameVariant), "%s", "RS41-SGM");
+                    handle->instance->logMode = RS41_LOGMODE_RAW;
                     break;
                 case RS41_SUBFRAME_AUX:
                     _RS41_readSubFrameAux((char *)(p + 2), subFrameLength - 4, handle->instance);

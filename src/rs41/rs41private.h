@@ -193,7 +193,7 @@ typedef struct _RS41_InstanceData {
             uint8_t reserved1EC[0x1F0-0x1EC];
             float f1F0[8];
             float pressureLaunchSite[2];        /* 0x210: Pressure [hPa] at launch site */
-            uint8_t nameVariant[10];            /* 0x218: Sonde variant (e.g. "RS41-SG") */
+            char nameVariant[10];               /* 0x218: Sonde variant (e.g. "RS41-SG") */
             uint8_t nameMainboard[10];          /* 0x222: Name of mainboard (e.g. "RSM412") */
             uint8_t serialMainboard[9];         /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
             uint8_t text235[14];                /* 0x235: "0000000000" */
