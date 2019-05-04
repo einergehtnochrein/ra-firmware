@@ -40,6 +40,17 @@ typedef struct {
 typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+
+    uint16_t milliseconds;
+    uint16_t count1024;
+
+    struct {
+        uint8_t PRN;
+        uint8_t snr;
+        uint8_t xxx1;
+        uint8_t xxx2;
+    } sats[16];
+    uint8_t usedSats;
 } MEISEI_CookedGps;
 
 
