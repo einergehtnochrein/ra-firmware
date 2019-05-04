@@ -55,8 +55,8 @@ typedef struct LLA_Coordinate {
     double      lon;
     double      alt;
     float       climbRate;
-    float       velocity;
-    float       direction;
+    float       velocity;                   /* m/s */
+    float       direction;                  /* 0 <= direction <= 2*pi */
 } LLA_Coordinate;
 
 
