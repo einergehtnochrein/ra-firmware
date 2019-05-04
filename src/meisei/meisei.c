@@ -108,9 +108,9 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%ld,11,0,%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",11,0,%"PRIu32,
                 instance->id,
-                instance->name
+                instance->serialSonde
                 );
 
     if (length > 0) {

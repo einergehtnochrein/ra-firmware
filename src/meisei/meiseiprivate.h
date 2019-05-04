@@ -40,6 +40,17 @@ typedef struct {
 typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+
+    uint16_t milliseconds;
+    uint16_t count1024;
+
+    struct {
+        uint8_t PRN;
+        uint8_t snr;
+        uint8_t xxx1;
+        uint8_t xxx2;
+    } sats[16];
+    uint8_t usedSats;
 } MEISEI_CookedGps;
 
 
@@ -47,7 +58,9 @@ typedef struct {
 typedef struct _MEISEI_InstanceData {
     struct _MEISEI_InstanceData *next;
     uint32_t id;
-    char name[20];
+    uint32_t serialSonde;
+    uint32_t serialPcb;
+    uint32_t serialSensorBoom;
     MEISEI_Model model;
     float rxFrequencyMHz;
     float rxOffset;
@@ -81,7 +94,11 @@ LPCLIB_Result _MEISEI_processMetrology (
 uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index);
 
 /* Check if the calibration block contains valid data for a given purpose */
-#define CALIB_SERIAL_SONDE          0x0000000000000010ll
+#define CALIB_SERIAL_SONDE1         0x0000000000000001ll
+#define CALIB_SERIAL_SONDE2         0x0000000000010000ll
+#define CALIB_SERIAL_SONDE3         0x0000000100000000ll
+#define CALIB_SERIAL_SONDE4         0x0001000000000000ll
+#define CALIB_SERIAL_SENSOR_BOOM    0x0000000000000010ll
 #define CALIB_SERIAL_PCB            0x0000000000000004ll
 
 bool _MEISEI_checkValidCalibration(MEISEI_InstanceData *instance, uint64_t purpose);
