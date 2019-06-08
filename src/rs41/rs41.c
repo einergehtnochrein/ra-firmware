@@ -219,7 +219,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         );
     }
     else {
-        length = snprintf((char *)s, sizeof(s), "%ld,1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,,%.2f,%.1f,%.1f,%d,%d,%s,%.1f",
+        length = snprintf((char *)s, sizeof(s), "%ld,1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,%.1f",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         instance->gps.usedSats,                 /* # sats in position solution */
@@ -232,6 +232,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->metro.temperature,            /* Temperature [°C] */
                         sPressure,                              /* Pressure sensor [hPa] */
                         special,
+                        instance->metro.humidity,
                         instance->gps.dop,
                         SYS_getFrameRssi(sys),
                         offset,                                 /* RX frequency offset [kHz] */
