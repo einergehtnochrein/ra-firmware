@@ -183,7 +183,6 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
             + 3.1965e-7 * T * T * T * T
             ;
     //TODO
-cookedMetro->humidityRAW = current[1];
 cookedMetro->humidity = (current[1] - 1.0f) / corr;
 
     return LPCLIB_SUCCESS;
