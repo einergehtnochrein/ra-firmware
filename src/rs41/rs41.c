@@ -470,38 +470,9 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                     break;
                 case RS41_SUBFRAME_METROLOGY:
                     _RS41_processMetrologyBlock((RS41_SubFrameMetrology *)(p + 2), &handle->instance->metro, handle->instance);
-#if SEMIHOSTING_RS41
-                    if (handle->instance->gps.observerLLA.alt > 100) {
-                        fprintf(handle->fpAnalog, "%u, %.0lf, ",
-                                handle->instance->frameCounter,
-                                handle->instance->gps.observerLLA.alt);
-                        RS41_SubFrameMetrology *pm = (RS41_SubFrameMetrology *)(p + 2);
-                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                _RS41_read24(pm->adc[0].current),
-                                _RS41_read24(pm->adc[0].refmin),
-                                _RS41_read24(pm->adc[0].refmax));
-                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                _RS41_read24(pm->adc[1].current),
-                                _RS41_read24(pm->adc[1].refmin),
-                                _RS41_read24(pm->adc[1].refmax));
-                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                _RS41_read24(pm->adc[2].current),
-                                _RS41_read24(pm->adc[2].refmin),
-                                _RS41_read24(pm->adc[2].refmax));
-                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                _RS41_read24(pm->adc[3].current),
-                                _RS41_read24(pm->adc[3].refmin),
-                                _RS41_read24(pm->adc[3].refmax));
-                        fprintf(handle->fpAnalog, "%u, %u, %u, ",
-                                pm->val12_16,
-                                pm->pressurePolyTwist,
-                                pm->val14_16);
-                        fprintf(handle->fpAnalog, "%.7f\n",
-                                (float)(_RS41_read24(pm->adc[0].refmax) - _RS41_read24(pm->adc[0].current))
-                                /(float)(_RS41_read24(pm->adc[0].refmax) - _RS41_read24(pm->adc[0].refmin)));
-                        fflush(handle->fpAnalog);
-                    }
-#endif
+                    break;
+                case RS41_SUBFRAME_METROLOGY_SHORT:
+                    _RS41_processMetrologyShortBlock((RS41_SubFrameMetrologyShort *)(p + 2), &handle->instance->metro, handle->instance);
                     break;
                 case RS41_SUBFRAME_GPS_POSITION:
                     _RS41_processGpsPositionBlock((RS41_SubFrameGpsPosition *)(p + 2), &handle->instance->gps);
