@@ -31,7 +31,6 @@ typedef struct RS41_Context {
 
 #if SEMIHOSTING_RS41
     FILE *fpAnalog;
-    FILE *fpGps;
 #endif
 } RS41_Context;
 
@@ -129,7 +128,6 @@ LPCLIB_Result RS41_open (RS41_Handle *pHandle)
 
 #if SEMIHOSTING_RS41
     _rs41.fpAnalog = fopen("rs41_analog.csv", "w");
-//    _rs41.fpGps = fopen("gps.csv", "w");
 #endif
 
     return LPCLIB_SUCCESS;
