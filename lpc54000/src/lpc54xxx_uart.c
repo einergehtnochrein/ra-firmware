@@ -565,7 +565,6 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
                 | UART_CFG_PARITYSEL_Msk
                 | UART_CFG_STOPLEN_Msk
                 | UART_CFG_LINMODE_Msk
-                | UART_CFG_CTSEN_Msk
                 | UART_CFG_SYNCEN_Msk
                 | UART_CFG_CLKPOL_Msk
                 | UART_CFG_SYNCMST_Msk
@@ -583,7 +582,6 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
                 | UART_CFG_PARITYSEL_Msk
                 | UART_CFG_STOPLEN_Msk
                 | UART_CFG_LINMODE_Msk
-                | UART_CFG_CTSEN_Msk
                 | UART_CFG_SYNCEN_Msk
                 | UART_CFG_CLKPOL_Msk
                 | UART_CFG_SYNCMST_Msk
@@ -639,9 +637,6 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
 
                 /* Enter TXD break */
                 LPCLIB_BITBAND(&uart->CTL, UART_CTL_TXBRKEN_Pos) = 1;
-
-                /* Re-enable TX */
-                LPCLIB_BITBAND(&uart->CTL, UART_CTL_TXDIS_Pos) = 0;
 #else
                 /* Clean TX disable to allow current character to be sent completely */
                 uart->CTL |= UART_CTL_TXDIS_Msk;
@@ -650,13 +645,20 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
 
                 /* Enter TXD break */
                 uart->CTL |= UART_CTL_TXBRKEN_Msk;
-
-                /* Re-enable TX */
-                uart->CTL &= ~UART_CTL_TXDIS_Msk;
 #endif
             }
             else {
-                uart->CTL &= ~UART_CTL_TXBRKEN_Msk;     /* Back to normal operation */
+#if (__CORTEX_M == 4)
+                /* Back to normal operation */
+                LPCLIB_BITBAND(&uart->CTL, UART_CTL_TXBRKEN_Pos) = 0;
+                /* Re-enable TX */
+                LPCLIB_BITBAND(&uart->CTL, UART_CTL_TXDIS_Pos) = 0;
+#else
+                /* Back to normal operation */
+                uart->CTL &= ~UART_CTL_TXBRKEN_Msk;
+                /* Re-enable TX */
+                uart->CTL &= ~UART_CTL_TXDIS_Msk;
+#endif
             }
             break;
 
