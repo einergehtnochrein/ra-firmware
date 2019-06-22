@@ -24,8 +24,8 @@ static const Config_t _factorySettingsDefault = {
     .rssiCorrectionLnaOn = -13.0,
     .rssiCorrectionLnaOff = 16.0,
 
-    .nameBluetooth = "LAIRD BL652",
-    .usbVendorString = L"ra.leckasemmel.de",
+    .nameBluetooth = "",
+    .usbVendorString = L"leckasemmel.de/ra",
     .usbProductString = L"Sondengott Ra",
 #endif
 };
@@ -38,8 +38,8 @@ static volatile const Config_t _factorySettingsUser;
 const Config_t *config_g = &_factorySettingsDefault;
 
 
-/* Calculate the CRC32 checksum of the user configuration */
-static uint32_t _CONFIG_getUserChecksum (void)
+/* Calculate the CRC32 checksum of a configuration and validate the configuration */
+static LPCLIB_Result _CONFIG_validateChecksum (volatile const Config_t *pConfig)
 {
     CRC_Handle crc = LPCLIB_INVALID_HANDLE;
     CRC_Mode crcMode;
@@ -56,8 +56,8 @@ static uint32_t _CONFIG_getUserChecksum (void)
         CRC_seed(crc, 0xFFFFFFFF);
         CRC_write(
             crc,
-            (void *)&_factorySettingsUser,
-            sizeof(_factorySettingsUser) - sizeof(_factorySettingsUser.crc),
+            (void *)pConfig,
+            sizeof(*pConfig) - sizeof(pConfig->crc),
             NULL,
             NULL);
         checksum = CRC_read(crc);
@@ -65,7 +65,7 @@ static uint32_t _CONFIG_getUserChecksum (void)
         CRC_close(&crc);
     }
 
-    return checksum;
+    return (checksum == pConfig->crc) ? LPCLIB_SUCCESS : LPCLIB_ERROR;
 }
 
 
@@ -73,7 +73,7 @@ static uint32_t _CONFIG_getUserChecksum (void)
 void CONFIG_open (void)
 {
     /* Use user supplied configuration if valid, otherwise fall back to factory defaults */
-    if (_CONFIG_getUserChecksum() == _factorySettingsUser.crc) {
+    if (_CONFIG_validateChecksum(&_factorySettingsUser) == LPCLIB_SUCCESS) {
         config_g = (const Config_t *)&_factorySettingsUser;
     }
 }
