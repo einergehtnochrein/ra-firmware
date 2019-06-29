@@ -5,6 +5,7 @@
 
 /* GPIO functions */
 #define GPIO_BLE_RESET                      GPIO_1_11
+#define GPIO_BLE_MODESEL                    GPIO_0_5    /* NOTE: Dummy! MODESEL not connected on Ra1 */
 #define GPIO_BLE_AUTORUN                    GPIO_0_7
 #define GPIO_BLE_RXD                        GPIO_0_0
 #define GPIO_POWER_SWITCH                   GPIO_1_10

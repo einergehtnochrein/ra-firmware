@@ -34,6 +34,7 @@
 #include "adf7021.h"
 #include "app.h"
 #include "beacon.h"
+#include "bl652.h"
 #include "dfm.h"
 #include "imet.h"
 #include "m10.h"
@@ -1117,7 +1118,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 long timestamp = 0;
                 if (sscanf(cl, "#%*d,%ld", &timestamp) == 1) {
                     /* Send application and version */
-                    char s[80];
+                    char s[140];
                     int hardwareVersion = 0;
 #if (BOARD_RA == 1)
                     hardwareVersion = 1;        /* Ra1 */
@@ -1128,12 +1129,16 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                         hardwareVersion = 3;    /* Ra2fix */
                     }
 #endif
-                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d",
+                    uint32_t bleFirmwareVersion = 0;
+                    BL652_getFirmwareVersion(ble, &bleFirmwareVersion);
+
+                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d,%ld",
                             FIRMWARE_VERSION_MAJOR,
                             hardwareVersion,
                             FIRMWARE_VERSION_MINOR,
                             FIRMWARE_NAME,
-                            config_g->serialNumber
+                            config_g->serialNumber,
+                            bleFirmwareVersion
                             );
                     SYS_send2Host(HOST_CHANNEL_PING, s);
 

@@ -13,6 +13,7 @@ C_SRCS = \
     main.c bspra2.c config.c \
     adf7021.c sys.c scanner.c ephemupdate.c \
     usb/usb_audio.c usb/usb_serial.c usb/usbuser_config.c \
+    bl652.c \
     pdm.c \
     gps/gps.c \
     reedsolomon/reedsolomon.c bch/bch.c \

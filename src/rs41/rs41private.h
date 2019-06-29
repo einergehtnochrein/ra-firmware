@@ -25,6 +25,7 @@ typedef enum {
     RS41_SUBFRAME_GPS_INFO = 0x7C,
     RS41_SUBFRAME_GPS_RAW = 0x7D,
     RS41_SUBFRAME_AUX = 0x7E,
+    RS41_SUBFRAME_METROLOGY_SHORT = 0x7F,
     RS41_SUBFRAME_CRYPT80 = 0x80,
 } RS41_SubFrameType;
 
@@ -60,6 +61,21 @@ typedef __PACKED(struct {
     uint16_t val14_16;
     uint16_t crc;
 }) RS41_SubFrameMetrology;
+
+
+/* The short metrology block contains only temperature and humidity values,
+ * no pressure sensor data.
+ * Never heard such a block myself, but it was reported by Zilog80:
+ * https://www.fingers-welt.de/phpBB/viewtopic.php?f=14&t=43&start=2950
+ */
+typedef __PACKED(struct {
+    __PACKED(struct {
+        uint8_t current[3];
+        uint8_t refmin[3];
+        uint8_t refmax[3];
+    }) adc[3];
+    uint16_t crc;
+}) RS41_SubFrameMetrologyShort;
 
 
 /* The identification of fields in the following GPS structures
@@ -251,10 +267,15 @@ bool _RS41_iterateInstance (RS41_InstanceData **instance);
 /* Remove an instance from the chain */
 void _RS41_deleteInstance (RS41_InstanceData *instance);
 
-/* Process the metrology block.
+/* Process the metrology block(s).
  */
 LPCLIB_Result _RS41_processMetrologyBlock (
         const RS41_SubFrameMetrology *rawMetro,
+        RS41_CookedMetrology *cookedMetro,
+        RS41_InstanceData *instance);
+
+LPCLIB_Result _RS41_processMetrologyShortBlock (
+        const RS41_SubFrameMetrologyShort *rawMetro,
         RS41_CookedMetrology *cookedMetro,
         RS41_InstanceData *instance);
 

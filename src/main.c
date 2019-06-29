@@ -6,6 +6,7 @@
 #include "lpclib.h"
 #include "bsp.h"
 #include "app.h"
+#include "bl652.h"
 #include "scanner.h"
 #include "sys.h"
 #include "ephemupdate.h"
@@ -20,6 +21,7 @@ SCANNER_Handle scanner;
 SONDE_Handle sonde;
 EPHEMUPDATE_Handle euTask;
 MRT_Handle mrt;
+BL652_Handle ble;
 
 char s[100];
 volatile struct mallinfo heapinfo;
@@ -39,19 +41,27 @@ int main (void)
 
     BSP_init();
 
+    if (BL652_open(blePort, GPIO_BLE_AUTORUN, GPIO_BLE_MODESEL, GPIO_BLE_RESET, &ble) == LPCLIB_SUCCESS) {
+        if (BL652_findBaudrate(ble) == LPCLIB_SUCCESS) {
+            if (BL652_readParameters(ble) == LPCLIB_SUCCESS) {
+#if (BOARD_RA == 2)
+                if (BL652_updateParameters(ble)) {
+                }
+#endif
+            }
+        }
+
+        BL652_setMode(ble, BL652_MODE_VSP_BRIDGE);
+    }
+
 #if (BOARD_RA == 1)
-    GPIO_writeBit(GPIO_BLE_AUTORUN, 1);     /* Select BL652 "VSP Bridge to UART" mode */
-    GPIO_writeBit(GPIO_BLE_RESET, 1);       /* Release BL652 reset */
     GPIO_writeBit(GPIO_ENABLE_VDDA, 1);
     GPIO_writeBit(GPIO_ADF7021_CE, 1);
     GPIO_writeBit(GPIO_ENABLE_DISP, 1);
 #endif
 #if (BOARD_RA == 2)
-    GPIO_writeBit(GPIO_BLE_MODESEL, 1);     /* Select BL652 "VSP Bridge to UART" mode */
-    GPIO_writeBit(GPIO_BLE_AUTORUN, 1);     /* Run in bridge mode */
     GPIO_writeBit(GPIO_ENABLE_VDDA, 1);
     GPIO_writeBit(GPIO_ADF7021_CE, 1);
-    GPIO_writeBit(GPIO_BLE_RESET, 1);       /* Release BL652 reset */
 #endif
 
     SYS_open(&sys);

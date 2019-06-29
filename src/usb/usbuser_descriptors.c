@@ -61,7 +61,7 @@ enum {
 static const DECLARE_USBD_STRINGS (
     theUSB_StringDescriptor,
     0x0409,
-    L"radiosonde.leckasemmel.de",
+    L"github.com/einergehtnochrein/ra-hardware",
     L"Ra Sondengott",
     L"*",
 
