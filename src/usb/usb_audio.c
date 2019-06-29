@@ -306,6 +306,8 @@ static ErrorCode_t USBAUDIO_endpoint0Handler (USBD_HANDLE_T hUsb, void *data, ui
     LPCLIB_Event event;
     int n;
 
+    LPCLIB_initEvent(&event, LPCLIB_EVENTID_USBAUDIO);
+
     if (usbdEvent == USB_EVT_SETUP) {
         /* Filter standard requests. This gives us a chance to follow changes in alternate settings. */
         if ((pSetup->bmRequestType.BM.Type == REQUEST_STANDARD) &&
@@ -326,6 +328,7 @@ else {
                     if (handle->pFunction->callback) {
 #if 1
                         event.opcode = USBAUDIO_EVENT_INTERFACE_CHANGE;
+                        event.block = pSetup->wIndex.WB.L;
                         event.channel = pSetup->wValue.WB.L;
 //                        event.parameter = pBuffer;
                         LPCLIB_Result callbackResult = handle->pFunction->callback(event);

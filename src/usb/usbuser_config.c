@@ -33,6 +33,34 @@
 #include "sys.h"
 
 
+#define RAAUDIO_QUEUE_LENGTH            10
+
+/* Message opcode */
+enum {
+    RAAUDIO_OPCODE_AUDIO_ENABLE,
+    RAAUDIO_OPCODE_SET_SPEED,
+};
+
+
+typedef enum _RAAUDIO_StreamState {
+    RAAUDIO_STREAMSTATE_OFF,            /* Inactive (interface alternate setting = 0) */
+    RAAUDIO_STREAMSTATE_ARMED,          /* Armed by interface alternate setting > 0 */
+    RAAUDIO_STREAMSTATE_ACTIVE,         /* Active (after setting endpoint speed) */
+} RAAUDIO_StreamState;
+
+
+/* Message format */
+typedef struct {
+    uint8_t opcode;
+
+    union {
+            LPCLIB_Switch enable;
+        int32_t numSamples;
+        uint32_t sampleRate;
+    };
+} RAAUDIO_Message;
+
+
 __SECTION(".usbworkspace")
 static uint8_t _usbWorkspace[0x800] __ALIGN(1024*1024*4);
 
@@ -55,6 +83,7 @@ struct _USBContext {
     bool configured;
 
     USBAUDIO_Handle audio;
+    RAAUDIO_StreamState streamState;
 
     struct _audiomm {
         int readBufferIndex;
@@ -66,6 +95,8 @@ struct _USBContext {
         uint32_t adapterModulus;
         uint32_t dmaTimestamp;
     } audiomm;
+
+    osMailQId queue;
 } usbContext;
 
 
@@ -142,29 +173,26 @@ static const USBAUDIO_FunctionDeclaration _usbAudioFunction16k = {
 /* Handle events from generic audio class. */
 static LPCLIB_Result _USBUSER_handleEventAudio (LPCLIB_Event event)
 {
-#if 0
-    FIFIAUDIO_Message *pMessage;
-    FIFIDSP_Config dspConfig;
+    struct _USBContext *handle = &usbContext;
+    RAAUDIO_Message *pMessage;
 
-    if (!fifiaudio.queue) {
+    if (!handle->queue) {
         return LPCLIB_SUCCESS;
     }
 
     switch (event.opcode) {
-    case USBAUDIO_EVENT_INTERFACE_CHANGE:
-        if (event.block == USBCONFIG_INTERFACE_AUDIO_STREAMING_1) {
-            pMessage = osMailAlloc(fifiaudio.queue, 0);
-            if (pMessage) {
-                pMessage->opcode = FIFIAUDIO_OPCODE_IQ_ENABLE_16;
-                if (event.channel == 1) {
-                    pMessage->opcode = FIFIAUDIO_OPCODE_IQ_ENABLE_32;
+        case USBAUDIO_EVENT_INTERFACE_CHANGE:
+            if (event.block == USBCONFIG_INTERFACE_AUDIO_STREAM) {
+                pMessage = osMailAlloc(handle->queue, 0);
+                if (pMessage) {
+                    pMessage->opcode = RAAUDIO_OPCODE_AUDIO_ENABLE;
+                    pMessage->enable = (event.channel != 0);      /* Non-zero alternate settings enable stream */
+                    osMailPut(handle->queue, pMessage);
                 }
-                pMessage->enable = (event.channel != 0);      /* Non-zero alternate settings enable codec */
-                osMailPut(fifiaudio.queue, pMessage);
             }
-        }
-        break;
+            break;
 
+#if 0
     case USBAUDIO_EVENT_SET_CONTROL:
         if ((event.block == USBCONFIG_UNIT_FEATURE_IQ) &&
             (event.channel == USBAC_CS_FU_VOLUME_CONTROL)) {
@@ -172,26 +200,21 @@ static LPCLIB_Result _USBUSER_handleEventAudio (LPCLIB_Event event)
             BSP_setCodecVolume(fifiaudio.volumeIQ, fifiaudio.sampleRateIQ, fifiaudio.sampleSize32);
         }
         break;
+#endif
 
     case USBAUDIO_EVENT_ENDPOINT:
-        if ((event.block == USBCONFIG_STREAMING_EP1) &&
+        if ((event.block == USBCONFIG_AUDIO_IN_EP) &&
             (event.channel == USBAC_CS_EP_SAMPLING_FREQ_CONTROL)) {
-            pMessage = osMailAlloc(fifiaudio.queue, 0);
+            pMessage = osMailAlloc(handle->queue, 0);
             if (pMessage) {
-                pMessage->opcode = FIFIAUDIO_OPCODE_SET_IQ_SPEED;
+                pMessage->opcode = RAAUDIO_OPCODE_SET_SPEED;
                 pMessage->sampleRate = (uint32_t)event.parameter;
-                osMailPut(fifiaudio.queue, pMessage);
+                osMailPut(handle->queue, pMessage);
             }
-
-            dspConfig.opcode = FIFIDSP_OPCODE_SET_INPUT_RATE;
-            dspConfig.sampleRate = (uint32_t)event.parameter;
-            FIFIDSP_ioctl(fifiaudio.dsp, &dspConfig);
         }
         break;
     }
-#else
-(void)event;
-#endif
+
     return LPCLIB_SUCCESS;
 }
 
@@ -399,11 +422,15 @@ void USBUSER_writeAudioStereo_float_float (const float *buffer1, const float *bu
 }
 
 
+osMailQDef(audioQueue, RAAUDIO_QUEUE_LENGTH, RAAUDIO_Message);
+
 void USBUSER_open (void)
 {
     struct _USBContext *handle = &usbContext;
     ErrorCode_t ret = LPC_OK;
 
+
+    handle->queue = osMailCreate(osMailQ(audioQueue), NULL);
 
     /* Init pointer to ROM API entry */
     handle->pUsbApi = (const USBD_API_T *) pRom->pUsbd;
@@ -463,6 +490,30 @@ bool USBUSER_isConfigured (void)
 
 void USBUSER_worker (void)
 {
+    struct _USBContext *handle = &usbContext;
+    RAAUDIO_Message *pMessage;
+    osEvent event;
+
+    event = osMailGet(handle->queue, 0);
+    if (event.status == osEventMail) {
+        pMessage = (RAAUDIO_Message *)event.value.p;
+
+        switch (pMessage->opcode) {
+            case RAAUDIO_OPCODE_AUDIO_ENABLE:
+                if (pMessage->enable) {
+                    handle->streamState = RAAUDIO_STREAMSTATE_ARMED;
+                    //TODO Disable stream/codec
+                }
+                else {
+                    handle->streamState = RAAUDIO_STREAMSTATE_OFF;
+                }
+                break;
+
+            case RAAUDIO_OPCODE_SET_SPEED:
+                /* Ignored for now */
+                break;
+        }
+    }
 }
 
 

@@ -84,6 +84,9 @@ int main (void)
         SYS_thread(sys);
         SCANNER_thread(scanner);
         EPHEMUPDATE_thread(euTask);
+#if (BOARD_RA == 2)
+        USBUSER_worker();
+#endif
         __WFI();
     }
 }
