@@ -1,6 +1,7 @@
 #ifndef __APP_H
 #define __APP_H
 
+#include "bl652.h"
 #include "ephemupdate.h"
 #include "scanner.h"
 #include "sys.h"
@@ -38,5 +39,6 @@ extern SCANNER_Handle scanner;
 extern SYS_Handle sys;
 extern SONDE_Handle sonde;
 extern MRT_Handle mrt;
+extern BL652_Handle ble;
 
 #endif
