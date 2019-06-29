@@ -956,7 +956,8 @@ typedef struct
 
 typedef struct
 {
-    __I  uint32_t RESERVED000[(0x010-0x000)/4];
+    __IO uint32_t SYSMEMREMAP;
+    __I  uint32_t RESERVED000[(0x010-0x004)/4];
     __IO uint32_t AHBMATPRIO;
     __I  uint32_t RESERVED014[(0x040-0x014)/4];
     __IO uint32_t SYSTCKCAL;
