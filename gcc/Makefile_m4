@@ -14,6 +14,7 @@ vpath %.c $(PDL)/libs/graphics/swim
 C_SRCS = \
     main.c bspra1.c config.c \
     adf7021.c sys.c scanner.c ephemupdate.c \
+    bl652.c \
     gps/gps.c \
     reedsolomon/reedsolomon.c bch/bch.c \
     sonde.c \
