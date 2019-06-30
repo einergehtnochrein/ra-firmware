@@ -55,7 +55,6 @@ void FLEXCOMM_installHandler (FLEXCOMM_Name flexcomm, FLEXCOMM_IRQHandler_t hand
 }
 
 
-__SECTION(".vectors")
 void FLEXCOMM0_IRQHandler (void)
 {
     if (IRQHandlers[0]) {
@@ -63,7 +62,6 @@ void FLEXCOMM0_IRQHandler (void)
     }
 }
 
-__SECTION(".vectors")
 void FLEXCOMM1_IRQHandler (void)
 {
     if (IRQHandlers[1]) {
@@ -71,7 +69,6 @@ void FLEXCOMM1_IRQHandler (void)
     }
 }
 
-__SECTION(".vectors")
 void FLEXCOMM2_IRQHandler (void)
 {
     if (IRQHandlers[2]) {
@@ -79,7 +76,6 @@ void FLEXCOMM2_IRQHandler (void)
     }
 }
 
-__SECTION(".vectors")
 void FLEXCOMM3_IRQHandler (void)
 {
     if (IRQHandlers[3]) {
@@ -87,7 +83,6 @@ void FLEXCOMM3_IRQHandler (void)
     }
 }
 
-__SECTION(".vectors")
 void FLEXCOMM4_IRQHandler (void)
 {
     if (IRQHandlers[4]) {
@@ -95,7 +90,6 @@ void FLEXCOMM4_IRQHandler (void)
     }
 }
 
-__SECTION(".vectors")
 void FLEXCOMM5_IRQHandler (void)
 {
     if (IRQHandlers[5]) {
@@ -103,7 +97,6 @@ void FLEXCOMM5_IRQHandler (void)
     }
 }
 
-__SECTION(".vectors")
 void FLEXCOMM6_IRQHandler (void)
 {
     if (IRQHandlers[6]) {
@@ -111,7 +104,6 @@ void FLEXCOMM6_IRQHandler (void)
     }
 }
 
-__SECTION(".vectors")
 void FLEXCOMM7_IRQHandler (void)
 {
     if (IRQHandlers[7]) {
