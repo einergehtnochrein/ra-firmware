@@ -146,8 +146,9 @@ struct SYS_Context {
     bool attenuatorActive;
 
     char commandLine[COMMAND_LINE_SIZE];
-
     int securityResponse;                               /* Response expected to security challenge */
+    bool blePortSetBreak;                               /* Set/clear UART break on BLE port */
+    int blePortBreakTime;                               /* Duration of break signalling on BLE port */
 } sysContext;
 
 
@@ -681,6 +682,16 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
     checksum += ',';
     sprintf(s, ",%d\r", checksum % 100);
     UART_write(blePort, s, strlen(s));
+
+    return LPCLIB_SUCCESS;
+}
+
+
+//TODO: duration=0: off, duration=-1: on, duration>0: on for specified #milliseconds
+LPCLIB_Result SYS_sendBreak (int durationMilliseconds)
+{
+    sysContext.blePortBreakTime = durationMilliseconds;
+    sysContext.blePortSetBreak = true;
 
     return LPCLIB_SUCCESS;
 }
@@ -1465,6 +1476,20 @@ static bool _SYS_checkEvent (SYS_Handle handle)
 }
 
 
+static const UART_Config blePortConfigBreakEnable[] = {
+    {.opcode = UART_OPCODE_SET_BREAK,
+        {.enableBreak = LPCLIB_YES, }},
+
+    UART_CONFIG_END
+};
+
+static const UART_Config blePortConfigBreakDisable[] = {
+    {.opcode = UART_OPCODE_SET_BREAK,
+        {.enableBreak = LPCLIB_NO, }},
+
+    UART_CONFIG_END
+};
+
 
 PT_THREAD(SYS_thread (SYS_Handle handle))
 {
@@ -1502,6 +1527,18 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     while (1) {
         /* Wait for an event */
         PT_WAIT_UNTIL(&handle->pt, _SYS_checkEvent(handle));
+
+        /* Change TX break for BLE port? */
+        if (handle->blePortSetBreak) {
+            handle->blePortSetBreak = false;
+
+            if (handle->blePortBreakTime != 0) {
+                UART_ioctl(blePort, blePortConfigBreakEnable);
+            }
+            else {
+                UART_ioctl(blePort, blePortConfigBreakDisable);
+            }
+        }
 
         /* Message via Bluetooth? */
         if (strlen(handle->commandLine) > 0) {

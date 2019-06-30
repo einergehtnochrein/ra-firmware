@@ -458,7 +458,6 @@ void USBUSER_open (void)
     ret = handle->pUsbApi->hw->Init(&handle->hUsb, &handle->desc, &handle->param);
     if (ret == LPC_OK) {
         ret = USBSerial_init(
-                    0,
                     handle->hUsb,
                     &appConfiguration1.serialCIF.interface,
                     &appConfiguration1.serialDIF.interface,

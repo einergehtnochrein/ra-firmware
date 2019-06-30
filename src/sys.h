@@ -54,6 +54,7 @@ float SYS_getFrameOffsetKhz (SYS_Handle handle);
 #define HOST_CHANNEL_DEBUG          77
 
 LPCLIB_Result SYS_send2Host (int channel, const char *message);
+LPCLIB_Result SYS_sendBreak (int durationMilliseconds);
 
 /** System management task. */
 PT_THREAD(SYS_thread (SYS_Handle handle));
