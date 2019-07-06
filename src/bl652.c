@@ -182,11 +182,15 @@ LPCLIB_Result BL652_findBaudrate (BL652_Handle handle)
     BL652_setMode(handle, BL652_MODE_COMMAND);
 
     if (!_BL652_testBaudrate(handle, 115200)) {
+#if (BOARD_RA == 1)     /* Don't try with Ra1. Leave it @ 115k2 */
+        return LPCLIB_ERROR;
+#else
         if (!_BL652_testBaudrate(handle, 230400)) {
             if (!_BL652_testBaudrate(handle, 460800)) {
                 return LPCLIB_ERROR;
             }
         }
+#endif
     }
 
     return LPCLIB_SUCCESS;
