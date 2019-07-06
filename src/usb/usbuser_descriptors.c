@@ -38,7 +38,6 @@
  *  to achieve an automatic numbering of all string descriptors.
  *
  *  The first entry must be assigned the index 1.
- *  The last entry must be USB_NUMBER_OF_STRING_DESCRIPTORS.
  */
 enum {
     USBSTR_IDVENDOR = 1,
