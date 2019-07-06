@@ -314,7 +314,7 @@ static const ADF7021_Config radioModeMeisei[] = {
 static const ADF7021_Config radioModeC34C50[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
-        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN4, }},
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN6, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
         {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
@@ -1438,6 +1438,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                             if (sscanf(cl, "#%*d,%*d,%d", &mode) == 1) {
                                 /* Send USB audio test mode to all decoders */
                                 BEACON_selectDebugAudio(mode);
+                                SRSC_selectDebugAudio(mode);
                             }
                             break;
                     }
