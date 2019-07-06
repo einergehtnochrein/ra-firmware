@@ -494,13 +494,6 @@ seli = 12;
 /* Enter a power-saving mode. */
 void CLKPWR_enterPowerSaving (CLKPWR_PowerSavingMode mode)
 {
-#if 0
-    uint32_t oldPCON;
-
-    /* Clear power mode and indicators */
-    oldPCON = LPC_PMU->PCON
-            & ~(PMU_PCON_PM_Msk | PMU_PCON_NODPD_Msk);
-#endif
     /* SLEEPDEEP bit required for anything but SLEEP mode */
     if (mode & (1u << 16)) {
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
@@ -508,15 +501,11 @@ void CLKPWR_enterPowerSaving (CLKPWR_PowerSavingMode mode)
     else {
         SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
     }
-#if 0
-    /* Set the mode... */
-    LPC_PMU->PCON = oldPCON | (mode & 0x7);
-#endif
-    /* ...and enter it. Wait for wake-up. */
+
+    /* Enter low-power mode. Wait for wake-up. */
     __WFI();
 
     /* Make sure any subsequent WFI will simply enter SLEEP */
-//    LPC_PMU->PCON = (LPC_PMU->PCON & ~(PMU_PCON_PM_Msk)) | PMU_PCON_SLEEPFLAG_Msk | PMU_PCON_DPDFLAG_Msk;
     SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
 }
 

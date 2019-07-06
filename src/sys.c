@@ -146,8 +146,9 @@ struct SYS_Context {
     bool attenuatorActive;
 
     char commandLine[COMMAND_LINE_SIZE];
-
     int securityResponse;                               /* Response expected to security challenge */
+    bool blePortSetBreak;                               /* Set/clear UART break on BLE port */
+    int blePortBreakTime;                               /* Duration of break signalling on BLE port */
 } sysContext;
 
 
@@ -313,7 +314,7 @@ static const ADF7021_Config radioModeMeisei[] = {
 static const ADF7021_Config radioModeC34C50[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
-        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN4, }},
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN6, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
         {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
@@ -686,6 +687,16 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
 }
 
 
+//TODO: duration=0: off, duration=-1: on, duration>0: on for specified #milliseconds
+LPCLIB_Result SYS_sendBreak (int durationMilliseconds)
+{
+    sysContext.blePortBreakTime = durationMilliseconds;
+    sysContext.blePortSetBreak = true;
+
+    return LPCLIB_SUCCESS;
+}
+
+
 
 /** Enter low-power mode */
 static void SYS_sleep (SYS_Handle handle)
@@ -723,6 +734,14 @@ static void SYS_sleep (SYS_Handle handle)
 
     /* Disable BOD reset */
     LPC_SYSCONEXTRA->BODCTRL = (LPC_SYSCONEXTRA->BODCTRL & ~(1u << 2)) | (1u << 6);
+
+    //TODO
+    LPC_SYSCON->PDSLEEPCFG0 |= 0
+            | (1u << 4)         /* FRO off */
+            | (1u << 7)         /* BOD Reset off */
+            | (1u << 8)         /* BOD IRQ off */
+            | (1u << 17)        /* ROM off */
+            ;
 #endif
 
     /* Enter Power Down mode, and wait for wake-up. */
@@ -1427,6 +1446,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                             if (sscanf(cl, "#%*d,%*d,%d", &mode) == 1) {
                                 /* Send USB audio test mode to all decoders */
                                 BEACON_selectDebugAudio(mode);
+                                SRSC_selectDebugAudio(mode);
                             }
                             break;
                     }
@@ -1465,6 +1485,20 @@ static bool _SYS_checkEvent (SYS_Handle handle)
 }
 
 
+static const UART_Config blePortConfigBreakEnable[] = {
+    {.opcode = UART_OPCODE_SET_BREAK,
+        {.enableBreak = LPCLIB_YES, }},
+
+    UART_CONFIG_END
+};
+
+static const UART_Config blePortConfigBreakDisable[] = {
+    {.opcode = UART_OPCODE_SET_BREAK,
+        {.enableBreak = LPCLIB_NO, }},
+
+    UART_CONFIG_END
+};
+
 
 PT_THREAD(SYS_thread (SYS_Handle handle))
 {
@@ -1502,6 +1536,18 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     while (1) {
         /* Wait for an event */
         PT_WAIT_UNTIL(&handle->pt, _SYS_checkEvent(handle));
+
+        /* Change TX break for BLE port? */
+        if (handle->blePortSetBreak) {
+            handle->blePortSetBreak = false;
+
+            if (handle->blePortBreakTime != 0) {
+                UART_ioctl(blePort, blePortConfigBreakEnable);
+            }
+            else {
+                UART_ioctl(blePort, blePortConfigBreakDisable);
+            }
+        }
 
         /* Message via Bluetooth? */
         if (strlen(handle->commandLine) > 0) {

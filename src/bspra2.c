@@ -102,7 +102,7 @@ void BSP_init (void)
     GPIO_writeBit(GPIO_LNA_GAIN, 0);
     GPIO_writeBit(GPIO_ADF7021_CE, 0);
     GPIO_writeBit(GPIO_ADF7021_SLE, 0);
-    GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 0);
+    GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 1);
 
 #if LPCLIB_DMA
     DMA_open(DMA0, &gpdma);

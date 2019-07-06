@@ -39,10 +39,10 @@
 
 /** Interface numbers for configuration 1. */
 #define USBCONFIG_NUM_INTERFACES                        4
-#define USBCONFIG_INTERFACE_SERIAL_CIF                  0
-#define USBCONFIG_INTERFACE_SERIAL_DIF                  1
-#define USBCONFIG_INTERFACE_AUDIO_CONTROL               2
-#define USBCONFIG_INTERFACE_AUDIO_STREAM                3
+#define USBCONFIG_INTERFACE_AUDIO_CONTROL               0
+#define USBCONFIG_INTERFACE_AUDIO_STREAM                1
+#define USBCONFIG_INTERFACE_SERIAL_CIF                  2
+#define USBCONFIG_INTERFACE_SERIAL_DIF                  3
 
 /** Endpoints */
 #define USBCONFIG_SERIAL_CIF_EP_INT                     0x81

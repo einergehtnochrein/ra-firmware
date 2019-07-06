@@ -38,7 +38,6 @@
  *  to achieve an automatic numbering of all string descriptors.
  *
  *  The first entry must be assigned the index 1.
- *  The last entry must be USB_NUMBER_OF_STRING_DESCRIPTORS.
  */
 enum {
     USBSTR_IDVENDOR = 1,
@@ -69,8 +68,8 @@ static const DECLARE_USBD_STRINGS (
     L"Serial CIF",
     L"Serial DIF",
 
-    L"Audio Control",
-    L"Audio Input Terminal",
+    L"Ra Radiosonde Receiver",
+    L"Ra FM Receiver Audio",
     L"Audio Feature",
     L"Audio Output Terminal",
 
@@ -111,23 +110,7 @@ ALIGNED(4) const USB_DEVICE_DESCRIPTOR appDeviceDescriptor = {
 ALIGNED(4) const __PACKED(struct {
     USB_CONFIGURATION_DESCRIPTOR                    config;
 
-    USB_INTERFACE_ASSOCIATION_DESCRIPTOR            serialIAD;
-    __PACKED(struct {
-        USB_INTERFACE_DESCRIPTOR                    interface;
-        __PACKED(struct _serialControlInterfaceSpec {
-            CDC_HEADER_DESCRIPTOR                       functionalHeader;
-            CDC_ABSTRACT_CONTROL_MANAGEMENT_DESCRIPTOR  acm;
-            CDC_UNION_DESCRIPTOR                        unionInterface;
-            CDC_CALL_MANAGEMENT_DESCRIPTOR              callManagement;
-            USB_ENDPOINT_DESCRIPTOR                     endpoint_int;
-        }) specification;
-    }) serialCIF;
-    __PACKED(struct {
-        USB_INTERFACE_DESCRIPTOR                    interface;
-        USB_ENDPOINT_DESCRIPTOR                         endpoint_out;
-        USB_ENDPOINT_DESCRIPTOR                         endpoint_in;
-    }) serialDIF;
-
+    USB_INTERFACE_ASSOCIATION_DESCRIPTOR            audioIAD;
     __PACKED(struct {
         USB_INTERFACE_DESCRIPTOR                    interface;
         __PACKED(struct _audioControlInterfaceSpec {
@@ -150,6 +133,23 @@ ALIGNED(4) const __PACKED(struct {
         USBAUDIO_IsoDataEndpointDescriptor          dataEndpoint;
     }) audioStream_alt1;
 
+    USB_INTERFACE_ASSOCIATION_DESCRIPTOR            serialIAD;
+    __PACKED(struct {
+        USB_INTERFACE_DESCRIPTOR                    interface;
+        __PACKED(struct _serialControlInterfaceSpec {
+            CDC_HEADER_DESCRIPTOR                       functionalHeader;
+            CDC_ABSTRACT_CONTROL_MANAGEMENT_DESCRIPTOR  acm;
+            CDC_UNION_DESCRIPTOR                        unionInterface;
+            CDC_CALL_MANAGEMENT_DESCRIPTOR              callManagement;
+            USB_ENDPOINT_DESCRIPTOR                     endpoint_int;
+        }) specification;
+    }) serialCIF;
+    __PACKED(struct {
+        USB_INTERFACE_DESCRIPTOR                    interface;
+        USB_ENDPOINT_DESCRIPTOR                         endpoint_out;
+        USB_ENDPOINT_DESCRIPTOR                         endpoint_in;
+    }) serialDIF;
+
     uint8_t                                         terminator;
 
 }) appConfiguration1 = {
@@ -163,6 +163,163 @@ ALIGNED(4) const __PACKED(struct {
         .iConfiguration         = 0,
         .bmAttributes           = 0x80,     /* bus-powered */
         .bMaxPower              = 250/2,
+    },
+
+    .audioIAD = {
+        .bLength                = USB_INTERFACE_ASSOCIATION_DESC_SIZE,
+        .bDescriptorType        = USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE,
+        .bFirstInterface        = USBCONFIG_INTERFACE_AUDIO_CONTROL,
+        .bInterfaceCount        = 2,
+        .bFunctionClass         = USBC_AUDIO,
+        .bFunctionSubClass      = USBC_AUDIO,
+        .bFunctionProtocol      = 0,
+        .iFunction              = 0,
+    },
+
+    .audioControl = {
+        .interface = {
+            .bLength                = USB_INTERFACE_DESC_SIZE,
+            .bDescriptorType        = USB_INTERFACE_DESCRIPTOR_TYPE,
+            .bInterfaceNumber       = USBCONFIG_INTERFACE_AUDIO_CONTROL,
+            .bAlternateSetting      = 0,
+            .bNumEndpoints          = 0,
+            .bInterfaceClass        = USBC_AUDIO,
+            .bInterfaceSubClass     = USBC_AUDIO,
+            .bInterfaceProtocol     = 0,
+            .iInterface             = USBSTR_AUDIO_CONTROL,
+        },
+
+        .specification = {
+            /* Class-Specific Audio Control Interface */
+            .interfaceHeader = {
+                .bLength                = sizeof(USBAPP_AudioControlInterfaceHeaderDescriptor),
+                .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
+                .bDescriptorSubtype     = USBD_AUDIO_ST_HEADER,
+                .bcdADC                 = 0x0100,   /* 1.0 */
+                .wTotalLength           = sizeof(struct _audioControlInterfaceSpec),
+                .bInCollection          = 1,
+                .baInterfaceNr          = {
+                    USBCONFIG_INTERFACE_AUDIO_STREAM,
+                },
+            },
+
+            /* Input Terminal */
+            .inputTerminal = {
+                .bLength                = sizeof(USBAUDIO_InputTerminalDescriptor),
+                .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
+                .bDescriptorSubtype     = USBD_AUDIO_ST_INPUT_TERMINAL,
+                .bTerminalID            = USBCONFIG_UNIT_TERMINAL_IN,
+                .wTerminalType          = USBAUDIO_TERMINAL_EXTERNAL_ANALOG_CONNECTOR,
+                .bAssocTerminal         = 0,        /* no association */
+                .bNrChannels            = 2,
+                .wChannelConfig         = 0x0003,
+                .iChannelNames          = 0,
+                .iTerminal              = USBSTR_AUDIO_INPUT_TERMINAL,
+            },
+
+            /* Feature Unit (UDA) */
+            .featureUnit = {
+                .bLength                = sizeof(USBAPP_AudioFeatureUnitDescriptor),
+                .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
+                .bDescriptorSubtype     = USBD_AUDIO_ST_FEATURE_UNIT,
+                .bUnitID                = USBCONFIG_UNIT_FEATURE,
+                .bSourceID              = USBCONFIG_UNIT_TERMINAL_IN,
+                .bControlSize           = 1,        /* n = 1 Byte/channel */
+                .bmaControls            = {
+                    0x03,               /* bmaControls(0)       Master: Mute+Volume */
+                    0x00,               /* bmaControls(1)       CH1                 */
+                    0x00,               /* bmaControls(2)       CH2                 */
+                },
+                .iFeature               = USBSTR_AUDIO_FEATURE,
+            },
+
+            /* Output Terminal I/Q */
+            .outputTerminal = {
+                .bLength                = sizeof(USBAUDIO_OutputTerminalDescriptor),
+                .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
+                .bDescriptorSubtype     = USBD_AUDIO_ST_OUTPUT_TERMINAL,
+                .bTerminalID            = USBCONFIG_UNIT_TERMINAL_OUT,
+                .wTerminalType          = USBAUDIO_TERMINAL_USB_STREAMING,
+                .bAssocTerminal         = 0,        /* no association */
+                .bSourceID              = USBCONFIG_UNIT_FEATURE,
+                .iTerminal              = USBSTR_AUDIO_OUTPUT_TERMINAL,
+            },
+        },
+    },
+
+    .audioStream_alt0 = {
+        .interface = {
+            .bLength                = USB_INTERFACE_DESC_SIZE,
+            .bDescriptorType        = USB_INTERFACE_DESCRIPTOR_TYPE,
+            .bInterfaceNumber       = USBCONFIG_INTERFACE_AUDIO_STREAM,
+            .bAlternateSetting      = 0,
+            .bNumEndpoints          = 0,
+            .bInterfaceClass        = USBC_AUDIO,
+            .bInterfaceSubClass     = USBCS_AUDIO_AUDIOSTREAMING,
+            .bInterfaceProtocol     = 0,
+            .iInterface             = USBSTR_AUDIO_STREAM,
+        },
+    },
+
+    .audioStream_alt1 = {
+        .interface = {
+            .bLength                = USB_INTERFACE_DESC_SIZE,
+            .bDescriptorType        = USB_INTERFACE_DESCRIPTOR_TYPE,
+            .bInterfaceNumber       = USBCONFIG_INTERFACE_AUDIO_STREAM,
+            .bAlternateSetting      = 1,
+            .bNumEndpoints          = 1,
+            .bInterfaceClass        = USBC_AUDIO,
+            .bInterfaceSubClass     = USBCS_AUDIO_AUDIOSTREAMING,
+            .bInterfaceProtocol     = 0,
+            .iInterface             = USBSTR_AUDIO_STREAM,
+        },
+
+        /* Audio Stream Audio Class */
+        .streamingInterface = {
+            .bLength                = sizeof(USBAUDIO_StreamingInterfaceDescriptor),
+            .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
+            .bDescriptorSubtype     = 1,        /* AS_GENERAL */
+            .bTerminalLink          = USBCONFIG_UNIT_TERMINAL_OUT,
+            .bDelay                 = 1,
+            .wFormatTag             = USBAUDIO_FORMATTAG_PCM,
+        },
+
+        /* Format Type Audio */
+        .formatType = {
+            .bLength                = sizeof(USBAPP_FormatDescriptor1),
+            .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
+            .bDescriptorSubtype     = 2,        /* FORMAT_TYPE */
+            .bFormatType            = USBAUDIO_FORMAT_TYPE_I,
+            .bNrChannels            = 2,
+            .bSubFrameSize          = 2,
+            .bBitResolution         = 16,
+            .bSamFreqType           = 1,        /* 1 frequency follows */
+            .tSamFreq               = {
+                { LE24(16000UL), },
+            },
+        },
+
+        /* Audio streaming IN endpoint */
+        .endpoint = {
+            .bLength                = sizeof(USB_EndpointDescriptorIso),
+            .bDescriptorType        = USB_ENDPOINT_DESCRIPTOR_TYPE,
+            .bEndpointAddress       = USBCONFIG_AUDIO_IN_EP,
+            .bmAttributes           = 0x05,     /* isochronous, async, data */
+            .wMaxPacketSize         = USBCONFIG_AUDIO_IN_EP_SIZE,
+            .bInterval              = 1,
+            .bRefresh               = 0,
+            .bSyncAddress           = 0,
+        },
+
+        /* Class specific audio endpoint */
+        .dataEndpoint = {
+            .bLength                = sizeof(USBAUDIO_IsoDataEndpointDescriptor),
+            .bDescriptorType        = USBD_AUDIO_CS_ENDPOINT,
+            .bDescriptorSubtype     = 1,        /* EP_GENERAL */
+            .bmAttributes           = 1,        /* Sample rate control */
+            .bLockDelayUnits        = 0,
+            .wLockDelay             = 0,
+        },
     },
 
     .serialIAD = {
@@ -262,152 +419,6 @@ ALIGNED(4) const __PACKED(struct {
             .bmAttributes           = USB_ENDPOINT_TYPE_BULK,
             .wMaxPacketSize         = USBCONFIG_SERIAL_DIF_EP_IN_SIZE,
             .bInterval              = 0,
-        },
-    },
-
-    .audioControl = {
-        .interface = {
-            .bLength                = USB_INTERFACE_DESC_SIZE,
-            .bDescriptorType        = USB_INTERFACE_DESCRIPTOR_TYPE,
-            .bInterfaceNumber       = USBCONFIG_INTERFACE_AUDIO_CONTROL,
-            .bAlternateSetting      = 0,
-            .bNumEndpoints          = 0,
-            .bInterfaceClass        = USBC_AUDIO,
-            .bInterfaceSubClass     = USBCS_AUDIO_AUDIOCONTROL,
-            .bInterfaceProtocol     = 0,
-            .iInterface             = USBSTR_AUDIO_CONTROL,
-        },
-
-        .specification = {
-            /* Class-Specific Audio Control Interface */
-            .interfaceHeader = {
-                .bLength                = sizeof(USBAPP_AudioControlInterfaceHeaderDescriptor),
-                .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
-                .bDescriptorSubtype     = USBD_AUDIO_ST_HEADER,
-                .bcdADC                 = 0x0100,   /* 1.0 */
-                .wTotalLength           = sizeof(struct _audioControlInterfaceSpec),
-                .bInCollection          = 1,
-                .baInterfaceNr          = {
-                    USBCONFIG_INTERFACE_AUDIO_STREAM,
-                },
-            },
-
-            /* Input Terminal */
-            .inputTerminal = {
-                .bLength                = sizeof(USBAUDIO_InputTerminalDescriptor),
-                .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
-                .bDescriptorSubtype     = USBD_AUDIO_ST_INPUT_TERMINAL,
-                .bTerminalID            = USBCONFIG_UNIT_TERMINAL_IN,
-                .wTerminalType          = USBAUDIO_TERMINAL_EXTERNAL_ANALOG_CONNECTOR,
-                .bAssocTerminal         = 0,        /* no association */
-                .bNrChannels            = 2,
-                .wChannelConfig         = 0x0003,
-                .iChannelNames          = 0,
-                .iTerminal              = USBSTR_AUDIO_INPUT_TERMINAL,
-            },
-
-            /* Feature Unit (UDA) */
-            .featureUnit = {
-                .bLength                = sizeof(USBAPP_AudioFeatureUnitDescriptor),
-                .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
-                .bDescriptorSubtype     = USBD_AUDIO_ST_FEATURE_UNIT,
-                .bUnitID                = USBCONFIG_UNIT_FEATURE,
-                .bSourceID              = USBCONFIG_UNIT_TERMINAL_IN,
-                .bControlSize           = 1,        /* n = 1 Byte/channel */
-                .bmaControls            = {
-                    0x03,               /* bmaControls(0)       Master: Mute+Volume */
-                    0x00,               /* bmaControls(1)       CH1                 */
-                    0x00,               /* bmaControls(1)       CH2                 */
-                },
-                .iFeature               = USBSTR_AUDIO_FEATURE,
-            },
-
-            /* Output Terminal I/Q */
-            .outputTerminal = {
-                .bLength                = sizeof(USBAUDIO_OutputTerminalDescriptor),
-                .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
-                .bDescriptorSubtype     = USBD_AUDIO_ST_OUTPUT_TERMINAL,
-                .bTerminalID            = USBCONFIG_UNIT_TERMINAL_OUT,
-                .wTerminalType          = USBAUDIO_TERMINAL_USB_STREAMING,
-                .bAssocTerminal         = 0,        /* no association */
-                .bSourceID              = USBCONFIG_UNIT_FEATURE,
-                .iTerminal              = USBSTR_AUDIO_OUTPUT_TERMINAL,
-            },
-        },
-    },
-
-    .audioStream_alt0 = {
-        .interface = {
-            .bLength                = USB_INTERFACE_DESC_SIZE,
-            .bDescriptorType        = USB_INTERFACE_DESCRIPTOR_TYPE,
-            .bInterfaceNumber       = USBCONFIG_INTERFACE_AUDIO_STREAM,
-            .bAlternateSetting      = 0,
-            .bNumEndpoints          = 0,
-            .bInterfaceClass        = USBC_AUDIO,
-            .bInterfaceSubClass     = USBCS_AUDIO_AUDIOSTREAMING,
-            .bInterfaceProtocol     = 0,
-            .iInterface             = USBSTR_AUDIO_STREAM,
-        },
-    },
-
-    .audioStream_alt1 = {
-        .interface = {
-            .bLength                = USB_INTERFACE_DESC_SIZE,
-            .bDescriptorType        = USB_INTERFACE_DESCRIPTOR_TYPE,
-            .bInterfaceNumber       = USBCONFIG_INTERFACE_AUDIO_STREAM,
-            .bAlternateSetting      = 1,
-            .bNumEndpoints          = 1,
-            .bInterfaceClass        = USBC_AUDIO,
-            .bInterfaceSubClass     = USBCS_AUDIO_AUDIOSTREAMING,
-            .bInterfaceProtocol     = 0,
-            .iInterface             = USBSTR_AUDIO_STREAM,
-        },
-
-        /* Audio Stream Audio Class */
-        .streamingInterface = {
-            .bLength                = sizeof(USBAUDIO_StreamingInterfaceDescriptor),
-            .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
-            .bDescriptorSubtype     = 1,        /* AS_GENERAL */
-            .bTerminalLink          = USBCONFIG_UNIT_TERMINAL_OUT,
-            .bDelay                 = 1,
-            .wFormatTag             = USBAUDIO_FORMATTAG_PCM,
-        },
-
-        /* Format Type Audio */
-        .formatType = {
-            .bLength                = sizeof(USBAPP_FormatDescriptor1),
-            .bDescriptorType        = USBD_AUDIO_CS_INTERFACE,
-            .bDescriptorSubtype     = 2,        /* FORMAT_TYPE */
-            .bFormatType            = USBAUDIO_FORMAT_TYPE_I,
-            .bNrChannels            = 2,
-            .bSubFrameSize          = 2,
-            .bBitResolution         = 16,
-            .bSamFreqType           = 1,        /* 1 frequency follows */
-            .tSamFreq               = {
-                { LE24(16000UL), },
-            },
-        },
-
-        /* Audio streaming IN endpoint */
-        .endpoint = {
-            .bLength                = sizeof(USB_EndpointDescriptorIso),
-            .bDescriptorType        = USB_ENDPOINT_DESCRIPTOR_TYPE,
-            .bEndpointAddress       = USBCONFIG_AUDIO_IN_EP,
-            .bmAttributes           = 0x05,     /* isochronous, async, data */
-            .wMaxPacketSize         = USBCONFIG_AUDIO_IN_EP_SIZE,
-            .bInterval              = 1,
-            .bRefresh               = 0,
-            .bSyncAddress           = 0,
-        },
-
-        /* Class specific audio endpoint */
-        .dataEndpoint = {
-            .bLength                = sizeof(USBAUDIO_IsoDataEndpointDescriptor),
-            .bDescriptorType        = USBD_AUDIO_CS_ENDPOINT,
-            .bDescriptorSubtype     = 1,        /* EP_GENERAL */
-            .bmAttributes           = 1,        /* Sample rate control */
-            .bLockDelayUnits        = 0,
-            .wLockDelay             = 0,
         },
     },
 

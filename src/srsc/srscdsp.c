@@ -17,6 +17,16 @@
 #define C34_NUM_FRAMES      40
 
 
+enum {
+    SRSC_DEBUGAUDIO_NORMAL = 0,
+
+    SRSC_DEBUGAUDIO_1,
+
+    __SRSC_DEBUGAUDIO_MAX__
+};
+
+
+
 #if (BOARD_RA == 1)
 /* Audio sample rate is 16169 Hz. Oscillator frequencies are:
  * OSC1: 2910 Hz (ideal: 2905 Hz)
@@ -128,6 +138,8 @@ static struct _SRSC_Audio {
         int frameWrIndex;
         uint8_t frames[C34_NUM_FRAMES][7];
     } c34;
+
+    int debugAudioChannel;
 
 } _srscAudioContext;
 
@@ -356,8 +368,25 @@ void SRSC_handleAudioCallback (int32_t *samples, int nSamples)
 
     SRSC_DSP_processAudio(samples, handle->fskOut, nSamples);
 #if (BOARD_RA == 2)
-    USBUSER_writeAudioStereo_i32_float(samples, handle->fskOut, nSamples);
+    switch (handle->debugAudioChannel) {
+        case SRSC_DEBUGAUDIO_1:
+            USBUSER_writeAudioStereo_i32_float(samples, handle->fskOut, nSamples);
+            break;
+        default:
+            USBUSER_writeAudioStereo_i32_i32(samples, samples, nSamples);
+            break;
+    }
 #endif
+}
+
+
+void SRSC_selectDebugAudio (int debugAudioChannel)
+{
+    struct _SRSC_Audio *handle = &_srscAudioContext;
+
+    if (debugAudioChannel < __SRSC_DEBUGAUDIO_MAX__) {
+        handle->debugAudioChannel = debugAudioChannel;
+    }
 }
 
 
