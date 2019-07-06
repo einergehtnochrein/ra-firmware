@@ -734,6 +734,14 @@ static void SYS_sleep (SYS_Handle handle)
 
     /* Disable BOD reset */
     LPC_SYSCONEXTRA->BODCTRL = (LPC_SYSCONEXTRA->BODCTRL & ~(1u << 2)) | (1u << 6);
+
+    //TODO
+    LPC_SYSCON->PDSLEEPCFG0 |= 0
+            | (1u << 4)         /* FRO off */
+            | (1u << 7)         /* BOD Reset off */
+            | (1u << 8)         /* BOD IRQ off */
+            | (1u << 17)        /* ROM off */
+            ;
 #endif
 
     /* Enter Power Down mode, and wait for wake-up. */
