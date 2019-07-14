@@ -483,6 +483,19 @@ static void _SYS_reportControls (SYS_Handle handle)
 }
 
 
+static void _SYS_reportEphemerisAge (SYS_Handle handle)
+{
+    (void)handle;
+
+    const char *ephemAge;
+    if (EPHEMERIS_findOldestEntry(&ephemAge) == LPCLIB_SUCCESS) {
+        char s[32];
+        snprintf(s, sizeof(s), "8,%s", ephemAge);
+        SYS_send2Host(HOST_CHANNEL_GUI, s);
+    }
+}
+
+
 
 static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
 {
@@ -1164,6 +1177,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     /* Send status */
                     _SYS_reportRadioFrequency(handle);
                     _SYS_reportControls(handle);
+                    _SYS_reportEphemerisAge(handle);
 
                     //TODO send only if ping parameter asks for it
                     RS41_resendLastPositions(handle->rs41);
@@ -1455,7 +1469,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             break;
 
         case 99:        /* Keep-alive message */
-            /* No action required. Packet reception itself has retriggered the keep-alive timer. */
+            /* Send status */
+            _SYS_reportRadioFrequency(handle);
+            _SYS_reportControls(handle);
             break;
         }
     }
