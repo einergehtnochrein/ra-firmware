@@ -114,10 +114,6 @@ struct SYS_Context {
     osTimerId rssiTick;
     osTimerId inactivityTimeout;
 
-#if SEMIHOSTING
-    FILE *fpLog;
-#endif
-
     RS41_Handle rs41;
     RS92_Handle rs92;
     BEACON_Handle beacon;
@@ -681,7 +677,7 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
         return LPCLIB_BUSY;
     }
 
-    sprintf(s, "#%d,", channel);
+    snprintf(s, sizeof(s), "#%d,", channel);
     for (i = 0; i < (int)strlen(s); i++) {
         checksum += s[i];
     }
@@ -693,7 +689,7 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
     UART_write(blePort, (uint8_t *)message, strlen(message));
 
     checksum += ',';
-    sprintf(s, ",%d\r", checksum % 100);
+    snprintf(s, sizeof(s), ",%d\r", checksum % 100);
     UART_write(blePort, s, strlen(s));
 
     return LPCLIB_SUCCESS;
@@ -1479,9 +1475,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             break;
 
         case 99:        /* Keep-alive message */
-            /* Send status */
-            _SYS_reportRadioFrequency(handle);
-            _SYS_reportControls(handle);
             break;
         }
     }
@@ -1548,10 +1541,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     MEISEI_open(&handle->meisei);
     PILOT_open(&handle->pilot);
     PDM_open(0, &handle->pdm);
-
-#if SEMIHOSTING
-    handle->fpLog = fopen("sys.csv", "w");
-#endif
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
     osTimerStart(handle->rssiTick, 20);
