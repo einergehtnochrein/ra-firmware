@@ -80,6 +80,7 @@ typedef enum UART_Opcode {
     UART_OPCODE_SET_TX_BLOCKING,            /**< TX blocking mode */
     UART_OPCODE_SET_HARDWARE_HANDSHAKE,     /**< Hardware handshake CTS (RTS) */
     UART_OPCODE_SET_BREAK,                  /**< TXD break condition */
+    UART_OPCODE_FLUSH_TX_BUFFER,            /**< Flush TX buffer */
 } UART_Opcode;
 
 

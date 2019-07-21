@@ -662,6 +662,14 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
             }
             break;
 
+        case UART_OPCODE_FLUSH_TX_BUFFER:
+            if (handle->pTxBuffer != NULL) {
+                for (temp = 0; temp < handle->txBufferSize; temp++) {
+                    handle->pTxBuffer[temp] = 0;
+                }
+            }
+            break;
+
         case UART_OPCODE_INVALID:
         default:
             /* ignore */
