@@ -1137,6 +1137,13 @@ LPCLIB_Result SYS_open (SYS_Handle *pHandle)
 
 
 
+static const UART_Config _uartFlushTx[] = {
+    {.opcode = UART_OPCODE_FLUSH_TX_BUFFER, },
+
+    UART_CONFIG_END
+};
+
+
 static void _SYS_handleBleCommand (SYS_Handle handle) {
     char *cl = handle->commandLine;
 
@@ -1149,6 +1156,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 /* If host sends a time stamp, respond by sending all current settings. */
                 long timestamp = 0;
                 if (sscanf(cl, "#%*d,%ld", &timestamp) == 1) {
+                    /* Flush UART */
+                    UART_ioctl(blePort, _uartFlushTx);
+
                     /* Send application and version */
                     char s[140];
                     int hardwareVersion = 0;
