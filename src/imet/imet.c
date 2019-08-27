@@ -47,7 +47,7 @@ static bool _IMET_doParityCheck (uint8_t *buffer, uint8_t length)
         CRC_write(crc, buffer, length - 2, NULL, NULL);
         receivedCRC = (buffer[length-2] << 8) | buffer[length-1];
         result = receivedCRC == CRC_read(crc);
-printf("c %04X %04lX\r\n", receivedCRC, CRC_read(crc));
+//printf("c %04X %04lX\r\n", receivedCRC, CRC_read(crc));
         CRC_close(&crc);
     }
 
