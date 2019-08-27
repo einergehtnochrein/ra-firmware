@@ -1466,6 +1466,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                             if (sscanf(cl, "#%*d,%*d,%d", &mode) == 1) {
                                 /* Send USB audio test mode to all decoders */
                                 BEACON_selectDebugAudio(mode);
+                                IMET_selectDebugAudio(mode);
                                 SRSC_selectDebugAudio(mode);
                             }
                             break;

@@ -9,12 +9,24 @@
 #include "sys.h"
 #include "imetprivate.h"
 #include "bsp.h"
+#if (BOARD_RA == 2)
+#include "usbuser_config.h"
+#endif
 
 
 #define UART_BUFFER_SIZE        64
 #define IMET_UART_BAUDRATE      1200
 #define IMET_NUM_FRAMES         10
 #define IMET_MAX_FRAME_LENGTH   50
+
+
+enum {
+    IMET_DEBUGAUDIO_NORMAL = 0,
+
+    IMET_DEBUGAUDIO_1,
+
+    __IMET_DEBUGAUDIO_MAX__
+};
 
 
 #if (BOARD_RA == 1)
@@ -152,6 +164,8 @@ static struct _IMET_Audio {
         uint32_t lastTime;          /* Last time a character was received */
         uint8_t frames[IMET_NUM_FRAMES][IMET_MAX_FRAME_LENGTH];
     } rsb;
+
+    int debugAudioChannel;
 
 } _imetAudioContext;
 
@@ -424,6 +438,26 @@ void IMET_handleAudioCallback (int32_t *samples, int nSamples)
     struct _IMET_Audio *handle = &_imetAudioContext;
 
     IMET_DSP_processAudio(samples, handle->fskOut, nSamples);
+#if (BOARD_RA == 2)
+    switch (handle->debugAudioChannel) {
+        case IMET_DEBUGAUDIO_1:
+            USBUSER_writeAudioStereo_i32_float(samples, handle->fskOut, nSamples);
+            break;
+        default:
+            USBUSER_writeAudioStereo_i32_i32(samples, samples, nSamples);
+            break;
+    }
+#endif
+}
+
+
+void IMET_selectDebugAudio (int debugAudioChannel)
+{
+    struct _IMET_Audio *handle = &_imetAudioContext;
+
+    if (debugAudioChannel < __IMET_DEBUGAUDIO_MAX__) {
+        handle->debugAudioChannel = debugAudioChannel;
+    }
 }
 
 
