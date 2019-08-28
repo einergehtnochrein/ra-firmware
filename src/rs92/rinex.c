@@ -24,7 +24,9 @@
  */
 
 
+#include <inttypes.h>
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "lpclib.h"
@@ -40,6 +42,7 @@ GPS_Ephemeris *ephemeris;
 
 /* TOC (calculated from RINEX data) */
 static uint32_t _ephemerisTOC[32];
+
 
 
 /* Initialize ephemeris from RINEX data */
@@ -155,3 +158,55 @@ uint32_t EPHEMERIS_getTOC (int prn)
     return _ephemerisTOC[prn - 1];
 }
 
+
+/* Determine the oldest valid satellite data.
+ * If no valid satellite data exists, the function returns LPCLIB_ERROR, and an empty string
+ * is returned in oldestSatTime.
+ */
+LPCLIB_Result EPHEMERIS_findOldestEntry (const char **oldestSatTime)
+{
+    if (oldestSatTime == NULL) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    const char *_noData = "";
+    *oldestSatTime = _noData;
+
+    uint32_t t_now;
+    uint32_t t_oldest = (uint32_t)(-1);
+
+    for (int prn = 1; prn <= 32; prn++) {
+        /* Ignore SV if flagged as not healthy in broadcast ephemerides */
+        if ((ephemeris->sats[prn].SV_health == 0) && (ephemeris->sats[prn].month > 0)) {
+            /* Get time of this satellite and convert to an integer for comparison */
+            t_now = (ephemeris->sats[prn].minute << 0);
+            t_now += (ephemeris->sats[prn].hour << 6);
+            t_now += (ephemeris->sats[prn].day << 11);
+            t_now += (ephemeris->sats[prn].month << 16);
+            t_now += (ephemeris->sats[prn].year << 20);
+
+            /* Remember oldest timestamp */
+            if (t_now < t_oldest) {
+                t_oldest = t_now;
+            }
+        }
+    }
+
+    /* No satellite data? */
+    if (t_oldest == (uint32_t)(-1)) {
+        return LPCLIB_ERROR;
+    }
+
+    static char str_oldestSat[30];
+    snprintf(str_oldestSat, sizeof(str_oldestSat),
+             "%04"PRIu32"-%02"PRIu32"-%02"PRIu32"T%02"PRIu32":%02"PRIu32":00+0000",
+             2000ul + ((t_oldest >> 20) & 0xFF),
+             ((t_oldest >> 16) & 0x0F),
+             ((t_oldest >> 11) & 0x1F),
+             ((t_oldest >> 6) & 0x1F),
+             ((t_oldest >> 0) & 0x3F)
+    );
+    *oldestSatTime = str_oldestSat;
+
+    return LPCLIB_SUCCESS;
+}

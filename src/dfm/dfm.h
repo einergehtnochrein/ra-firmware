@@ -35,7 +35,13 @@ typedef struct DFM_Context *DFM_Handle;
 
 
 LPCLIB_Result DFM_open (DFM_Handle *pHandle);
-LPCLIB_Result DFM_processBlock (DFM_Handle handle, SONDE_Type type, void *buffer, uint32_t length, float rxFrequencyHz);
+LPCLIB_Result DFM_processBlock (
+        DFM_Handle handle,
+        SONDE_Type type,
+        void *buffer,
+        uint32_t length,
+        float rxFrequencyHz,
+        uint32_t rxTime);
 LPCLIB_Result DFM_resendLastPositions (DFM_Handle handle);
 LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id, float *frequency);
 

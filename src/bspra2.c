@@ -73,6 +73,8 @@ ADF7021_Handle radio;
 DMA_Handle gpdma;
 #endif
 
+
+/* Ra2 vs Ra2fix dependencies */
 GPIO_Pin GPIO_ADF7021_CE;
 
 
@@ -94,6 +96,9 @@ void BSP_init (void)
     GPIO_setDirBit(GPIO_ENABLE_VDDA, ENABLE);
     GPIO_setDirBit(GPIO_LNA_GAIN, ENABLE);
     GPIO_setDirBit(GPIO_VBAT_ADC_ENABLE, ENABLE);
+    GPIO_setDirBit(GPIO_0_24, ENABLE);                  /* Unused pin P0.24, output low */
+    GPIO_setDirBit(GPIO_0_25, ENABLE);                  /* Unused pin P0.25, output low */
+    GPIO_setDirBit(GPIO_0_26, ENABLE);                  /* Unused pin P0.26, output low */
 
     GPIO_writeBit(GPIO_BLE_RESET, 0);
     GPIO_writeBit(GPIO_BLE_AUTORUN, 0);
@@ -103,6 +108,9 @@ void BSP_init (void)
     GPIO_writeBit(GPIO_ADF7021_CE, 0);
     GPIO_writeBit(GPIO_ADF7021_SLE, 0);
     GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 1);
+    GPIO_writeBit(GPIO_0_24, 0);                        /* Unused pin P0.24, output low */
+    GPIO_writeBit(GPIO_0_25, 0);                        /* Unused pin P0.25, output low */
+    GPIO_writeBit(GPIO_0_26, 0);                        /* Unused pin P0.26, output low */
 
 #if LPCLIB_DMA
     DMA_open(DMA0, &gpdma);
@@ -167,6 +175,14 @@ static void BSP_initPins (void)
                                                    PIN_INPUT_NOT_INVERTED,
                                                    PIN_I2CMODE_GPIO_4MA,
                                                    PIN_FILTER_ON));
+    IOCON_configurePin(PIN_P0_25, IOCON_makeConfigI(PIN_FUNCTION_0,             /* GPIO_0_25    Used as constant low output */
+                                                   PIN_INPUT_NOT_INVERTED,
+                                                   PIN_I2CMODE_GPIO_4MA,
+                                                   PIN_FILTER_ON));
+    IOCON_configurePin(PIN_P0_26, IOCON_makeConfigI(PIN_FUNCTION_0,             /* GPIO_0_26    Used as constant low output */
+                                                   PIN_INPUT_NOT_INVERTED,
+                                                   PIN_I2CMODE_GPIO_4MA,
+                                                   PIN_FILTER_ON));
     IOCON_configurePinDefault(PIN_P0_29, PIN_FUNCTION_1, PIN_PULL_REPEATER);    /* FC1_MOSI     MOSI_D */
     IOCON_configurePinDefault(PIN_P0_30, PIN_FUNCTION_1, PIN_PULL_REPEATER);    /* FC1_MISO     MISO_D */
     IOCON_configurePinDefault(PIN_P1_0,  PIN_FUNCTION_1, PIN_PULL_REPEATER);    /* PDM0_DATA    SYNC_PDM_DATA */
@@ -201,7 +217,12 @@ static void BSP_initPins (void)
     IOCON_configurePinDefault(PIN_P1_9,  PIN_FUNCTION_0, PIN_PULL_NONE);        /* GPIO_1_9     LNA_GAIN */
     IOCON_configurePinDefault(PIN_P1_11, PIN_FUNCTION_7, PIN_PULL_NONE);        /* USB0_VBUS    VBUS */
     IOCON_configurePinDefault(PIN_P1_12, PIN_FUNCTION_0, PIN_PULL_NONE);        /* GPIO_1_12    BLE_RESET */
-    IOCON_configurePinDefault(PIN_P1_15, PIN_FUNCTION_0, PIN_PULL_NONE);        /* high impedance */
+    if (GPIO_readBit(GPIO_0_19) == 0) {
+        IOCON_configurePinDefault(PIN_P1_15, PIN_FUNCTION_0, PIN_PULL_UP);      /* Ra2fix: pull-up */
+    }
+    else {
+        IOCON_configurePinDefault(PIN_P1_15, PIN_FUNCTION_0, PIN_PULL_NONE);    /* Ra2: high impedance */
+    }
     IOCON_configurePinDefault(PIN_P1_17, PIN_FUNCTION_4, PIN_PULL_REPEATER);    /* MCLK         SCLK_D_PDM_CLK */
 
     if (IOCON_checkErrors() != LPCLIB_SUCCESS) {

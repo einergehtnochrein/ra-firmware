@@ -16,8 +16,20 @@
 #include "gps.h"
 
 
-/* Length of a DFM frame (264 bits) in milliseconds and OS ticks */
-#define DFM_FRAME_LENGTH_MILLISEC           (211.2f)
+/* Length of a DFM frame (32+528 bits @ 2500 bit/s) in milliseconds */
+#define DFM_FRAME_LENGTH_MILLISEC           (224.0f)
+
+
+typedef enum {
+    DFM_MODEL_UNKNOWN = 0,
+    DFM_MODEL_DFM06_OLD,
+    DFM_MODEL_DFM06_NEW,
+    DFM_MODEL_DFM09_OLD,
+    DFM_MODEL_DFM09_NEW,
+    DFM_MODEL_DFM09_AFRICA,
+    DFM_MODEL_PS15,
+    DFM_MODEL_DFM17,
+} DFM_Model;
 
 
 enum {
@@ -26,6 +38,9 @@ enum {
     DFM09_CHANNEL_CONFIG_BATTERY_VOLTAGE = -5,
     DFM09_CHANNEL_CONFIG_CPU_TEMPERATURE = -4,
     DFM09_CHANNEL_CONFIG_NAME = 0,
+
+    DFM17_CHANNEL_CONFIG_BATTERY_VOLTAGE = -7,
+    DFM17_CHANNEL_CONFIG_CPU_TEMPERATURE = -6,
 } DFM_ConfigChannel;
 
 
@@ -85,9 +100,6 @@ typedef struct {
     bool sondeNameKnown;
     uint16_t frameCounter;
     uint32_t frequencyKhz;
-
-    bool isPS15;                                /* PS15 detected (DFM06 platform) */
-    bool isDFM06;                               /* DFM-06 detected (not PS15, not DFM-09 8051) */
 } DFM_CookedConfig;
 
 
@@ -126,6 +138,7 @@ typedef struct {
 typedef struct _DFM_InstanceData {
     struct _DFM_InstanceData *next;
     uint32_t id;
+    DFM_Model model;
     char name[20];
     float rxFrequencyMHz;
     SONDE_Type platform;
@@ -147,16 +160,6 @@ typedef struct _DFM_InstanceData {
         uint32_t prevSondeNumber;
         uint32_t sondeNumber;
     } confDetect;
-    struct {
-        struct {
-            int32_t i32;
-            int16_t i16;
-        } fragment[16];
-        uint32_t receivedFragmentsMask;
-        uint32_t lastCh0Time;
-        uint32_t lastTime;
-        uint8_t prevChannel;
-    } gpsDetect;
 
     DFM_CookedConfig config;
     DFM_CookedMetrology metro;
@@ -173,8 +176,9 @@ typedef struct _DFM_InstanceData {
  */
 LPCLIB_Result _DFM_processConfigBlock (
         const DFM_SubFrameConfig *rawConfig,
-        DFM_InstanceData **instancePointer,
-        float rxFrequencyHz);
+        DFM_InstanceData *instance,
+        float rxFrequencyHz,
+        uint32_t rxTime);
 
 
 /* Check if the calibration block contains valid data for a given purpose */
@@ -190,7 +194,10 @@ void _DFM_deleteInstance (DFM_InstanceData *instance);
  */
 LPCLIB_Result _DFM_processGpsBlock (
         const DFM_SubFrameGps *rawGps,
-        DFM_InstanceData *instance);
+        DFM_InstanceData **instancePointer,
+        float rxFrequencyHz,
+        uint32_t rxTime,
+        SONDE_Type sondeType);
 
 /* Process a frame with meteorological measurements. */
 LPCLIB_Result _DFM_processMetrologyBlock (

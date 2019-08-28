@@ -38,5 +38,6 @@ LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t leng
 void IMET_handleAudioCallback (int32_t *samples, int nSamples);
 LPCLIB_Result IMET_resendLastPositions (IMET_Handle handle);
 LPCLIB_Result IMET_pauseResume (IMET_Handle handle, bool pause);
+void IMET_selectDebugAudio (int debugAudioChannel);
 
 #endif

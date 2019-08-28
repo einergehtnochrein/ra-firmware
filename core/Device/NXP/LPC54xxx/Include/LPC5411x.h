@@ -845,7 +845,8 @@ typedef struct {
 
 typedef struct
 {
-    __I  uint32_t RESERVED000[(0x044-0x000)/4];
+    __IO uint32_t VDCTRL[5];
+    __I  uint32_t RESERVED014[(0x044-0x014)/4];
     __IO uint32_t BODCTRL;
 } LPC_SYSCONEXTRA_Type;
 

@@ -440,6 +440,18 @@ if((inputFrequency==targetCpuFrequency)||!syspllClkOk){
 #endif
 
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
+    /* NOTE:
+     * Increase VD1 from 0.9V to 1.0V when running faster than 12 MHz.
+     * A few devices are failing @ 48 MHz when running with the default 0.9V.
+     * There's a small increase in active power consumption.
+     */
+    if (targetCpuFrequency <= 12000000ul) {
+        LPC_SYSCONEXTRA->VDCTRL[0] = 5;
+    }
+    else {
+        LPC_SYSCONEXTRA->VDCTRL[0] = 7;
+    }
+
 if(targetCpuFrequency==48000000){
     // P=1 -> Fcco=96 MHz
     // N=2 -> Fref=6 MHz

@@ -89,6 +89,7 @@ typedef struct {
     volatile uint8_t valid;
     uint8_t opcode;
     uint16_t param;
+    uint32_t rxTime;
 
     uint8_t data8[IPC_S2M_DATA_SIZE];
 } IPC_S2M;
@@ -113,10 +114,6 @@ struct SYS_Context {
     osEvent rtosEvent;
     osTimerId rssiTick;
     osTimerId inactivityTimeout;
-
-#if SEMIHOSTING
-    FILE *fpLog;
-#endif
 
     RS41_Handle rs41;
     RS92_Handle rs92;
@@ -483,6 +480,19 @@ static void _SYS_reportControls (SYS_Handle handle)
 }
 
 
+static void _SYS_reportEphemerisAge (SYS_Handle handle)
+{
+    (void)handle;
+
+    const char *ephemAge;
+    if (EPHEMERIS_findOldestEntry(&ephemAge) == LPCLIB_SUCCESS) {
+        char s[32];
+        snprintf(s, sizeof(s), "8,%s", ephemAge);
+        SYS_send2Host(HOST_CHANNEL_GUI, s);
+    }
+}
+
+
 
 static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
 {
@@ -560,7 +570,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 #endif
 #if (BOARD_RA == 2)
             ADF7021_getDemodClock(radio, &demodClock);
-            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), SRSC_handleAudioCallback);
+            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), IMET_handleAudioCallback);
 #endif
             LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
             break;
@@ -668,7 +678,7 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
         return LPCLIB_BUSY;
     }
 
-    sprintf(s, "#%d,", channel);
+    snprintf(s, sizeof(s), "#%d,", channel);
     for (i = 0; i < (int)strlen(s); i++) {
         checksum += s[i];
     }
@@ -680,7 +690,7 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
     UART_write(blePort, (uint8_t *)message, strlen(message));
 
     checksum += ',';
-    sprintf(s, ",%d\r", checksum % 100);
+    snprintf(s, sizeof(s), ",%d\r", checksum % 100);
     UART_write(blePort, s, strlen(s));
 
     return LPCLIB_SUCCESS;
@@ -1124,6 +1134,13 @@ LPCLIB_Result SYS_open (SYS_Handle *pHandle)
 
 
 
+static const UART_Config _uartFlushTx[] = {
+    {.opcode = UART_OPCODE_FLUSH_TX_BUFFER, },
+
+    UART_CONFIG_END
+};
+
+
 static void _SYS_handleBleCommand (SYS_Handle handle) {
     char *cl = handle->commandLine;
 
@@ -1136,6 +1153,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 /* If host sends a time stamp, respond by sending all current settings. */
                 long timestamp = 0;
                 if (sscanf(cl, "#%*d,%ld", &timestamp) == 1) {
+                    /* Flush UART */
+                    UART_ioctl(blePort, _uartFlushTx);
+
                     /* Send application and version */
                     char s[140];
                     int hardwareVersion = 0;
@@ -1164,6 +1184,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                     /* Send status */
                     _SYS_reportRadioFrequency(handle);
                     _SYS_reportControls(handle);
+                    _SYS_reportEphemerisAge(handle);
 
                     //TODO send only if ping parameter asks for it
                     RS41_resendLastPositions(handle->rs41);
@@ -1446,6 +1467,7 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                             if (sscanf(cl, "#%*d,%*d,%d", &mode) == 1) {
                                 /* Send USB audio test mode to all decoders */
                                 BEACON_selectDebugAudio(mode);
+                                IMET_selectDebugAudio(mode);
                                 SRSC_selectDebugAudio(mode);
                             }
                             break;
@@ -1455,7 +1477,6 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
             break;
 
         case 99:        /* Keep-alive message */
-            /* No action required. Packet reception itself has retriggered the keep-alive timer. */
             break;
         }
     }
@@ -1522,10 +1543,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     MEISEI_open(&handle->meisei);
     PILOT_open(&handle->pilot);
     PDM_open(0, &handle->pdm);
-
-#if SEMIHOSTING
-    handle->fpLog = fopen("sys.csv", "w");
-#endif
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
     osTimerStart(handle->rssiTick, 20);
@@ -1662,7 +1679,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         _SYS_getSondeBufferLength(SONDE_DFM_NORMAL),
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    handle->currentFrequency,
+                                    ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1673,7 +1691,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         _SYS_getSondeBufferLength(SONDE_DFM_INVERTED),
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    handle->currentFrequency,
+                                    ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }

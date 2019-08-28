@@ -49,4 +49,7 @@ void EPHEMERIS_calculateSatellitePosition (
     float estimatedRange
     );
 
+/* Get timestamp of oldest satellite data */
+LPCLIB_Result EPHEMERIS_findOldestEntry (const char **oldestSatTime);
+
 #endif

@@ -97,8 +97,6 @@ void SystemInit (void)
 {
     BSP_systemInit();
 
-    /* Increase internal voltages so we can run up to 96 MHz */
-//    pRom->pPwrd->set_voltage(0, 96000000);
 #if (BOARD_RA == 1)
     CLKPWR_setCpuClock(48000000, CLKPWR_CLOCK_IRC);
 #endif
