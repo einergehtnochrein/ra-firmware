@@ -205,21 +205,27 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* DFM type indicator */
     special = 0;
-    if (instance->platform == SONDE_DFM_INVERTED) {
-        if (instance->gps.inBurkinaFaso) {
-            special += 4;
-        }
-        else {
-            special += 8;
-        }
-    }
-    else {
-        if (instance->config.isPS15) {
-            special += 32;
-        }
-        if (instance->config.isDFM06) {
-            special += 16;
-        }
+    switch (instance->model) {
+        case DFM_MODEL_DFM09_AFRICA:
+            special |= (1u << 2);
+            break;
+        case DFM_MODEL_DFM09_OLD:
+        case DFM_MODEL_DFM09_NEW:
+            special |= (1u << 3);
+            break;
+        case DFM_MODEL_DFM06_OLD:
+        case DFM_MODEL_DFM06_NEW:
+            special |= (1u << 4);
+            break;
+        case DFM_MODEL_PS15:
+            special |= (1u << 5);
+            break;
+        case DFM_MODEL_DFM17:
+            special |= (1u << 9);
+            break;
+        case DFM_MODEL_UNKNOWN:
+            /* Nothing to do */
+            break;
     }
     snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
 
@@ -286,10 +292,15 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
 
 
-LPCLIB_Result DFM_processBlock (DFM_Handle handle, SONDE_Type type, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result DFM_processBlock (
+        DFM_Handle handle,
+        SONDE_Type type,
+        void *buffer,
+        uint32_t length,
+        float rxFrequencyHz,
+        uint32_t rxTime)
 {
     LPCLIB_Result result = LPCLIB_ERROR;
-    bool parityOk;
 
     if (length >= 66) {  //TODO
         /* Convert to byte array */
@@ -297,99 +308,94 @@ LPCLIB_Result DFM_processBlock (DFM_Handle handle, SONDE_Type type, void *buffer
         _DFM_buffer2raw((uint8_t *)buffer + 2*7, (uint8_t *)&handle->packet.gps[0], 13);
         _DFM_buffer2raw((uint8_t *)buffer + 2*(7+13), (uint8_t *)&handle->packet.gps[1], 13);
 
+        DFM_InstanceData *instance = NULL;
+
+        if (_DFM_doParityCheck((uint8_t *)&handle->packet.gps[0].raw, 13)) {
+            _DFM_processGpsBlock(&handle->packet.gps[0].raw, &instance, rxFrequencyHz, rxTime, type);
+        }
+
+        if (_DFM_doParityCheck((uint8_t *)&handle->packet.gps[1].raw, 13)) {
+            _DFM_processGpsBlock(&handle->packet.gps[1].raw, &instance, rxFrequencyHz, rxTime, type);
+        }
+
         if (_DFM_doParityCheck((uint8_t *)&handle->packet.config.raw, 7)) {
-            _DFM_processConfigBlock(&handle->packet.config.raw, &handle->instance, rxFrequencyHz);
+            _DFM_processConfigBlock(&handle->packet.config.raw, instance, rxFrequencyHz, rxTime);
+        }
+
+        if (instance) {
+            handle->instance = instance;
         }
 
         if (handle->instance) {
             handle->instance->platform = type;
 
-            parityOk = true;
-            if (_DFM_doParityCheck((uint8_t *)&handle->packet.gps[0].raw, 13)) {
-                _DFM_processGpsBlock(&handle->packet.gps[0].raw, handle->instance);
-            }
-            else {
-                parityOk = false;
-            }
+            /* Log */
+            char log[60];
+            uint32_t confval = 0
+                    | (handle->packet.config.h[0] << 24)
+                    | (handle->packet.config.h[1] << 20)
+                    | (handle->packet.config.h[2] << 16)
+                    | (handle->packet.config.h[3] << 12)
+                    | (handle->packet.config.h[4] <<  8)
+                    | (handle->packet.config.h[5] <<  4)
+                    | (handle->packet.config.h[6] <<  0)
+                    ;
+            uint32_t gps0val1 = 0
+                    | (handle->packet.gps[0].d1[0] << 16)
+                    | (handle->packet.gps[0].d1[1] << 12)
+                    | (handle->packet.gps[0].d1[2] <<  8)
+                    | (handle->packet.gps[0].d1[3] <<  4)
+                    | (handle->packet.gps[0].d1[4] <<  0)
+                    ;
+            uint32_t gps0val2 = 0
+                    | (handle->packet.gps[0].d1[5]  << 28)
+                    | (handle->packet.gps[0].d1[6]  << 24)
+                    | (handle->packet.gps[0].d1[7]  << 20)
+                    | (handle->packet.gps[0].d1[8]  << 16)
+                    | (handle->packet.gps[0].d1[9]  << 12)
+                    | (handle->packet.gps[0].d1[10] <<  8)
+                    | (handle->packet.gps[0].d1[11] <<  4)
+                    | (handle->packet.gps[0].d1[12] <<  0)
+                    ;
+            uint32_t gps1val1 = 0
+                    | (handle->packet.gps[1].d1[0] << 16)
+                    | (handle->packet.gps[1].d1[1] << 12)
+                    | (handle->packet.gps[1].d1[2] <<  8)
+                    | (handle->packet.gps[1].d1[3] <<  4)
+                    | (handle->packet.gps[1].d1[4] <<  0)
+                    ;
+            uint32_t gps1val2 = 0
+                    | (handle->packet.gps[1].d1[5]  << 28)
+                    | (handle->packet.gps[1].d1[6]  << 24)
+                    | (handle->packet.gps[1].d1[7]  << 20)
+                    | (handle->packet.gps[1].d1[8]  << 16)
+                    | (handle->packet.gps[1].d1[9]  << 12)
+                    | (handle->packet.gps[1].d1[10] <<  8)
+                    | (handle->packet.gps[1].d1[11] <<  4)
+                    | (handle->packet.gps[1].d1[12] <<  0)
+                    ;
+            snprintf(log, sizeof(log), "%s,2,1,%07lX%05lX%08lX%05lX%08lX",
+                        handle->instance->name,
+                        confval,
+                        gps0val1,
+                        gps0val2,
+                        gps1val1,
+                        gps1val2);
+            SYS_send2Host(HOST_CHANNEL_INFO, log);
 
-            if (_DFM_doParityCheck((uint8_t *)&handle->packet.gps[1].raw, 13)) {
-                _DFM_processGpsBlock(&handle->packet.gps[1].raw, handle->instance);
-            }
-            else {
-                parityOk = false;
-            }
-
-            /* Log (only if whole frame is ok) */
-            if (parityOk) {
-                char log[60];
-                uint32_t confval = 0
-                        | (handle->packet.config.h[0] << 24)
-                        | (handle->packet.config.h[1] << 20)
-                        | (handle->packet.config.h[2] << 16)
-                        | (handle->packet.config.h[3] << 12)
-                        | (handle->packet.config.h[4] <<  8)
-                        | (handle->packet.config.h[5] <<  4)
-                        | (handle->packet.config.h[6] <<  0)
-                        ;
-                uint32_t gps0val1 = 0
-                        | (handle->packet.gps[0].d1[0] << 16)
-                        | (handle->packet.gps[0].d1[1] << 12)
-                        | (handle->packet.gps[0].d1[2] <<  8)
-                        | (handle->packet.gps[0].d1[3] <<  4)
-                        | (handle->packet.gps[0].d1[4] <<  0)
-                        ;
-                uint32_t gps0val2 = 0
-                        | (handle->packet.gps[0].d1[5]  << 28)
-                        | (handle->packet.gps[0].d1[6]  << 24)
-                        | (handle->packet.gps[0].d1[7]  << 20)
-                        | (handle->packet.gps[0].d1[8]  << 16)
-                        | (handle->packet.gps[0].d1[9]  << 12)
-                        | (handle->packet.gps[0].d1[10] <<  8)
-                        | (handle->packet.gps[0].d1[11] <<  4)
-                        | (handle->packet.gps[0].d1[12] <<  0)
-                        ;
-                uint32_t gps1val1 = 0
-                        | (handle->packet.gps[1].d1[0] << 16)
-                        | (handle->packet.gps[1].d1[1] << 12)
-                        | (handle->packet.gps[1].d1[2] <<  8)
-                        | (handle->packet.gps[1].d1[3] <<  4)
-                        | (handle->packet.gps[1].d1[4] <<  0)
-                        ;
-                uint32_t gps1val2 = 0
-                        | (handle->packet.gps[1].d1[5]  << 28)
-                        | (handle->packet.gps[1].d1[6]  << 24)
-                        | (handle->packet.gps[1].d1[7]  << 20)
-                        | (handle->packet.gps[1].d1[8]  << 16)
-                        | (handle->packet.gps[1].d1[9]  << 12)
-                        | (handle->packet.gps[1].d1[10] <<  8)
-                        | (handle->packet.gps[1].d1[11] <<  4)
-                        | (handle->packet.gps[1].d1[12] <<  0)
-                        ;
-                snprintf(log, sizeof(log), "%s,2,1,%07lX%05lX%08lX%05lX%08lX",
-                            handle->instance->name,
-                            confval,
-                            gps0val1,
-                            gps0val2,
-                            gps1val1,
-                            gps1val2);
-                SYS_send2Host(HOST_CHANNEL_INFO, log);
-            }
-
-            /* If there is a complete position update, send it out (once sonde name is known) */
+            /* If there is a complete position update, send it out */
             if (handle->instance->gps.newPosition) {
                 handle->instance->gps.newPosition = false;
-if(1){//                if (handle->instance->config.sondeNameKnown) {
-                    _DFM_sendKiss(handle->instance);
+                _DFM_sendKiss(handle->instance);
 
-                    LPCLIB_Event event;
-                    LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
-                    event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DETECTOR_DFM;
-                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
-                    SYS_handleEvent(event);
+                LPCLIB_Event event;
+                LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
+                event.opcode = APP_EVENT_HEARD_SONDE;
+                event.block = SONDE_DETECTOR_DFM;
+                event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                SYS_handleEvent(event);
 
-                    result = LPCLIB_SUCCESS;
-                }
+                result = LPCLIB_SUCCESS;
             }
         }
 

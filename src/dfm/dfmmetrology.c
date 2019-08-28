@@ -67,28 +67,52 @@ LPCLIB_Result _DFM_processMetrologyBlock (
                 ;
 //        uint8_t fragment = rawConfig->h[5];
 
-        if (instance->platform == SONDE_DFM_NORMAL) {
-            instance->metro.batteryVoltage = NAN;
-            instance->metro.cpuTemperature = NAN;
+        switch (instance->model) {
+            case DFM_MODEL_DFM06_OLD:
+            case DFM_MODEL_DFM06_NEW:
+            case DFM_MODEL_DFM09_OLD:
+                instance->metro.batteryVoltage = NAN;
+                instance->metro.cpuTemperature = NAN;
 
-            switch (channel - (int)instance->maxConfigChannel) {
-                case DFM06_CHANNEL_CONFIG_NAME:
-                    /* Ignored once detected */
-                    break;
-            }
-        }
-        if (instance->platform == SONDE_DFM_INVERTED) {
-            switch (channel - (int)instance->maxConfigChannel) {
-                case DFM09_CHANNEL_CONFIG_BATTERY_VOLTAGE:
-                    instance->metro.batteryVoltage = u16value / 1000.0f;
-                    break;
-                case DFM09_CHANNEL_CONFIG_CPU_TEMPERATURE:
-                    instance->metro.cpuTemperature = u16value / 100.0f - 273.16f;
-                    break;
-                case DFM09_CHANNEL_CONFIG_NAME:
-                    /* Ignored once detected */
-                    break;
-            }
+                switch (channel - (int)instance->maxConfigChannel) {
+                    case DFM06_CHANNEL_CONFIG_NAME:
+                        /* Ignored once detected */
+                        break;
+                }
+                break;
+
+            case DFM_MODEL_DFM09_NEW:
+            case DFM_MODEL_DFM09_AFRICA:
+                switch (channel - (int)instance->maxConfigChannel) {
+                    case DFM09_CHANNEL_CONFIG_BATTERY_VOLTAGE:
+                        instance->metro.batteryVoltage = u16value / 1000.0f;
+                        break;
+                    case DFM09_CHANNEL_CONFIG_CPU_TEMPERATURE:
+                        instance->metro.cpuTemperature = u16value / 100.0f - 273.16f;
+                        break;
+                    case DFM09_CHANNEL_CONFIG_NAME:
+                        /* Ignored once detected */
+                        break;
+                }
+                break;
+
+            case DFM_MODEL_PS15:
+                break;
+
+            case DFM_MODEL_DFM17:
+                switch (channel - (int)instance->maxConfigChannel) {
+                    case DFM17_CHANNEL_CONFIG_BATTERY_VOLTAGE:
+                        /* Reported battery voltage differs from real battery voltage by ~280mV */
+                        instance->metro.batteryVoltage = u16value / 1000.0f + 0.28f;
+                        break;
+                    case DFM17_CHANNEL_CONFIG_CPU_TEMPERATURE:
+                        instance->metro.cpuTemperature = u16value / 100.0f - 273.16f;
+                        break;
+                }
+                break;
+
+            case DFM_MODEL_UNKNOWN:
+                break;
         }
     }
 

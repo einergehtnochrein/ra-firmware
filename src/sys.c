@@ -89,6 +89,7 @@ typedef struct {
     volatile uint8_t valid;
     uint8_t opcode;
     uint16_t param;
+    uint32_t rxTime;
 
     uint8_t data8[IPC_S2M_DATA_SIZE];
 } IPC_S2M;
@@ -1678,7 +1679,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         _SYS_getSondeBufferLength(SONDE_DFM_NORMAL),
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    handle->currentFrequency,
+                                    ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1689,7 +1691,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         _SYS_getSondeBufferLength(SONDE_DFM_INVERTED),
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    handle->currentFrequency,
+                                    ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
