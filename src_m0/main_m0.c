@@ -125,7 +125,7 @@ static const SYNC_Config configModem = {
 
 
 static const SYNC_Config configModemPilot = {
-    .nPatterns = 1,
+    .nPatterns = 2,
     .conf = {
         {
             .id = 7,
@@ -136,6 +136,17 @@ static const SYNC_Config configModemPilot = {
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_UART_8N1,
             .inverted = true,
+            .postProcess = NULL,
+        },
+        {
+            .id = 7,
+            .nSyncLen = 30,
+            .pattern = {0x000000000AB2AD01LL, 0},
+            .nMaxDifference = 1,
+            .frameLengthBits = (50 - 4) * 8,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_UART_8N1,
+            .inverted = false,
             .postProcess = NULL,
         },
     },
