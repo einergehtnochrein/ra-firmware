@@ -263,7 +263,8 @@ static const ADF7021_Config radioModePilot[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+//        {.bandwidth = ADF7021_BANDWIDTH_13k5, }}, /* Old PCB variant <=9 */
+        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},   /* PCB variant 10 */
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -274,7 +275,8 @@ static const ADF7021_Config radioModePilot[] = {
         {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
-            .deviation = 2400,
+//            .deviation = 2400,    /* Old PCB variant <=9 */
+            .deviation = 4500,      /* PCB variant 10 */
             .postDemodBandwidth = 3600, }}},
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
