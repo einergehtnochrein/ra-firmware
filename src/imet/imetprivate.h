@@ -54,7 +54,7 @@ typedef __PACKED(struct {
     uint8_t frameType;
     float latitude;
     float longitude;
-    uint16_t altitude;
+    uint16_t altitudePlus5000;
     uint8_t numSats;
     uint8_t hour;
     uint8_t minute;
@@ -67,7 +67,7 @@ typedef __PACKED(struct {
     uint8_t frameType;
     float latitude;
     float longitude;
-    uint16_t altitude;
+    uint16_t altitudePlus5000;
     uint8_t numSats;
     float eastVelocity;
     float northVelocity;
