@@ -97,125 +97,128 @@ LPCLIB_Result GPIO_ioctl (const GPIO_Config *pConfig)
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
 
-    switch (pConfig->opcode) {
+    while (pConfig->opcode != GPIO_OPCODE_INVALID) {
+        switch (pConfig->opcode) {
 #if LPCLIB_GPIO_INTERRUPTS
-    case GPIO_OPCODE_CONFIGURE_PIN_INTERRUPT:
-        intNum = pConfig->pinInterrupt.interruptLine;
-        if (intNum >= __NUM_GPIO_PIN_INTERRUPT_LINES__) {
-            return LPCLIB_ILLEGAL_PARAMETER;
-        }
-
-        gpioContext.pinInterruptMode[intNum] = pConfig->pinInterrupt.mode;
-
-        mask = 1u << intNum;
-
-        LPC_PINT->CIENR = mask;                         /* Always mask interrupts during configuration */
-        LPC_PINT->CIENF = mask;
-
-        /* Connect selected GPIO to the indiviual interrupt line */
-        CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_INPUTMUX);
-        LPC_INPUTMUX->PINTSEL[intNum] =
-                (LPC_INPUTMUX->PINTSEL[intNum] & ~0x7F)
-            |   ((pConfig->pinInterrupt.pin / 32) << 5)
-            |   ((pConfig->pinInterrupt.pin % 32) << 0);
-        CLKPWR_disableClock(CLKPWR_CLOCKSWITCH_INPUTMUX);
-
-        LPC_PINT->RISE = mask;
-        LPC_PINT->FALL = mask;
-//            LPC_GPIO_PIN_INT->IST = mask;
-
-        if (pConfig->pinInterrupt.enable) {
-            switch (pConfig->pinInterrupt.mode) {
-            case GPIO_INT_FALLING_EDGE:
-                LPC_PINT->ISEL &= ~mask;                /* Edge sensitive */
-                LPC_PINT->SIENF = mask;                 /* Falling edge */
-                break;
-            case GPIO_INT_RISING_EDGE:
-                LPC_PINT->ISEL &= ~mask;                /* Edge sensitive */
-                LPC_PINT->SIENR = mask;                 /* Rising edge */
-                break;
-            case GPIO_INT_BOTH_EDGES:
-                LPC_PINT->ISEL &= ~mask;                /* Edge sensitive */
-                LPC_PINT->SIENR = mask;                 /* Rising edge */
-                LPC_PINT->SIENF = mask;                 /* Falling edge */
-                break;
-            case GPIO_INT_LOW_LEVEL:
-            case GPIO_INT_LOW_LEVEL_ONCE:
-                LPC_PINT->ISEL |= mask;                 /* Level sensitive */
-                LPC_PINT->CIENF = mask;                 /* Low level */
-                LPC_PINT->SIENR = mask;                 /* Enable(!) */
-                break;
-            case GPIO_INT_HIGH_LEVEL:
-            case GPIO_INT_HIGH_LEVEL_ONCE:
-                LPC_PINT->ISEL |= mask;                 /* Level sensitive */
-                LPC_PINT->SIENF = mask;                 /* High level */
-                LPC_PINT->SIENR = mask;                 /* Enable(!) */
-                break;
+        case GPIO_OPCODE_CONFIGURE_PIN_INTERRUPT:
+            intNum = pConfig->pinInterrupt.interruptLine;
+            if (intNum >= __NUM_GPIO_PIN_INTERRUPT_LINES__) {
+                return LPCLIB_ILLEGAL_PARAMETER;
             }
 
-            gpioContext.pinCallbacks[intNum] = pConfig->pinInterrupt.callback;
-        }
-        break;
+            gpioContext.pinInterruptMode[intNum] = pConfig->pinInterrupt.mode;
 
-    case GPIO_OPCODE_CONFIGURE_GROUP_INTERRUPT:
-        intNum = pConfig->groupInterrupt.interruptLine;
-        if (intNum < __NUM_GPIO_GROUP_INTERRUPT_LINES__) {
-            CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_GINT);
-            port = pConfig->groupInterrupt.pin / 32;            /* Port number */
-            mask = 1u << (pConfig->groupInterrupt.pin % 32);    /* Bit mask */
-            pGroupInt = pConfig->groupInterrupt.interruptLine == GPIO_GROUP_INT_0 ? LPC_GINT0 : LPC_GINT1;
+            mask = 1u << intNum;
 
-            pGroupInt->PORT_ENA[port] &= ~mask;             /* Always mask interrupts during configuration */
-            pGroupInt->CTRL |= GINTx_CTRL_TRIG_Msk;         /* Level-triggered */
+            LPC_PINT->CIENR = mask;                         /* Always mask interrupts during configuration */
+            LPC_PINT->CIENF = mask;
 
-            if (pConfig->groupInterrupt.enable) {
-                switch (pConfig->groupInterrupt.mode) {
+            /* Connect selected GPIO to the indiviual interrupt line */
+            CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_INPUTMUX);
+            LPC_INPUTMUX->PINTSEL[intNum] =
+                    (LPC_INPUTMUX->PINTSEL[intNum] & ~0x7F)
+                |   ((pConfig->pinInterrupt.pin / 32) << 5)
+                |   ((pConfig->pinInterrupt.pin % 32) << 0);
+            CLKPWR_disableClock(CLKPWR_CLOCKSWITCH_INPUTMUX);
+
+            LPC_PINT->RISE = mask;
+            LPC_PINT->FALL = mask;
+    //            LPC_GPIO_PIN_INT->IST = mask;
+
+            if (pConfig->pinInterrupt.enable) {
+                switch (pConfig->pinInterrupt.mode) {
                 case GPIO_INT_FALLING_EDGE:
-                    if (GPIO_readBit(pConfig->groupInterrupt.pin)) {
-                        pGroupInt->PORT_POL[port] &= ~mask;
-                    }
-                    else {
-                        pGroupInt->PORT_POL[port] |= mask;
-                    }
-                    result = LPCLIB_SUCCESS;
+                    LPC_PINT->ISEL &= ~mask;                /* Edge sensitive */
+                    LPC_PINT->SIENF = mask;                 /* Falling edge */
                     break;
                 case GPIO_INT_RISING_EDGE:
-                    if (GPIO_readBit(pConfig->groupInterrupt.pin)) {
-                        pGroupInt->PORT_POL[port] |= mask;
-                    }
-                    else {
-                        pGroupInt->PORT_POL[port] &= ~mask;
-                    }
-                    result = LPCLIB_SUCCESS;
+                    LPC_PINT->ISEL &= ~mask;                /* Edge sensitive */
+                    LPC_PINT->SIENR = mask;                 /* Rising edge */
+                    break;
+                case GPIO_INT_BOTH_EDGES:
+                    LPC_PINT->ISEL &= ~mask;                /* Edge sensitive */
+                    LPC_PINT->SIENR = mask;                 /* Rising edge */
+                    LPC_PINT->SIENF = mask;                 /* Falling edge */
                     break;
                 case GPIO_INT_LOW_LEVEL:
-                    pGroupInt->PORT_POL[port] &= ~mask;
-                    result = LPCLIB_SUCCESS;
+                case GPIO_INT_LOW_LEVEL_ONCE:
+                    LPC_PINT->ISEL |= mask;                 /* Level sensitive */
+                    LPC_PINT->CIENF = mask;                 /* Low level */
+                    LPC_PINT->SIENR = mask;                 /* Enable(!) */
                     break;
                 case GPIO_INT_HIGH_LEVEL:
-                    pGroupInt->PORT_POL[port] |= mask;
-                    result = LPCLIB_SUCCESS;
-                    break;
-                default:
+                case GPIO_INT_HIGH_LEVEL_ONCE:
+                    LPC_PINT->ISEL |= mask;                 /* Level sensitive */
+                    LPC_PINT->SIENF = mask;                 /* High level */
+                    LPC_PINT->SIENR = mask;                 /* Enable(!) */
                     break;
                 }
 
-                gpioContext.groupCallbacks[intNum] = pConfig->groupInterrupt.callback;
-
-                pGroupInt->PORT_ENA[port] |= mask;          /* Add the pin to the selected group. */
+                gpioContext.pinCallbacks[intNum] = pConfig->pinInterrupt.callback;
             }
+            break;
 
-            //TODO disable
+        case GPIO_OPCODE_CONFIGURE_GROUP_INTERRUPT:
+            intNum = pConfig->groupInterrupt.interruptLine;
+            if (intNum < __NUM_GPIO_GROUP_INTERRUPT_LINES__) {
+                CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_GINT);
+                port = pConfig->groupInterrupt.pin / 32;            /* Port number */
+                mask = 1u << (pConfig->groupInterrupt.pin % 32);    /* Bit mask */
+                pGroupInt = pConfig->groupInterrupt.interruptLine == GPIO_GROUP_INT_0 ? LPC_GINT0 : LPC_GINT1;
 
-            if ((pGroupInt->PORT_ENA[0] | pGroupInt->PORT_ENA[1]) == 0) {
-                CLKPWR_disableClock(CLKPWR_CLOCKSWITCH_GINT);
+                pGroupInt->PORT_ENA[port] &= ~mask;             /* Always mask interrupts during configuration */
+                pGroupInt->CTRL |= GINTx_CTRL_TRIG_Msk;         /* Level-triggered */
+
+                if (pConfig->groupInterrupt.enable) {
+                    switch (pConfig->groupInterrupt.mode) {
+                    case GPIO_INT_FALLING_EDGE:
+                        if (GPIO_readBit(pConfig->groupInterrupt.pin)) {
+                            pGroupInt->PORT_POL[port] &= ~mask;
+                        }
+                        else {
+                            pGroupInt->PORT_POL[port] |= mask;
+                        }
+                        result = LPCLIB_SUCCESS;
+                        break;
+                    case GPIO_INT_RISING_EDGE:
+                        if (GPIO_readBit(pConfig->groupInterrupt.pin)) {
+                            pGroupInt->PORT_POL[port] |= mask;
+                        }
+                        else {
+                            pGroupInt->PORT_POL[port] &= ~mask;
+                        }
+                        result = LPCLIB_SUCCESS;
+                        break;
+                    case GPIO_INT_LOW_LEVEL:
+                        pGroupInt->PORT_POL[port] &= ~mask;
+                        result = LPCLIB_SUCCESS;
+                        break;
+                    case GPIO_INT_HIGH_LEVEL:
+                        pGroupInt->PORT_POL[port] |= mask;
+                        result = LPCLIB_SUCCESS;
+                        break;
+                    default:
+                        break;
+                    }
+
+                    gpioContext.groupCallbacks[intNum] = pConfig->groupInterrupt.callback;
+
+                    pGroupInt->PORT_ENA[port] |= mask;          /* Add the pin to the selected group. */
+                }
+
+                //TODO disable
+
+                if ((pGroupInt->PORT_ENA[0] | pGroupInt->PORT_ENA[1]) == 0) {
+                    CLKPWR_disableClock(CLKPWR_CLOCKSWITCH_GINT);
+                }
             }
-        }
-        break;
+            break;
 #endif
+        case GPIO_OPCODE_INVALID:
+            break;
+        }
 
-    default:
-        break;
+        ++pConfig;
     }
 
     return result;
