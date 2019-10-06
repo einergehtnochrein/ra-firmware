@@ -104,7 +104,7 @@ LPCLIB_Result BL652_setMode (BL652_Handle handle, int mode)
             GPIO_writeBit(handle->gpioSIO02, 0);
             GPIO_writeBit(handle->gpioNAUTORUN, 1);
             GPIO_writeBit(handle->gpioNRESET, 0);
-            osDelay(100);
+            osDelay(5);
             GPIO_writeBit(handle->gpioNRESET, 1);
             break;
 
@@ -112,7 +112,7 @@ LPCLIB_Result BL652_setMode (BL652_Handle handle, int mode)
             GPIO_writeBit(handle->gpioSIO02, 1);
             GPIO_writeBit(handle->gpioNAUTORUN, 0);
             GPIO_writeBit(handle->gpioNRESET, 0);
-            osDelay(100);
+            osDelay(5);
             GPIO_writeBit(handle->gpioNRESET, 1);
             break;
 
@@ -120,7 +120,7 @@ LPCLIB_Result BL652_setMode (BL652_Handle handle, int mode)
             GPIO_writeBit(handle->gpioSIO02, 1);
             GPIO_writeBit(handle->gpioNAUTORUN, 1);
             GPIO_writeBit(handle->gpioNRESET, 0);
-            osDelay(100);
+            osDelay(5);
             GPIO_writeBit(handle->gpioNRESET, 1);
             break;
     }
