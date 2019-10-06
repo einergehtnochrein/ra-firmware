@@ -119,6 +119,15 @@ LPCLIB_DefineRegBit(UART_FIFOCFG_WAKETX,            14, 1);
 LPCLIB_DefineRegBit(UART_FIFOCFG_WAKERX,            15, 1);
 LPCLIB_DefineRegBit(UART_FIFOCFG_EMPTYTX,           16, 1);
 LPCLIB_DefineRegBit(UART_FIFOCFG_EMPTYRX,           17, 1);
+#define UART_FIFOCFG_READMASK (0        \
+    | UART_FIFOCFG_ENABLETX_Msk         \
+    | UART_FIFOCFG_ENABLERX_Msk         \
+    | UART_FIFOCFG_SIZE_Msk             \
+    | UART_FIFOCFG_DMATX_Msk            \
+    | UART_FIFOCFG_DMARX_Msk            \
+    | UART_FIFOCFG_WAKETX_Msk           \
+    | UART_FIFOCFG_WAKERX_Msk           \
+    )
 
 LPCLIB_DefineRegBit(UART_FIFOTRIG_TXLVLENA,         0,  1);
 LPCLIB_DefineRegBit(UART_FIFOTRIG_RXLVLENA,         1,  1);
@@ -663,11 +672,34 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
             break;
 
         case UART_OPCODE_FLUSH_TX_BUFFER:
-            if (handle->pTxBuffer != NULL) {
-                for (temp = 0; temp < handle->txBufferSize; temp++) {
-                    handle->pTxBuffer[temp] = 0;
-                }
-            }
+#if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5410X
+            /* Disable TX interrupt */
+            uart->INTENCLR = UART_INTENCLR_TXRDYCLR_Msk;
+            /* Wait until current TX character has left the UART */
+            uart->CTL |= UART_CTL_TXDIS_Msk;
+            while (!(uart->STAT & UART_STAT_TXDISSTAT_Msk))
+                ;
+            /* Empty the ring buffer */
+            handle->txWriteIndex = handle->txReadIndex = 0;
+            /* Reenable UART transmitter */
+            uart->CTL &= ~UART_CTL_TXDIS_Msk;
+            uart->INTENSET = UART_INTENSET_TXRDYEN_Msk;
+#endif
+#if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
+            /* Disable TX interrupt (FIFO) */
+            uart->FIFOINTENCLR = UART_FIFOINTENCLR_TXLVL_Msk;
+            /* Wait until current TX character has left the UART */
+            uart->CTL |= UART_CTL_TXDIS_Msk;
+            while (!(uart->STAT & UART_STAT_TXDISSTAT_Msk))
+                ;
+            /* Empty the FIFO */
+            uart->FIFOCFG = (uart->FIFOCFG & UART_FIFOCFG_READMASK) | UART_FIFOCFG_EMPTYTX_Msk;
+            /* Empty the ring buffer */
+            handle->txWriteIndex = handle->txReadIndex = 0;
+            /* Reenable UART transmitter */
+            uart->CTL &= ~UART_CTL_TXDIS_Msk;
+            uart->FIFOINTENSET = UART_FIFOINTENSET_TXLVL_Msk;
+#endif
             break;
 
         case UART_OPCODE_INVALID:
