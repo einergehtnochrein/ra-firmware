@@ -96,6 +96,7 @@ void BSP_init (void)
     GPIO_setDirBit(GPIO_ENABLE_VDDA, ENABLE);
     GPIO_setDirBit(GPIO_LNA_GAIN, ENABLE);
     GPIO_setDirBit(GPIO_VBAT_ADC_ENABLE, ENABLE);
+    GPIO_setDirBit(GPIO_0_23, ENABLE);                  /* Unused pin P0.23, output low */
     GPIO_setDirBit(GPIO_0_24, ENABLE);                  /* Unused pin P0.24, output low */
     GPIO_setDirBit(GPIO_0_25, ENABLE);                  /* Unused pin P0.25, output low */
     GPIO_setDirBit(GPIO_0_26, ENABLE);                  /* Unused pin P0.26, output low */
@@ -108,6 +109,7 @@ void BSP_init (void)
     GPIO_writeBit(GPIO_ADF7021_CE, 0);
     GPIO_writeBit(GPIO_ADF7021_SLE, 0);
     GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 1);
+    GPIO_writeBit(GPIO_0_23, 0);                        /* Unused pin P0.23, output low */
     GPIO_writeBit(GPIO_0_24, 0);                        /* Unused pin P0.24, output low */
     GPIO_writeBit(GPIO_0_25, 0);                        /* Unused pin P0.25, output low */
     GPIO_writeBit(GPIO_0_26, 0);                        /* Unused pin P0.26, output low */
@@ -166,8 +168,9 @@ static void BSP_initPins (void)
     IOCON_configurePinDefault(PIN_P0_13, PIN_FUNCTION_1, PIN_PULL_NONE);        /* FC3_TXD      BLE_TXD */
     IOCON_configurePinDefault(PIN_P0_14, PIN_FUNCTION_5, PIN_PULL_REPEATER);    /* FC1_SCK      SCLK_D_PDM_CLK */
     IOCON_configurePinDefault(PIN_P0_15, PIN_FUNCTION_1, PIN_PULL_NONE);        /* FC3_RTS      BLE_RTS */
+    IOCON_configurePinDefault(PIN_P0_19, PIN_FUNCTION_0, PIN_PULL_UP);          /* GPIO_0_19    Ra2 PCB version */
     IOCON_configurePinDefault(PIN_P0_22, PIN_FUNCTION_0, PIN_PULL_UP);          /* GPIO_0_22    FORCE_LOADER */
-    IOCON_configurePin(PIN_P0_23, IOCON_makeConfigI(PIN_FUNCTION_1,             /* FC1_SSEL1    Virtual slave select */
+    IOCON_configurePin(PIN_P0_23, IOCON_makeConfigI(PIN_FUNCTION_0,             /* GPIO_0_23    Used as constant low output */
                                                    PIN_INPUT_INVERTED,
                                                    PIN_I2CMODE_GPIO_4MA,
                                                    PIN_FILTER_ON));
@@ -187,7 +190,7 @@ static void BSP_initPins (void)
     IOCON_configurePinDefault(PIN_P0_30, PIN_FUNCTION_1, PIN_PULL_REPEATER);    /* FC1_MISO     MISO_D */
     IOCON_configurePinDefault(PIN_P1_0,  PIN_FUNCTION_1, PIN_PULL_REPEATER);    /* PDM0_DATA    SYNC_PDM_DATA */
 //    IOCON_configurePinDefault(PIN_P1_1,  PIN_FUNCTION_2, PIN_PULL_REPEATER);    /* SWO          SWO */
-    IOCON_configurePinDefault(PIN_P1_2,  PIN_FUNCTION_0, PIN_PULL_REPEATER);    /* GPIO_1_2     MUXOUT */
+    IOCON_configurePinDefault(PIN_P1_2,  PIN_FUNCTION_0, PIN_PULL_DOWN);        /* GPIO_1_2     MUXOUT */
     IOCON_configurePinDefault(PIN_P1_3,  PIN_FUNCTION_2, PIN_PULL_NONE);        /* FC7_SSEL2    SLE_C */
     if (GPIO_readBit(GPIO_0_19) == 0) {
         /* Ra2fix */
@@ -239,8 +242,20 @@ void BSP_prepareSleep (void)
     GPIO_writeBit(GPIO_ADF7021_CE, 0);      /* Radio chip off */
     GPIO_writeBit(GPIO_ADF7021_SLE, 0);
     GPIO_writeBit(GPIO_ENABLE_VDDA, 0);     /* VDDA off */
-    GPIO_writeBit(GPIO_BLE_AUTORUN, 0);     /* Irrelevant pin once BLE module runs. */
-    GPIO_writeBit(GPIO_BLE_MODESEL, 0);     /* Irrelevant pin once BLE module runs. */
+    GPIO_writeBit(GPIO_BLE_AUTORUN, 0);     /* Irrelevant pin once BLE module runs.
+                                             * Set low because BL652.SIO_13 has an internal pull-down.
+                                             * TODO: Move to BL652 driver
+                                             */
+    GPIO_writeBit(GPIO_BLE_MODESEL, 0);     /* Irrelevant pin once BLE module runs.
+                                             * Set low because BL652.SIO_02 has an internal pull-down.
+                                             * TODO: Move to BL652 driver
+                                             */
+
+    IOCON_configurePinDefault(PIN_P0_19, PIN_FUNCTION_0, PIN_PULL_DOWN);        /* PCB version sense: pull-down */
+    IOCON_configurePinDefault(PIN_P0_29, PIN_FUNCTION_0, PIN_PULL_DOWN);        /* MOSI_D: pull-down */
+    IOCON_configurePinDefault(PIN_P1_3,  PIN_FUNCTION_0, PIN_PULL_DOWN);        /* SLE_C: pull-down */
+    IOCON_configurePinDefault(PIN_P1_6,  PIN_FUNCTION_0, PIN_PULL_DOWN);        /* SCLK_C: pull-down */
+    IOCON_configurePinDefault(PIN_P1_7,  PIN_FUNCTION_0, PIN_PULL_DOWN);        /* MOSI_C: pull-down */
 }
 
 
