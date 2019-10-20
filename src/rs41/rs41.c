@@ -28,10 +28,6 @@ typedef struct RS41_Context {
 
     RS41_InstanceData *instance;
     RS41_RawGps rawGps;
-
-#if SEMIHOSTING_RS41
-    FILE *fpAnalog;
-#endif
 } RS41_Context;
 
 
@@ -125,10 +121,6 @@ static void _RS41_readSubFrameAux (char *p, int length, RS41_InstanceData *insta
 LPCLIB_Result RS41_open (RS41_Handle *pHandle)
 {
     *pHandle = &_rs41;
-
-#if SEMIHOSTING_RS41
-    _rs41.fpAnalog = fopen("rs41_analog.csv", "w");
-#endif
 
     return LPCLIB_SUCCESS;
 }
