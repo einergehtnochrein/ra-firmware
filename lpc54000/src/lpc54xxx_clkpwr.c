@@ -145,6 +145,16 @@ LPCLIB_DefineRegBit(SYSCON_FROCTRL_SEL,             14, 1);
 
 LPCLIB_DefineRegBit(SYSCON_SYSPLLSTAT_LOCK,         0,  1);
 
+LPCLIB_DefineRegBit(SYSCON_SYSPLLNDEC_NDEC,         0,  10);
+LPCLIB_DefineRegBit(SYSCON_SYSPLLNDEC_NREQ,         10, 1);
+
+LPCLIB_DefineRegBit(SYSCON_SYSPLLPDEC_PDEC,         0,  7);
+LPCLIB_DefineRegBit(SYSCON_SYSPLLPDEC_PREQ,         7,  1);
+
+LPCLIB_DefineRegBit(SYSCON_SYSPLLSSCTRL0_MDEC,      0,  17);
+LPCLIB_DefineRegBit(SYSCON_SYSPLLSSCTRL0_MREQ,      17, 1);
+LPCLIB_DefineRegBit(SYSCON_SYSPLLSSCTRL0_SEL_EXT,   18, 1);
+
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_1,         1,  1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_3,         3,  1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_FRO,       4,  1);
@@ -468,23 +478,69 @@ if((inputFrequency==targetCpuFrequency)||!syspllClkOk){
 if(targetCpuFrequency==48000000){
     // P=1 -> Fcco=96 MHz
     // N=2 -> Fref=6 MHz
-    // M=2*8
+    // Meff=2*8
     uint32_t x;
     int val;
+    uint32_t N = 2;
+    uint32_t Meff = 16;
+    uint32_t M = Meff / 2;
+    uint32_t P = 1;
 (void)inputFrequency; //TODO
-    x = 0x80;
-    for (val = 4; val <= 256; val++) {
-        x = (((x ^ (x >> 2) ^ (x >> 3) ^ (x >> 4)) & 1) << 7) | ((x >> 1) & 0x7F);
-    }
-x=0x202;
-    LPC_SYSCON->SYSPLLNDEC = x | (1u << 10);
 
-    x = 0x4000;
-    for (val = 8; val <= 32768; val++) {
-        x = (((x ^ (x >> 1)) & 1) << 14) | ((x >> 1) & 0x3FFF);
+    /* NDEC, see UM 1.8, 6.5.49.6.1 */
+    switch (N) {
+        case 1:
+            x = 0x302;
+            break;
+        case 2:
+            x = 0x202;
+            break;
+        default:
+            x = 0x80;
+            for (val = N; val <= 256; val++) {
+                x = (((x ^ (x >> 2) ^ (x >> 3) ^ (x >> 4)) & 1) << 7) | ((x >> 1) & 0x7F);
+            }
+            break;
     }
-    LPC_SYSCON->SYSPLLSSCTRL0 = x | (1u << 17) | (1u << 18);
-    LPC_SYSCON->SYSPLLPDEC = 0x00000062 | (1u << 7);
+    LPC_SYSCON->SYSPLLNDEC = x | (1u << SYSCON_SYSPLLNDEC_NREQ_Pos);
+
+    /* MDEC, see UM 1.8, 6.5.49.6.2 */
+    switch (M) {
+        case 1:
+            x = 0x18003;
+            break;
+        case 2:
+            x = 0x10003;
+            break;
+        default:
+            x = 0x4000;
+            for (val = M; val <= 32768; val++) {
+                x = (((x ^ (x >> 1)) & 1) << 14) | ((x >> 1) & 0x3FFF);
+            }
+            break;
+    }
+    LPC_SYSCON->SYSPLLSSCTRL0 = 0
+        | x
+        | (1u << SYSCON_SYSPLLSSCTRL0_MREQ_Pos)
+        | (1u << SYSCON_SYSPLLSSCTRL0_SEL_EXT_Pos)
+        ;
+
+    /* PDEC, see UM 1.8, 6.5.49.6.3 */
+    switch (P) {
+        case 1:
+            x = 0x62;
+            break;
+        case 2:
+            x = 0x42;
+            break;
+        default:
+            x = 0x10;
+            for (val = P; val <= 32; val++) {
+                x = (((x ^ (x >> 2)) & 1) << 4) | ((x >> 1) & 0xF);
+            }
+            break;
+    }
+    LPC_SYSCON->SYSPLLPDEC = x | (1u << SYSCON_SYSPLLPDEC_PREQ_Pos);
 
     uint32_t selp, seli, selr;
     selp = 30;
@@ -509,12 +565,14 @@ seli = 12;
 
     LPC_SYSCON->MAINCLKSELB =                           /* Switch main clock to PLL */
         (MAINCLKSELB_SEL_PLLOUT << SYSCON_MAINCLKSELB_SEL_Pos);
+
+    uint32_t ahbDivider = 1 + ((LPC_SYSCON->AHBCLKDIV & SYSCON_AHBCLKDIV_DIV_Msk) >> SYSCON_AHBCLKDIV_DIV_Pos);
+    SystemCoreClock = CLKPWR_getBusClock(CLKPWR_CLOCK_MAIN) / ahbDivider;
 }
 #endif
 
     return LPCLIB_SUCCESS;
 }
-
 
 
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
@@ -525,6 +583,9 @@ void _CLKPWR_enterDeepSleep (uint32_t userPeripheralEnable)
 {
     uint32_t oldRUNCFG;
     uint32_t oldAHBClocks0 = LPC_SYSCON->AHBCLKCTRL0;
+
+    /* Allow going deep */
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
 
     oldRUNCFG = LPC_SYSCON->PDRUNCFG0;
     uint32_t newSLEEPCFG = oldRUNCFG;
@@ -592,6 +653,8 @@ void _CLKPWR_enterDeepSleep (uint32_t userPeripheralEnable)
     if (!(oldAHBClocks0 & SYSCON_AHBCLKCTRL0_FLASH_Msk)) {
         LPC_SYSCON->AHBCLKCTRLCLR0 = SYSCON_AHBCLKCTRL0_FLASH_Msk;
     }
+
+    SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
 }
 #endif
 
@@ -632,16 +695,11 @@ void CLKPWR_enterPowerSaving (CLKPWR_PowerSavingMode mode)
             primask = __get_PRIMASK();
             __disable_irq();
 
-            /* Allow going deep */
-            SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-
             _CLKPWR_enterDeepSleep(0
                 | SYSCON_PDRUNCFG_PDEN_SRAM1_Msk
                 | SYSCON_PDRUNCFG_PDEN_SRAM2_Msk
                 | SYSCON_PDRUNCFG_PDEN_SRAMX_Msk
                 );
-
-            SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
 
             __set_PRIMASK(primask);
             break;
