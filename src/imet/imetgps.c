@@ -23,7 +23,10 @@ LPCLIB_Result _IMET_processGpsFrame (
 
     cookedGps->observerLLA.lat = M_PI * (rawGps->latitude / 180.0f);
     cookedGps->observerLLA.lon = M_PI * (rawGps->longitude / 180.0f);
-    cookedGps->observerLLA.alt = rawGps->altitude;
+    /* Altitude is transmitted with a +5000 m offset.
+     * See Wendell, Jordan: "iMet-1-RSB Radiosonde Protocol, Version 1.11, August 12, 2009"
+     */
+    cookedGps->observerLLA.alt = rawGps->altitudePlus5000 - 5000;
     cookedGps->observerLLA.climbRate = NAN;
     cookedGps->observerLLA.velocity = NAN;
     cookedGps->observerLLA.direction = NAN;
@@ -50,7 +53,10 @@ LPCLIB_Result _IMET_processGpsxFrame (
 
     cookedGps->observerLLA.lat = M_PI * (rawGps->latitude / 180.0f);
     cookedGps->observerLLA.lon = M_PI * (rawGps->longitude / 180.0f);
-    cookedGps->observerLLA.alt = rawGps->altitude;
+    /* Altitude is transmitted with a +5000 m offset.
+     * See Wendell, Jordan: "iMet-1-RSB Radiosonde Protocol, Version 1.11, August 12, 2009"
+     */
+    cookedGps->observerLLA.alt = rawGps->altitudePlus5000 - 5000;
     cookedGps->observerLLA.climbRate = rawGps->verticalVelocity;
     float ve = rawGps->eastVelocity;
     float vn = rawGps->northVelocity;

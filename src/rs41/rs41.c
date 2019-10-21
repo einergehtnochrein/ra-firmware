@@ -28,10 +28,6 @@ typedef struct RS41_Context {
 
     RS41_InstanceData *instance;
     RS41_RawGps rawGps;
-
-#if SEMIHOSTING_RS41
-    FILE *fpAnalog;
-#endif
 } RS41_Context;
 
 
@@ -112,11 +108,30 @@ static bool _RS41_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC)
 
 
 
-static void _RS41_readSubFrameAux (char *p, int length, RS41_InstanceData *instance)
+static void _RS41_readSubFrameXdata (char *p, int length, RS41_InstanceData *instance)
 {
-(void)p;
-    if (length == 21) {
-        instance->metro.hasO3 = true;
+    /* Minimum required data in XDATA subframe:
+     * 1 byte unknown
+     * Instrument ID (type of instrument), 2 ASCII digits
+     * Instrument number (position in chain), 2 ASCII digits
+     */
+    if (length >= 5) {
+        /* For the most part we leave decoding XDATA packets to the app.
+         * However, we want to know if an ozone unit is present,
+         * so we check for specific instrument ID's.
+         */
+        int instrumentID;
+        int instrumentNumber;
+        if (sscanf(p, "%*c%02d%02d", &instrumentID, &instrumentNumber) == 2) {
+            switch (instrumentID) {
+                case 5:
+                    /* Sanity check for packet length */
+                    if (length == 21) {
+                        instance->metro.hasO3 = true;
+                    }
+                    break;
+            }
+        }
     }
 }
 
@@ -125,10 +140,6 @@ static void _RS41_readSubFrameAux (char *p, int length, RS41_InstanceData *insta
 LPCLIB_Result RS41_open (RS41_Handle *pHandle)
 {
     *pHandle = &_rs41;
-
-#if SEMIHOSTING_RS41
-    _rs41.fpAnalog = fopen("rs41_analog.csv", "w");
-#endif
 
     return LPCLIB_SUCCESS;
 }
@@ -501,8 +512,8 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                     snprintf(handle->instance->nameVariant, sizeof(handle->instance->nameVariant), "%s", "RS41-SGM");
                     handle->instance->logMode = RS41_LOGMODE_RAW;
                     break;
-                case RS41_SUBFRAME_AUX:
-                    _RS41_readSubFrameAux((char *)(p + 2), subFrameLength - 4, handle->instance);
+                case RS41_SUBFRAME_XDATA:
+                    _RS41_readSubFrameXdata((char *)(p + 2), subFrameLength - 4, handle->instance);
                     break;
                 default:
                     /* Ignore unknown (or unhandled) frame types */

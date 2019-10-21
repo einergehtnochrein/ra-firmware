@@ -263,7 +263,8 @@ static const ADF7021_Config radioModePilot[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+//        {.bandwidth = ADF7021_BANDWIDTH_13k5, }}, /* Old PCB variant <=9 */
+        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},   /* PCB variant 10 */
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -274,7 +275,8 @@ static const ADF7021_Config radioModePilot[] = {
         {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
-            .deviation = 2400,
+//            .deviation = 2400,    /* Old PCB variant <=9 */
+            .deviation = 4500,      /* PCB variant 10 */
             .postDemodBandwidth = 3600, }}},
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
@@ -371,6 +373,12 @@ static const ADF7021_Config radioModeBeacon[] = {
     ADF7021_CONFIG_END
 };
 
+
+static const UART_Config _uartFlushTx[] = {
+    {.opcode = UART_OPCODE_FLUSH_TX_BUFFER, },
+
+    UART_CONFIG_END
+};
 
 
 
@@ -714,7 +722,18 @@ static void SYS_sleep (SYS_Handle handle)
     uint32_t OldSystemCoreClock;
 
 
+    /* Reset M0 (keep it there) */
+    extern uint32_t M0IMAGE_start;
+    LPC_SYSCON->CPUCTRL = (LPC_SYSCON->CPUCTRL | 0xC0C40000) | (1 << 3) | (1 << 5);
+
     SCANNER_setMode(scanner, 1);
+
+    /* Stop BLE UART transmission.
+     * NOTE: If we didn't stop the UART cleanly, it could be stopped by deep sleep in the middle
+     * of a character. A zero bit would then be interpreted as break by the BL652, and in this case
+     * the BL652 might stop advertising, a situation from which we would not be able to recover.
+     */
+    UART_ioctl(blePort, _uartFlushTx);
 
     handle->sleeping = true;
 
@@ -780,6 +799,11 @@ static void SYS_sleep (SYS_Handle handle)
     SONDE_Detector detector = handle->sondeDetector;
     handle->sondeDetector = _SONDE_DETECTOR_UNDEFINED_;
     SYS_enableDetector(handle, handle->currentFrequency, detector);
+
+    /* Start M0 */
+    LPC_SYSCON->CPSTACK = ((volatile uint32_t *)&M0IMAGE_start)[0];
+    LPC_SYSCON->CPBOOT = ((volatile uint32_t *)&M0IMAGE_start)[1];
+    LPC_SYSCON->CPUCTRL = ((LPC_SYSCON->CPUCTRL | 0xC0C40000) | (1 << 3)) & ~(1 << 5);
 }
 
 
@@ -1134,16 +1158,16 @@ LPCLIB_Result SYS_open (SYS_Handle *pHandle)
 
 
 
-static const UART_Config _uartFlushTx[] = {
-    {.opcode = UART_OPCODE_FLUSH_TX_BUFFER, },
-
-    UART_CONFIG_END
-};
-
-
 static void _SYS_handleBleCommand (SYS_Handle handle) {
     char *cl = handle->commandLine;
 
+//TODO: Waking up from deep sleep causes the first character to be destorted.
+//Future version of the app will send dummy lines to overcome this. For the time being
+//we just accept the first distorted character anyway.
+//TODO Remove in the future.
+if (cl[0] != 0) {
+    cl[0] = '#';
+}
     /* Valid command line starts with command number, a comma, and a non-zero length payload */
     int channel;
     if (sscanf(cl, "#%d", &channel) == 1) {
@@ -1155,6 +1179,9 @@ static void _SYS_handleBleCommand (SYS_Handle handle) {
                 if (sscanf(cl, "#%*d,%ld", &timestamp) == 1) {
                     /* Flush UART */
                     UART_ioctl(blePort, _uartFlushTx);
+
+                    /* Send some dummy lines */
+                    UART_write(blePort, "\r\r\r", 3);
 
                     /* Send application and version */
                     char s[140];

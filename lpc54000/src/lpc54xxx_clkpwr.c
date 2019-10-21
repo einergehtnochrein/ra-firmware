@@ -125,7 +125,40 @@ LPCLIB_DefineRegBit(SYSCON_AHBCLKDIV_DIV,           0,  8);
 #endif
 
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
+LPCLIB_DefineRegBit(SYSCON_PRESETCTRL0_FLASH_RST,   7,  1);
+
+LPCLIB_DefineRegBit(SYSCON_AHBCLKCTRL0_ROM,         1,  1);
+LPCLIB_DefineRegBit(SYSCON_AHBCLKCTRL0_SRAM1,       3,  1);
+LPCLIB_DefineRegBit(SYSCON_AHBCLKCTRL0_SRAM2,       4,  1);
+LPCLIB_DefineRegBit(SYSCON_AHBCLKCTRL0_FLASH,       7,  1);
+
+LPCLIB_DefineRegBit(SYSCON_AHBCLKDIV_DIV,           0,  8);
+
+LPCLIB_DefineRegBit(SYSCON_FLASHCFG_FETCHCFG,       0,  2);
+LPCLIB_DefineRegBit(SYSCON_FLASHCFG_DATACFG,        2,  2);
+LPCLIB_DefineRegBit(SYSCON_FLASHCFG_ACCEL,          4,  1);
+LPCLIB_DefineRegBit(SYSCON_FLASHCFG_PREFEN,         5,  1);
+LPCLIB_DefineRegBit(SYSCON_FLASHCFG_PREFOVR,        6,  1);
+LPCLIB_DefineRegBit(SYSCON_FLASHCFG_FLASHTIM,       12, 4);
+
+LPCLIB_DefineRegBit(SYSCON_FROCTRL_SEL,             14, 1);
+
+LPCLIB_DefineRegBit(SYSCON_SYSPLLSTAT_LOCK,         0,  1);
+
+LPCLIB_DefineRegBit(SYSCON_SYSPLLNDEC_NDEC,         0,  10);
+LPCLIB_DefineRegBit(SYSCON_SYSPLLNDEC_NREQ,         10, 1);
+
+LPCLIB_DefineRegBit(SYSCON_SYSPLLPDEC_PDEC,         0,  7);
+LPCLIB_DefineRegBit(SYSCON_SYSPLLPDEC_PREQ,         7,  1);
+
+LPCLIB_DefineRegBit(SYSCON_SYSPLLSSCTRL0_MDEC,      0,  17);
+LPCLIB_DefineRegBit(SYSCON_SYSPLLSSCTRL0_MREQ,      17, 1);
+LPCLIB_DefineRegBit(SYSCON_SYSPLLSSCTRL0_SEL_EXT,   18, 1);
+
+LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_1,         1,  1);
+LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_3,         3,  1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_FRO,       4,  1);
+LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_FLASH,     5,  1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_TS,        6,  1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_BOD_RST,   7,  1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_BOD_INTR,  8,  1);
@@ -135,24 +168,14 @@ LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_SRAM1,     14, 1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_SRAM2,     15, 1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_SRAMX,     16, 1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_ROM,       17, 1);
+LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_18,        18, 1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_VDDA,      19, 1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_WDT_OSC,   20, 1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_USB_PHY,   21, 1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_SYS_PLL,   22, 1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_VREFP,     23, 1);
-
-LPCLIB_DefineRegBit(SYSCON_AHBCLKDIV_DIV,           0,  8);
-
-LPCLIB_DefineRegBit(SYSCON_FROCTRL_SEL,             14, 1);
-
-LPCLIB_DefineRegBit(SYSCON_FLASHCFG_FETCHCFG,       0,  2);
-LPCLIB_DefineRegBit(SYSCON_FLASHCFG_DATACFG,        2,  2);
-LPCLIB_DefineRegBit(SYSCON_FLASHCFG_ACCEL,          4,  1);
-LPCLIB_DefineRegBit(SYSCON_FLASHCFG_PREFEN,         5,  1);
-LPCLIB_DefineRegBit(SYSCON_FLASHCFG_PREFOVR,        6,  1);
-LPCLIB_DefineRegBit(SYSCON_FLASHCFG_FLASHTIM,       12, 4);
-
-LPCLIB_DefineRegBit(SYSCON_SYSPLLSTAT_LOCK,         0,  1);
+LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_32K_OSC,   24, 1);
+LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_26,        26, 1);
 #endif
 
 
@@ -455,23 +478,69 @@ if((inputFrequency==targetCpuFrequency)||!syspllClkOk){
 if(targetCpuFrequency==48000000){
     // P=1 -> Fcco=96 MHz
     // N=2 -> Fref=6 MHz
-    // M=2*8
+    // Meff=2*8
     uint32_t x;
     int val;
+    uint32_t N = 2;
+    uint32_t Meff = 16;
+    uint32_t M = Meff / 2;
+    uint32_t P = 1;
 (void)inputFrequency; //TODO
-    x = 0x80;
-    for (val = 4; val <= 256; val++) {
-        x = (((x ^ (x >> 2) ^ (x >> 3) ^ (x >> 4)) & 1) << 7) | ((x >> 1) & 0x7F);
-    }
-x=0x202;
-    LPC_SYSCON->SYSPLLNDEC = x | (1u << 10);
 
-    x = 0x4000;
-    for (val = 8; val <= 32768; val++) {
-        x = (((x ^ (x >> 1)) & 1) << 14) | ((x >> 1) & 0x3FFF);
+    /* NDEC, see UM 1.8, 6.5.49.6.1 */
+    switch (N) {
+        case 1:
+            x = 0x302;
+            break;
+        case 2:
+            x = 0x202;
+            break;
+        default:
+            x = 0x80;
+            for (val = N; val <= 256; val++) {
+                x = (((x ^ (x >> 2) ^ (x >> 3) ^ (x >> 4)) & 1) << 7) | ((x >> 1) & 0x7F);
+            }
+            break;
     }
-    LPC_SYSCON->SYSPLLSSCTRL0 = x | (1u << 17) | (1u << 18);
-    LPC_SYSCON->SYSPLLPDEC = 0x00000062 | (1u << 7);
+    LPC_SYSCON->SYSPLLNDEC = x | (1u << SYSCON_SYSPLLNDEC_NREQ_Pos);
+
+    /* MDEC, see UM 1.8, 6.5.49.6.2 */
+    switch (M) {
+        case 1:
+            x = 0x18003;
+            break;
+        case 2:
+            x = 0x10003;
+            break;
+        default:
+            x = 0x4000;
+            for (val = M; val <= 32768; val++) {
+                x = (((x ^ (x >> 1)) & 1) << 14) | ((x >> 1) & 0x3FFF);
+            }
+            break;
+    }
+    LPC_SYSCON->SYSPLLSSCTRL0 = 0
+        | x
+        | (1u << SYSCON_SYSPLLSSCTRL0_MREQ_Pos)
+        | (1u << SYSCON_SYSPLLSSCTRL0_SEL_EXT_Pos)
+        ;
+
+    /* PDEC, see UM 1.8, 6.5.49.6.3 */
+    switch (P) {
+        case 1:
+            x = 0x62;
+            break;
+        case 2:
+            x = 0x42;
+            break;
+        default:
+            x = 0x10;
+            for (val = P; val <= 32; val++) {
+                x = (((x ^ (x >> 2)) & 1) << 4) | ((x >> 1) & 0xF);
+            }
+            break;
+    }
+    LPC_SYSCON->SYSPLLPDEC = x | (1u << SYSCON_SYSPLLPDEC_PREQ_Pos);
 
     uint32_t selp, seli, selr;
     selp = 30;
@@ -496,6 +565,9 @@ seli = 12;
 
     LPC_SYSCON->MAINCLKSELB =                           /* Switch main clock to PLL */
         (MAINCLKSELB_SEL_PLLOUT << SYSCON_MAINCLKSELB_SEL_Pos);
+
+    uint32_t ahbDivider = 1 + ((LPC_SYSCON->AHBCLKDIV & SYSCON_AHBCLKDIV_DIV_Msk) >> SYSCON_AHBCLKDIV_DIV_Pos);
+    SystemCoreClock = CLKPWR_getBusClock(CLKPWR_CLOCK_MAIN) / ahbDivider;
 }
 #endif
 
@@ -503,9 +575,95 @@ seli = 12;
 }
 
 
+#if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
+/* Enter deep sleep mode. This function runs in SRAM0. */
+void _CLKPWR_enterDeepSleep (uint32_t userPeripheralEnable);
+__SECTION("LPCLIB_RAMCODE")
+void _CLKPWR_enterDeepSleep (uint32_t userPeripheralEnable)
+{
+    uint32_t oldRUNCFG;
+    uint32_t oldAHBClocks0 = LPC_SYSCON->AHBCLKCTRL0;
+
+    /* Allow going deep */
+    SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+
+    oldRUNCFG = LPC_SYSCON->PDRUNCFG0;
+    uint32_t newSLEEPCFG = oldRUNCFG;
+
+    /* Enable unknown power switch 3 */
+    newSLEEPCFG &= ~SYSCON_PDRUNCFG_PDEN_3_Msk;
+    /* Try to disable all but some selected blocks.
+     * User can override the disable requests.
+     */
+    newSLEEPCFG |= ~(0
+        | SYSCON_PDRUNCFG_PDEN_1_Msk        /* DEEP_PD (unknown) */
+        | SYSCON_PDRUNCFG_PDEN_3_Msk        /* ? */
+        | SYSCON_PDRUNCFG_PDEN_SRAM0_Msk    /* SRAM0 */
+        | SYSCON_PDRUNCFG_PDEN_26_Msk       /* VD3 (unknown) */
+        );
+    /* The following peripherals can be enabled by user request:
+     * 4    FRO
+     * 7    Brownout reset
+     * 8    Brownout interrupt
+     * 14   SRAM1
+     * 15   SRAM2
+     * 16   SRAMX
+     * 20   Watchdog oscillator
+     * 21   USB PHY
+     * 24   RTC oscillator
+     */
+    newSLEEPCFG &= ~(userPeripheralEnable & (0
+        | SYSCON_PDRUNCFG_PDEN_FRO_Msk
+        | SYSCON_PDRUNCFG_PDEN_BOD_RST_Msk
+        | SYSCON_PDRUNCFG_PDEN_BOD_INTR_Msk
+        | SYSCON_PDRUNCFG_PDEN_SRAM1_Msk
+        | SYSCON_PDRUNCFG_PDEN_SRAM2_Msk
+        | SYSCON_PDRUNCFG_PDEN_SRAMX_Msk
+        | SYSCON_PDRUNCFG_PDEN_WDT_OSC_Msk
+        | SYSCON_PDRUNCFG_PDEN_USB_PHY_Msk
+        | SYSCON_PDRUNCFG_PDEN_32K_OSC_Msk
+        ));
+
+    /* Apply */
+    LPC_SYSCON->PDSLEEPCFG0 = newSLEEPCFG;
+
+    /* Cut power to flash and keep it in reset */
+    LPC_SYSCON->AHBCLKCTRLSET0 = SYSCON_AHBCLKCTRL0_FLASH_Msk;
+    LPC_SYSCON->PDRUNCFGSET0 = SYSCON_PDRUNCFG_PDEN_FLASH_Msk | SYSCON_PDRUNCFG_PDEN_18_Msk;
+    LPC_SYSCON->PRESETCTRLSET0 = SYSCON_PRESETCTRL0_FLASH_RST_Msk;
+
+    __WFI();
+
+    /* If flash was enabled before, reenable it now. */
+    if (!(oldRUNCFG & SYSCON_PDRUNCFG_PDEN_FLASH_Msk)) {
+        LPC_SYSCON->PDRUNCFGCLR0 = SYSCON_PDRUNCFG_PDEN_FLASH_Msk | SYSCON_PDRUNCFG_PDEN_18_Msk;
+
+        /* Some delay */
+        for (volatile int i = 0; i < 1000; i++)
+            ;
+    }
+
+    LPC_SYSCON->PRESETCTRLCLR0 = SYSCON_PRESETCTRL0_FLASH_RST_Msk;
+    LPC_SYSCON->PDRUNCFG0 = oldRUNCFG & ~SYSCON_PDRUNCFG_PDEN_3_Msk;
+
+    /* Dummy read of flash sector 1 */
+    volatile uint32_t dummy = ((volatile uint32_t *)0x1000)[0];
+    (void)dummy;
+
+    if (!(oldAHBClocks0 & SYSCON_AHBCLKCTRL0_FLASH_Msk)) {
+        LPC_SYSCON->AHBCLKCTRLCLR0 = SYSCON_AHBCLKCTRL0_FLASH_Msk;
+    }
+
+    SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+}
+#endif
+
+
+
 /* Enter a power-saving mode. */
 void CLKPWR_enterPowerSaving (CLKPWR_PowerSavingMode mode)
 {
+#if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5410X
     /* SLEEPDEEP bit required for anything but SLEEP mode */
     if (mode & (1u << 16)) {
         SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
@@ -519,6 +677,48 @@ void CLKPWR_enterPowerSaving (CLKPWR_PowerSavingMode mode)
 
     /* Make sure any subsequent WFI will simply enter SLEEP */
     SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+#endif
+#if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
+    uint32_t primask;
+
+    switch (mode) {
+        case CLKPWR_POWERSAVING_SLEEP:
+            /* Don't go deep */
+            SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+
+            /* Enter sleep. Wait for any interrupt to wake-up. */
+            __WFI();
+            break;
+
+        case CLKPWR_POWERSAVING_DEEPSLEEP:
+            /* No more interrupts from now on */
+            primask = __get_PRIMASK();
+            __disable_irq();
+
+            _CLKPWR_enterDeepSleep(0
+                | SYSCON_PDRUNCFG_PDEN_SRAM1_Msk
+                | SYSCON_PDRUNCFG_PDEN_SRAM2_Msk
+                | SYSCON_PDRUNCFG_PDEN_SRAMX_Msk
+                );
+
+            __set_PRIMASK(primask);
+            break;
+
+        case CLKPWR_POWERSAVING_DEEPPOWERDOWN:
+            /* No more interrupts from now on */
+            __disable_irq();
+
+            /* Allow going deep */
+            SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+
+            /* Make sure the RTC oscillator is running */
+            LPC_SYSCON->PDRUNCFGCLR0 = SYSCON_PDRUNCFG_PDEN_32K_OSC_Msk;
+
+            /* Enter deep power down. Wait RTC wakeup or reset. */
+            __WFI();
+            break;
+    }
+#endif
 }
 
 
