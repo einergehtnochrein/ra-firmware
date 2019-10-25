@@ -276,7 +276,7 @@ static const ADF7021_Config radioModePilot[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
 //            .deviation = 2400,    /* Old PCB variant <=9 */
-            .deviation = 4500,      /* PCB variant 10 */
+            .deviation = 6200,      /* PCB variant 10 */
             .postDemodBandwidth = 3600, }}},
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
