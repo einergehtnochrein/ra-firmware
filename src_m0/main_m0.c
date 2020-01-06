@@ -12,6 +12,7 @@ typedef enum {
     MODE_MODEM_M10 = 4,
     MODE_MODEM_PILOTSONDE = 5,
     MODE_MEISEI = 6,
+    MODE_JINYANG = 7,
 } SYNC_Mode;
 
 
@@ -208,6 +209,33 @@ static const SYNC_Config configMeisei = {
 };
 
 
+static const SYNC_Config configJinyang = {
+    .nPatterns = 2,
+    .conf = {
+        {
+            .id = 10,
+            .nSyncLen = 56,
+            .pattern = {0x00AAAAAA88888888LL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 320,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+        },
+        {
+            .id = 10,
+            .nSyncLen = 56,
+            .pattern = {0x0055555577777777LL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 320,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = true,
+        },
+    },
+};
+
+
 
 void MAILBOX_IRQHandler (void)
 {
@@ -237,6 +265,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 5)) {
         newMode = MODE_MEISEI;
         LPC_MAILBOX->IRQ0CLR = (1u << 5);
+    }
+    else if (requests & (1u << 6)) {
+        newMode = MODE_JINYANG;
+        LPC_MAILBOX->IRQ0CLR = (1u << 6);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -288,6 +320,9 @@ int main (void)
                     break;
                 case MODE_MEISEI:
                     syncConfig = &configMeisei;
+                    break;
+                case MODE_JINYANG:
+                    syncConfig = &configJinyang;
                     break;
                 case MODE_AFSK:
                 default:
