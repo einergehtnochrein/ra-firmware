@@ -30,11 +30,11 @@ static JINYANG_Context _jinyang;
 
 
 static const uint8_t whitening[40] = {
-    0x00,0x00,0x00,0x00,0x00,0x85,0x01,0x00,
-    0x00,0x79,0xD2,0x39,0x70,0x97,0x57,0x0A,
-    0x54,0x7D,0x2E,0x00,0x6D,0x0D,0x00,0x80,
-    0x67,0x59,0xC7,0xA2,0x00,0x34,0xCA,0x18,
-    0x30,0x53,0x93,0xDF,0x6E,0xB9,0x00,0x00,
+    0xFF,0xE1,0x1D,0x9A,0xED,0x85,0x33,0x24,
+    0xEA,0x7A,0xD2,0x39,0x70,0x97,0x57,0x0A,
+    0x54,0x7D,0x2D,0xD8,0x6D,0x0D,0xBA,0x8F,
+    0x67,0x59,0xC7,0xA2,0xBF,0x34,0xCA,0x18,
+    0x30,0x53,0x93,0xDF,0x92,0xEC,0xA7,0x15,
 };
 
 
@@ -46,6 +46,34 @@ static void _JINYANG_removeWhitening(uint8_t *buffer, int length)
     for (i = 0; i < length; i++) {
         buffer[i] ^= whitening[i % sizeof(whitening)];
     }
+}
+
+
+
+/* Check frame CRC */
+static bool _JINYANG_checkCRC (JINYANG_Handle handle)
+{
+    CRC_Handle crc = LPCLIB_INVALID_HANDLE;
+    CRC_Mode crcMode;
+    bool result = false;
+
+    crcMode = CRC_makeMode(
+            CRC_POLY_CRC16,
+            CRC_DATAORDER_NORMAL,
+            CRC_SUMORDER_NORMAL,
+            CRC_DATAPOLARITY_NORMAL,
+            CRC_SUMPOLARITY_NORMAL
+            );
+    if (CRC_open(crcMode, &crc) == LPCLIB_SUCCESS) {
+        CRC_seed(crc, 0xFFFF);
+        CRC_write(crc, &handle->packet.rawData, 40 - 2, NULL, NULL);
+        /* CRC is sent in big-endian format */
+        result = (__REV16(handle->packet.crc) == CRC_read(crc));
+
+        CRC_close(&crc);
+    }
+
+    return result;
 }
 
 
@@ -193,37 +221,31 @@ LPCLIB_Result JINYANG_processBlock (
 
     if (length == sizeof(JINYANG_Packet)) {
         memcpy(&handle->packet, buffer, sizeof(handle->packet));
-//        _JINYANG_sendRaw(handle, buffer);
 
-        result = _JINYANG_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
-        if (result == LPCLIB_SUCCESS) {
-            /* Process detected subframe type */
-            switch (handle->packet.subType) {
-                case 0: {
-union{
-  uint32_t fx;
-  float fy;
-}xyz;
-xyz.fy=handle->packet.frameGps.latitude;
-handle->rawlat = xyz.fx;
-xyz.fy=handle->packet.frameGps.longitude;
-handle->rawlon = xyz.fx;
-xyz.fy=handle->packet.frameGps.altitude;
-handle->rawalt = xyz.fx;
-                    result = _JINYANG_processGpsFrame(&handle->packet.frameGps, handle->instance);
-                    if (result == LPCLIB_SUCCESS) {
-                        _JINYANG_sendKiss(handle->instance);
-                    }
-                    handle->instance->frameGps = handle->packet.frameGps;
-                    break;}
+        /* Check CRC-16 at the end of the frame */
+        if (_JINYANG_checkCRC(handle)) {
+//            _JINYANG_sendRaw(handle, buffer);
 
-                case 1:
-                    handle->instance->frame1 = handle->packet.frame1;
-                    break;
+            result = _JINYANG_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
+            if (result == LPCLIB_SUCCESS) {
+                /* Process subframe type */
+                switch (handle->packet.subType) {
+                    case 0:
+                        handle->instance->frame0 = handle->packet.frame0;
+                        break;
 
-                case 3:
-                    handle->instance->frame3 = handle->packet.frame3;
-                    break;
+                    case 2:
+                        handle->instance->frame2 = handle->packet.frame2;
+                        break;
+
+                    case 3: {
+                        result = _JINYANG_processGpsFrame(&handle->packet.frameGps, handle->instance);
+                        if (result == LPCLIB_SUCCESS) {
+                            _JINYANG_sendKiss(handle->instance);
+                        }
+                        handle->instance->frameGps = handle->packet.frameGps;
+                        break;}
+                }
             }
         }
     }

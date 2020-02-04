@@ -29,22 +29,23 @@ typedef __PACKED(struct {
     float latitude;
     float longitude;
     float altitude;
-    uint32_t unk1;
+    uint16_t unk1;
     uint16_t unk2;
+    uint16_t unk3;
     uint16_t velocity;
     uint16_t direction;
-    uint16_t lastone;
+    uint16_t unk4;
 }) JINYANG_SubFrameGps;
 
 
 typedef __PACKED(struct {
-    uint32_t data[7];
-}) JINYANG_SubFrame1;
+    int16_t data[14];
+}) JINYANG_SubFrame0;
 
 
 typedef __PACKED(struct {
-    uint32_t data[7];
-}) JINYANG_SubFrame3;
+    int16_t data[14];
+}) JINYANG_SubFrame2;
 
 
 typedef union {
@@ -61,8 +62,8 @@ typedef union {
         uint8_t subType;
         __PACKED(union {
             JINYANG_SubFrameGps frameGps;
-            JINYANG_SubFrame1 frame1;
-            JINYANG_SubFrame3 frame3;
+            JINYANG_SubFrame0 frame0;
+            JINYANG_SubFrame2 frame2;
         });
         uint16_t crc;
     });
@@ -77,6 +78,10 @@ typedef struct {
 typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+uint16_t unk1;
+uint16_t unk2;
+uint16_t unk3;
+uint16_t unk4;
 } JINYANG_CookedGps;
 
 
@@ -89,11 +94,12 @@ typedef struct _JINYANG_InstanceData {
     float rxFrequencyMHz;
     uint32_t lastUpdated;
 
+    uint32_t lastGpsTime;
     JINYANG_CookedGps gps;
     JINYANG_CookedMetrology metro;
 JINYANG_SubFrameGps frameGps;
-JINYANG_SubFrame1 frame1;
-JINYANG_SubFrame3 frame3;
+JINYANG_SubFrame0 frame0;
+JINYANG_SubFrame2 frame2;
 } JINYANG_InstanceData;
 
 
