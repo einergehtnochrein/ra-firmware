@@ -149,55 +149,19 @@ static void _JINYANG_sendRaw (JINYANG_Handle handle, JINYANG_Packet *p1)
 
     snprintf(s, sizeof(s),
                      "%ld,12,1,"
-                     "%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8
-                     "%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8
-                     "%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8
-                     "%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8
-                     "%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8
-                     "%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8
-                     "%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8
-                     "%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8"%02"PRIX8,
+                     "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
+                     "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32,
                      handle->instance->id,
-                     p1->rawData[0],
-                     p1->rawData[1],
-                     p1->rawData[2],
-                     p1->rawData[3],
-                     p1->rawData[4],
-                     p1->rawData[5],
-                     p1->rawData[6],
-                     p1->rawData[7],
-                     p1->rawData[8],
-                     p1->rawData[9],
-                     p1->rawData[10],
-                     p1->rawData[11],
-                     p1->rawData[12],
-                     p1->rawData[13],
-                     p1->rawData[14],
-                     p1->rawData[15],
-                     p1->rawData[16],
-                     p1->rawData[17],
-                     p1->rawData[18],
-                     p1->rawData[19],
-                     p1->rawData[20],
-                     p1->rawData[21],
-                     p1->rawData[22],
-                     p1->rawData[23],
-                     p1->rawData[24],
-                     p1->rawData[25],
-                     p1->rawData[26],
-                     p1->rawData[27],
-                     p1->rawData[28],
-                     p1->rawData[29],
-                     p1->rawData[30],
-                     p1->rawData[31],
-                     p1->rawData[32],
-                     p1->rawData[33],
-                     p1->rawData[34],
-                     p1->rawData[35],
-                     p1->rawData[36],
-                     p1->rawData[37],
-                     p1->rawData[38],
-                     p1->rawData[39]
+                     __REV(p1->rawData.dat32[0]),
+                     __REV(p1->rawData.dat32[1]),
+                     __REV(p1->rawData.dat32[2]),
+                     __REV(p1->rawData.dat32[3]),
+                     __REV(p1->rawData.dat32[4]),
+                     __REV(p1->rawData.dat32[5]),
+                     __REV(p1->rawData.dat32[6]),
+                     __REV(p1->rawData.dat32[7]),
+                     __REV(p1->rawData.dat32[8]),
+                     __REV(p1->rawData.dat32[9])
                     );
 
     SYS_send2Host(HOST_CHANNEL_INFO, s);
@@ -224,7 +188,7 @@ LPCLIB_Result JINYANG_processBlock (
 
         /* Check CRC-16 at the end of the frame */
         if (_JINYANG_checkCRC(handle)) {
-//            _JINYANG_sendRaw(handle, buffer);
+            _JINYANG_sendRaw(handle, buffer);
 
             result = _JINYANG_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
             if (result == LPCLIB_SUCCESS) {

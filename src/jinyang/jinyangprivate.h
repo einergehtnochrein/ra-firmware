@@ -21,7 +21,10 @@ typedef enum {
     JINYANG_MODEL_RSG20A,
 } JINYANG_Model;
 
-typedef uint8_t JINYANG_RawData[40];
+typedef __PACKED(union {
+    uint8_t dat8[40];
+    uint32_t dat32[10];
+}) JINYANG_RawData;
 
 
 typedef __PACKED(struct {
