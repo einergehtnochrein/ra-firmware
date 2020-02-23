@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, DF9DQ
+/* Copyright (c) 2016-2019, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -37,6 +37,7 @@
 #include "bl652.h"
 #include "dfm.h"
 #include "imet.h"
+#include "jinyang.h"
 #include "m10.h"
 #include "meisei.h"
 #include "pdm.h"
@@ -120,6 +121,7 @@ struct SYS_Context {
     BEACON_Handle beacon;
     DFM_Handle dfm;
     IMET_Handle imet;
+    JINYANG_Handle jinyang;
     M10_Handle m10;
     PILOT_Handle pilot;
     SRSC_Handle srsc;
@@ -208,6 +210,31 @@ static const ADF7021_Config radioModeVaisala[] = {
 };
 
 static const ADF7021_Config radioModeGraw[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 1875, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeJinyang[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
@@ -396,6 +423,9 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
         case SONDE_DFM_NORMAL:
         case SONDE_DFM_INVERTED:
             length = 66;
+            break;
+        case SONDE_RSG20:
+            length = 40;
             break;
         case SONDE_MEISEI_CONFIG:
         case SONDE_MEISEI_GPS:
@@ -614,6 +644,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
             LPC_MAILBOX->IRQ0SET = (1u << 1); //TODO
+            break;
+
+        case SONDE_DETECTOR_JINYANG:
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setBitRate(radio, 2400);
+            ADF7021_ioctl(radio, radioModeJinyang);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+            LPC_MAILBOX->IRQ0SET = (1u << 6); //TODO
             break;
 
         case SONDE_DETECTOR_MEISEI:
@@ -1219,6 +1260,7 @@ if (cl[0] != 0) {
                     DFM_resendLastPositions(handle->dfm);
                     SRSC_resendLastPositions(handle->srsc);
                     IMET_resendLastPositions(handle->imet);
+                    JINYANG_resendLastPositions(handle->jinyang);
                     M10_resendLastPositions(handle->m10);
                     BEACON_resendLastPositions(handle->beacon);
                     PILOT_resendLastPositions(handle->pilot);
@@ -1255,6 +1297,7 @@ if (cl[0] != 0) {
                         case 5:     detector = SONDE_DETECTOR_BEACON; break;
                         case 6:     detector = SONDE_DETECTOR_MEISEI; break;
                         case 7:     detector = SONDE_DETECTOR_PILOT; break;
+                        case 8:     detector = SONDE_DETECTOR_JINYANG; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -1319,6 +1362,10 @@ if (cl[0] != 0) {
                                     case SONDE_DECODER_MEISEI:
                                         MEISEI_removeFromList(handle->meisei, id, &frequency);
                                         detector = SONDE_DETECTOR_MEISEI;
+                                        break;
+                                    case SONDE_DECODER_JINYANG:
+                                        JINYANG_removeFromList(handle->jinyang, id, &frequency);
+                                        detector = SONDE_DETECTOR_JINYANG;
                                         break;
                                     default:
                                         /* ignore */
@@ -1566,6 +1613,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     BEACON_open(&handle->beacon);
     SRSC_open(&handle->srsc);
     IMET_open(&handle->imet);
+    JINYANG_open(&handle->jinyang);
     M10_open(&handle->m10);
     MEISEI_open(&handle->meisei);
     PILOT_open(&handle->pilot);
@@ -1649,14 +1697,15 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                         if (handle->currentFrequency != 0) {
                             SONDE_Type sondeType = SONDE_UNDEFINED;
                             switch (ipc[bufferIndex].param) {
-                                case 0: sondeType = SONDE_RS92; break;
-                                case 1: sondeType = SONDE_RS41; break;
-                                case 2: sondeType = SONDE_DFM_INVERTED; break;
-                                case 3: sondeType = SONDE_DFM_NORMAL; break;
-                                case 4: sondeType = SONDE_M10; break;
-                                case 7: sondeType = SONDE_PILOT; break;
-                                case 8: sondeType = SONDE_MEISEI_CONFIG; break;
-                                case 9: sondeType = SONDE_MEISEI_GPS; break;
+                                case 0:  sondeType = SONDE_RS92; break;
+                                case 1:  sondeType = SONDE_RS41; break;
+                                case 2:  sondeType = SONDE_DFM_INVERTED; break;
+                                case 3:  sondeType = SONDE_DFM_NORMAL; break;
+                                case 4:  sondeType = SONDE_M10; break;
+                                case 7:  sondeType = SONDE_PILOT; break;
+                                case 8:  sondeType = SONDE_MEISEI_CONFIG; break;
+                                case 9:  sondeType = SONDE_MEISEI_GPS; break;
+                                case 10: sondeType = SONDE_RSG20; break;
                             }
 
                             /* Process buffer */
@@ -1730,6 +1779,17 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         _SYS_getSondeBufferLength(sondeType),
+                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_RSG20) {
+                                if (JINYANG_processBlock(
+                                        handle->jinyang,
+                                        sondeType,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_RSG20),
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);

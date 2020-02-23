@@ -1,4 +1,5 @@
 *.kdev4
+*.directory
 gcc/obj_m0_ra1/
 gcc/obj_m4_ra1/
 gcc/obj_m0_ra2/
