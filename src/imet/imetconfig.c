@@ -60,7 +60,7 @@ IMET_InstanceData *_IMET_getInstanceDataStructure (float frequency)
         instance->id = SONDE_getNewID(sonde);
         instance->frequency = frequency;
         instance->config.frequencyKhz = lroundf(frequency / 1000.0);
-        strcpy(instance->name, "iMet-1");
+        strcpy(instance->name, "iMet");
 
         /* Insert into list */
         p = instanceList;

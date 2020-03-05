@@ -23,7 +23,7 @@ C_SRCS = \
     rs41/rs41.c rs41/rs41calibconfig.c rs41/rs41gps.c rs41/rs41metrology.c \
     rs92/rs92.c rs92/rs92calibconfig.c rs92/rs92gps.c rs92/rs92metrology.c rs92/rinex.c rs92/observer.c \
     srsc/srsc.c srsc/srscconfig.c srsc/srscdsp.c srsc/srscgps.c \
-    imet/imet.c imet/imetconfig.c imet/imetdsp.c imet/imetgps.c \
+    imet/imet.c imet/imetconfig.c imet/imetdsp.c imet/imetgps.c imet/imetmetrology.c \
     jinyang/jinyang.c jinyang/jinyangconfig.c jinyang/jinyanggps.c \
     modem/m10.c modem/m10calibconfig.c modem/m10gps.c modem/m10metrology.c \
     modem/pilot.c modem/pilotconfig.c modem/pilotgps.c \

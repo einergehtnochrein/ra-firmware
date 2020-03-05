@@ -117,27 +117,32 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
         length = sprintf((char *)s, "%ld,%s,%.3f,,,,%s,%s,,,,,,,,,%.1f,%.1f,0",
                         instance->id,
                         sType,
-                        f,                          /* Frequency [MHz] */
-                        sAltitude,                  /* Altitude [m] */
-                        sClimbRate,                 /* Climb rate [m/s] */
+                        f,                              /* Frequency [MHz] */
+                        sAltitude,                      /* Altitude [m] */
+                        sClimbRate,                     /* Climb rate [m/s] */
                         SYS_getFrameRssi(sys),
-                        offset                      /* RX frequency offset [kHz] */
+                        offset                          /* RX frequency offset [kHz] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%ld,%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,,,,,,,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%ld,%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%.1f,%.1f,,,%.1f,,%.1f,%.1f,%d,%d,,%.1f",
                         instance->id,
                         sType,
-                        f,                          /* Frequency [MHz] */
-                        latitude,                   /* Latitude [degrees] */
-                        longitude,                  /* Longitude [degrees] */
-                        sAltitude,                  /* Altitude [m] */
-                        sClimbRate,                 /* Climb rate [m/s] */
+                        f,                              /* Frequency [MHz] */
+                        latitude,                       /* Latitude [degrees] */
+                        longitude,                      /* Longitude [degrees] */
+                        sAltitude,                      /* Altitude [m] */
+                        sClimbRate,                     /* Climb rate [m/s] */
                         sDirection,
                         sVelocity,
+                        instance->metro.temperature,    /* Temperature [°C] */
+                        instance->metro.pressure,       /* Pressure [hPa] */
+                        instance->metro.humidity,       /* Humidity [%] */
                         SYS_getFrameRssi(sys),
-                        offset,                     /* RX frequency offset [kHz] */
-                        instance->gps.usedSats
+                        offset,                         /* RX frequency offset [kHz] */
+                        instance->gps.usedSats,
+                        instance->metro.frameCounter,
+                        instance->metro.batteryVoltage  /* Battery voltage [V] */
                         );
     }
 
@@ -188,11 +193,19 @@ LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t leng
             /* Get/create an instance */
             handle->instance = _IMET_getInstanceDataStructure(rxFrequencyHz);
             if (handle->instance) {
-                if (frameType == IMET_FRAME_GPS) {
-                    _IMET_processGpsFrame((IMET_FrameGps *)p, &handle->instance->gps);
-                }
-                if (frameType == IMET_FRAME_GPSX) {
-                    _IMET_processGpsxFrame((IMET_FrameGpsx *)p, &handle->instance->gps);
+                switch (frameType) {
+                    case IMET_FRAME_GPS:
+                        _IMET_processGpsFrame((IMET_FrameGps *)p, &handle->instance->gps);
+                        break;
+                    case IMET_FRAME_GPSX:
+                        _IMET_processGpsxFrame((IMET_FrameGpsx *)p, &handle->instance->gps);
+                        break;
+                    case IMET_FRAME_PTU:
+                        _IMET_processPtuFrame((IMET_FramePtu *)p, &handle->instance->metro);
+                        break;
+                    case IMET_FRAME_PTUX:
+                        _IMET_processPtuxFrame((IMET_FramePtux *)p, &handle->instance->metro);
+                        break;
                 }
 
                 /* Remember RX frequency (difference to nominal sonde frequency will be reported as frequency offset) */
