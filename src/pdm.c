@@ -42,6 +42,7 @@ LPCLIB_DefineRegBit(DMIC_CHANEN_EN_CH1,             1,  1);
 
 #define PDM_SAMPLES_PER_BUFFER              256
 #define PDM_N_BUFFERS                       3
+#define PDM_DCFILTER_LENGTH                 (128)
 
 static struct _PDM_Context {
     PDM_Callback callback;
@@ -51,8 +52,33 @@ static struct _PDM_Context {
     int completedBufferIndex;
     int bufferWrIndex;
 
+    int32_t dcFilter[PDM_DCFILTER_LENGTH];
     float dcOffset;
+    int dcIndex;
+    int32_t dcPrevious;
 } pdmContext;
+
+
+
+/* Take a new sample, and update the moving average DC extraction filter. */
+static int32_t _PDM_extractDc (PDM_Handle handle, int32_t sx)
+{
+    int32_t temp;
+
+
+    temp = handle->dcFilter[handle->dcIndex];                         /* Put sample into moving average filter */
+    handle->dcFilter[handle->dcIndex] = sx;
+    ++handle->dcIndex;
+    if (handle->dcIndex >= PDM_DCFILTER_LENGTH) {
+        handle->dcIndex = 0;
+    }
+
+    temp = sx - temp;                                   /* Calculate output (dc) of filter */
+    temp += handle->dcPrevious;
+    handle->dcPrevious = temp;
+
+    return temp / PDM_DCFILTER_LENGTH;
+}
 
 
 
@@ -99,8 +125,7 @@ void PDM_run (PDM_Handle handle, int decimationRatio, PDM_Callback callback)
 LPC_DMIC->FIFOCTRL0 = 0x00080007;   // Trigger level = 9
     LPC_DMIC->PDMSRCCFG0 = 0x0001;   // falling edge sampling
     LPC_DMIC->DCCTRL0 = 0
-//            | (2 << 0)                      /* 78 Hz */
-    | (0 << 0)                      /* No DC filter */
+            | (0 << 0)                      /* No DC filter */
             | (4 << 4)                      /* 21.5 bits --> 17.5 bits */
             | (1 << 8)                      /* Saturation on (16 bits) */
             ;
@@ -158,14 +183,10 @@ void DMIC_IRQHandler (void)
     PDM_Handle handle = &pdmContext;
     int i;
     uint32_t status;
-    int readBuffer4dc;
 
     status = LPC_DMIC->FIFOSTAT0;
 
     if (status & 1) {
-        /* DC averaging is over one buffer length */
-        readBuffer4dc = (handle->activeBufferIndex + PDM_N_BUFFERS - 1) % PDM_N_BUFFERS;
-
         /* Get samples from FIFO */
         for (i = 0; i < 8; i++) {  //TODO
             if (handle->bufferWrIndex < PDM_SAMPLES_PER_BUFFER) {
@@ -174,14 +195,11 @@ void DMIC_IRQHandler (void)
                  * Bits [31:25] always read as 0. FIFO data is therefore shifted left by 8 bits
                  * to create a 32-bit signed value (int32_t), which is then scaled down to 16 bits.
                  */
-                handle->audioBuffer[handle->activeBufferIndex][handle->bufferWrIndex] =
-                    (int32_t)(LPC_DMIC->FIFODATA0 << 8) / 256;
+                int32_t sx = (int32_t)(LPC_DMIC->FIFODATA0 << 8) / 256;
 
-                /* DC filter (moving average of last PDM_SAMPLES_PER_BUFFER samples */
-                float f = handle->audioBuffer[handle->activeBufferIndex][handle->bufferWrIndex]
-                        - handle->audioBuffer[readBuffer4dc][handle->bufferWrIndex];
-                handle->dcOffset = handle->dcOffset - f / PDM_SAMPLES_PER_BUFFER;
-//    DC[n] = DC[n-1] - (1/N)*(x[n-N] + x[n])
+                /* DC filter determines frequency offset, then removes offset before storing */
+                handle->dcOffset = _PDM_extractDc(handle, sx);
+                handle->audioBuffer[handle->activeBufferIndex][handle->bufferWrIndex] = sx - handle->dcOffset;
             }
             ++handle->bufferWrIndex;
         }
