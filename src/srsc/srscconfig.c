@@ -219,8 +219,8 @@ LPCLIB_Result _SRSC_processConfigFrame (
             case SRSC_FRAME_CONFIG_106:
                 instance->config.info106 = data;
                 break;
-            case SRSC_FRAME_CONFIG_107:
-                instance->config.info107 = data;
+            case SRSC_FRAME_CONFIG_SERIAL_SENSORBOOM:
+                instance->config.serialSensorboom = data;
                 break;
             case SRSC_FRAME_CONFIG_FIRMWARE_VERSION:
                 instance->config.firmwareVersion = data;
