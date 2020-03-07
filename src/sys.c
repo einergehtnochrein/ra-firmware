@@ -1662,18 +1662,28 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                 case APP_EVENT_RAW_FRAME:
                     /* Check which type of sonde this is for */
                     if ((SONDE_Type)pMessage->event.block == SONDE_C34) {
+                        float rxOffset = 0;
+#if (BOARD_RA == 2)
+                        rxOffset = PDM_getDcOffset(handle->pdm) / (-5.3f);     //TODO factor
+#endif
                         SRSC_processBlock(
                                     handle->srsc,
                                     (uint8_t *)pMessage->event.parameter,
                                     7,
-                                    handle->currentFrequency);
+                                    handle->currentFrequency,
+                                    rxOffset);
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_IMET_RSB) {
+                        float rxOffset = 0;
+#if (BOARD_RA == 2)
+                        rxOffset = PDM_getDcOffset(handle->pdm) / (-2.65f);     //TODO factor
+#endif
                         IMET_processBlock(
                                     handle->imet,
                                     (uint8_t *)pMessage->event.parameter,
                                     0,  /* variable packet length */
-                                    handle->currentFrequency);
+                                    handle->currentFrequency,
+                                    rxOffset);
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_BEACON) {
                         BEACON_processBlock(
@@ -1838,12 +1848,6 @@ SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         rate3 = 0;
                         _SYS_reportVbat(handle);
                     }
-
-#if (BOARD_RA == 2)
-                    //TODO
-                    /* Get frequency offset from PDM DC bias (only AFSK modes) */
-                    SRSC_setRxOffset(handle->srsc, PDM_getDcOffset(handle->pdm) / 1.32f); //TODO factor
-#endif
 
                     /* On Ra hardware prior to Ra2fix the VBAT measurement has a systematic error.
                      * The measurement can be too low if there is a voltage drop on a resistor

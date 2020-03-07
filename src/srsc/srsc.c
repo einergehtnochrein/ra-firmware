@@ -23,7 +23,6 @@ typedef struct SRSC_Context {
 
     SRSC_InstanceData *instance;
     float rxFrequencyHz;
-    float rxOffset;
     uint32_t timeOfLastReport;
 
 #if SEMIHOSTING
@@ -66,26 +65,11 @@ LPCLIB_Result SRSC_open (SRSC_Handle *pHandle)
 
     *pHandle = handle;
 
-    handle->rxOffset = NAN;
     SRSC_DSP_initAudio();
 
 #if 0 //#if SEMIHOSTING
     handle->fpLog = fopen("srsc.txt", "w");
 #endif
-
-    return LPCLIB_SUCCESS;
-}
-
-
-
-/* Inform decoder about RX offset */
-LPCLIB_Result SRSC_setRxOffset (SRSC_Handle handle, float rxOffset)
-{
-    if (handle == LPCLIB_INVALID_HANDLE) {
-        return LPCLIB_ILLEGAL_PARAMETER;
-    }
-
-    handle->rxOffset = rxOffset;
 
     return LPCLIB_SUCCESS;
 }
@@ -189,7 +173,12 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 
 
 
-LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result SRSC_processBlock (
+        SRSC_Handle handle,
+        void *buffer,
+        uint32_t length,
+        float rxSetFrequencyHz,
+        float rxOffset)
 {
     if (length == 7) {
         if (_SRSC_doParityCheck(buffer, length)) {
@@ -214,8 +203,8 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
 #endif
 
             /* Always call config handler first to obtain an instance */
-            if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz) == LPCLIB_SUCCESS) {
-                handle->instance->rxOffset = handle->rxOffset;
+            if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxSetFrequencyHz) == LPCLIB_SUCCESS) {
+                handle->instance->rxOffset = rxOffset;
 
                 if (SRSC_isGpsType(handle->packet.type)) {
                     _SRSC_processGpsFrame(&handle->packet, &handle->instance->gps);
@@ -240,7 +229,7 @@ LPCLIB_Result SRSC_processBlock (SRSC_Handle handle, void *buffer, uint32_t leng
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
                     event.block = SONDE_DETECTOR_C34_C50;
-                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                    event.parameter = (void *)((uint32_t)lrintf(rxSetFrequencyHz));
                     SYS_handleEvent(event);
                 }
             }

@@ -74,11 +74,10 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
     char sDirection[8];
     char *sType;
     int length = 0;
-    float f, offset;
+    float f;
 
     /* Get frequency */
     f = instance->config.frequencyKhz / 1000.0f;
-    offset = SYS_getFrameOffsetKhz(sys);
 
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
@@ -121,7 +120,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         sAltitude,                      /* Altitude [m] */
                         sClimbRate,                     /* Climb rate [m/s] */
                         SYS_getFrameRssi(sys),
-                        offset                          /* RX frequency offset [kHz] */
+                        instance->rxOffset / 1e3f       /* RX frequency offset [kHz] */
                         );
     }
     else {
@@ -139,7 +138,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         instance->metro.pressure,       /* Pressure [hPa] */
                         instance->metro.humidity,       /* Humidity [%] */
                         SYS_getFrameRssi(sys),
-                        offset,                         /* RX frequency offset [kHz] */
+                        instance->rxOffset / 1e3f,      /* RX frequency offset [kHz] */
                         instance->gps.usedSats,
                         instance->metro.frameCounter,
                         instance->metro.batteryVoltage  /* Battery voltage [V] */
@@ -162,7 +161,12 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
 
 
 
-LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result IMET_processBlock (
+        IMET_Handle handle,
+        void *buffer,
+        uint32_t length,
+        float rxSetFrequencyHz,
+        float rxOffset)
 {
     /* Determine length from frame type */
     uint8_t *p = (uint8_t *)buffer;
@@ -191,7 +195,7 @@ LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t leng
     if (length >= 3) {
         if (_IMET_doParityCheck(p, length)) {
             /* Get/create an instance */
-            handle->instance = _IMET_getInstanceDataStructure(rxFrequencyHz);
+            handle->instance = _IMET_getInstanceDataStructure(rxSetFrequencyHz);
             if (handle->instance) {
                 switch (frameType) {
                     case IMET_FRAME_GPS:
@@ -208,8 +212,9 @@ LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t leng
                         break;
                 }
 
-                /* Remember RX frequency (difference to nominal sonde frequency will be reported as frequency offset) */
-                handle->rxFrequencyHz = rxFrequencyHz;
+                /* Remember RX (set) frequency and RX offset */
+                handle->rxFrequencyHz = rxSetFrequencyHz;
+                handle->instance->rxOffset = rxOffset;
 
                 /* If there is a position update, send it out */
                 if (handle->instance->gps.updated) {
@@ -221,7 +226,7 @@ LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t leng
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
                     event.block = SONDE_DETECTOR_IMET;
-                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                    event.parameter = (void *)((uint32_t)lrintf(rxSetFrequencyHz));
                     SYS_handleEvent(event);
                 }
             }
