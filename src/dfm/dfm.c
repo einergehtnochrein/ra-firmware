@@ -171,7 +171,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     uint32_t special;
     char sSpecial[8];
     int length = 0;
-    float f, offset;
+    float f;
 
     /* Pressure/temperature/humidity sensors */
     sTemperature[0] = 0;
@@ -181,7 +181,6 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* Get frequency */
     f = instance->config.frequencyKhz / 1000.0f;
-    offset = SYS_getFrameOffsetKhz(sys);
 
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
@@ -245,19 +244,18 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%ld,2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,%.1f,,,,",
+        length = sprintf((char *)s, "%ld,2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,,,,,",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
                         sClimbRate,                 /* Climb rate [m/s] */
                         sTemperature,               /* Temperature [°C] */
                         sSpecial,
-                        SYS_getFrameRssi(sys),
-                        offset                      /* RX frequency offset [kHz] */
+                        SYS_getFrameRssi(sys)
                         );
     }
     else {
-        length = sprintf((char *)s, "%ld,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,%.2f,%.1f,%.1f,%d,,,%s",
+        length = sprintf((char *)s, "%ld,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,%.2f,%.1f,,%d,,,%s",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -270,7 +268,6 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         sSpecial,
                         instance->gps.hdop,
                         SYS_getFrameRssi(sys),
-                        offset,                     /* RX frequency offset [kHz] */
                         instance->gps.usedSats,
                         sVbat                       /* Battery voltage [V] */
                         );

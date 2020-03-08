@@ -30,7 +30,7 @@ typedef __PACKED(struct {
     uint16_t packetNumber;
     uint8_t pressure24[3];
     int16_t temperature;
-    int16_t humidity;
+    uint16_t humidity;
     uint8_t batteryVoltage;
     uint16_t crc;
 }) IMET_FramePtu;
@@ -41,7 +41,7 @@ typedef __PACKED(struct {
     uint16_t packetNumber;
     uint8_t pressure24[3];
     int16_t temperature;
-    int16_t humidity;
+    uint16_t humidity;
     uint8_t batteryVoltage;
     int16_t internalTemperature;
     int16_t pressureSensorTemperature;
@@ -88,6 +88,19 @@ typedef struct {
 
 
 typedef struct {
+    float temperature;
+    float temperaturePSensor;
+    float temperatureUSensor;
+    float temperatureInternal;
+    float humidity;
+    float pressure;
+    float pressureAltitude;
+    float batteryVoltage;
+    uint16_t frameCounter;
+} IMET_CookedMetrology;
+
+
+typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     struct {
@@ -109,6 +122,7 @@ typedef struct _IMET_InstanceData {
     uint32_t id;
     char name[20];
     float frequency;
+    float rxOffset;
 
     uint32_t lastUpdated;
 
@@ -127,6 +141,7 @@ typedef struct _IMET_InstanceData {
 
     IMET_CookedConfig config;
     IMET_CookedGps gps;
+    IMET_CookedMetrology metro;
 } IMET_InstanceData;
 
 
@@ -146,6 +161,12 @@ LPCLIB_Result _IMET_processGpsFrame (
 LPCLIB_Result _IMET_processGpsxFrame (
         const IMET_FrameGpsx *rawGps,
         IMET_CookedGps *cookedGps);
+LPCLIB_Result _IMET_processPtuFrame (
+        const IMET_FramePtu *rawPtu,
+        IMET_CookedMetrology *cookedMetro);
+LPCLIB_Result _IMET_processPtuxFrame (
+        const IMET_FramePtux *rawPtux,
+        IMET_CookedMetrology *cookedMetro);
 
 
 void IMET_DSP_processAudio (const int32_t *rawAudio, float *cookedAudio, int nSamples);

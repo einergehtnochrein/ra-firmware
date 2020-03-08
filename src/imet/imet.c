@@ -74,11 +74,10 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
     char sDirection[8];
     char *sType;
     int length = 0;
-    float f, offset;
+    float f;
 
     /* Get frequency */
     f = instance->config.frequencyKhz / 1000.0f;
-    offset = SYS_getFrameOffsetKhz(sys);
 
     /* Convert lat/lon from radian to decimal degrees */
     double latitude = instance->gps.observerLLA.lat;
@@ -117,27 +116,32 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
         length = sprintf((char *)s, "%ld,%s,%.3f,,,,%s,%s,,,,,,,,,%.1f,%.1f,0",
                         instance->id,
                         sType,
-                        f,                          /* Frequency [MHz] */
-                        sAltitude,                  /* Altitude [m] */
-                        sClimbRate,                 /* Climb rate [m/s] */
+                        f,                              /* Frequency [MHz] */
+                        sAltitude,                      /* Altitude [m] */
+                        sClimbRate,                     /* Climb rate [m/s] */
                         SYS_getFrameRssi(sys),
-                        offset                      /* RX frequency offset [kHz] */
+                        instance->rxOffset / 1e3f       /* RX frequency offset [kHz] */
                         );
     }
     else {
-        length = sprintf((char *)s, "%ld,%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,,,,,,,%.1f,%.1f,%d",
+        length = sprintf((char *)s, "%ld,%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%.1f,%.1f,,,%.1f,,%.1f,%.1f,%d,%d,,%.1f",
                         instance->id,
                         sType,
-                        f,                          /* Frequency [MHz] */
-                        latitude,                   /* Latitude [degrees] */
-                        longitude,                  /* Longitude [degrees] */
-                        sAltitude,                  /* Altitude [m] */
-                        sClimbRate,                 /* Climb rate [m/s] */
+                        f,                              /* Frequency [MHz] */
+                        latitude,                       /* Latitude [degrees] */
+                        longitude,                      /* Longitude [degrees] */
+                        sAltitude,                      /* Altitude [m] */
+                        sClimbRate,                     /* Climb rate [m/s] */
                         sDirection,
                         sVelocity,
+                        instance->metro.temperature,    /* Temperature [°C] */
+                        instance->metro.pressure,       /* Pressure [hPa] */
+                        instance->metro.humidity,       /* Humidity [%] */
                         SYS_getFrameRssi(sys),
-                        offset,                     /* RX frequency offset [kHz] */
-                        instance->gps.usedSats
+                        instance->rxOffset / 1e3f,      /* RX frequency offset [kHz] */
+                        instance->gps.usedSats,
+                        instance->metro.frameCounter,
+                        instance->metro.batteryVoltage  /* Battery voltage [V] */
                         );
     }
 
@@ -157,7 +161,12 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
 
 
 
-LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result IMET_processBlock (
+        IMET_Handle handle,
+        void *buffer,
+        uint32_t length,
+        float rxSetFrequencyHz,
+        float rxOffset)
 {
     /* Determine length from frame type */
     uint8_t *p = (uint8_t *)buffer;
@@ -186,17 +195,26 @@ LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t leng
     if (length >= 3) {
         if (_IMET_doParityCheck(p, length)) {
             /* Get/create an instance */
-            handle->instance = _IMET_getInstanceDataStructure(rxFrequencyHz);
+            handle->instance = _IMET_getInstanceDataStructure(rxSetFrequencyHz);
             if (handle->instance) {
-                if (frameType == IMET_FRAME_GPS) {
-                    _IMET_processGpsFrame((IMET_FrameGps *)p, &handle->instance->gps);
-                }
-                if (frameType == IMET_FRAME_GPSX) {
-                    _IMET_processGpsxFrame((IMET_FrameGpsx *)p, &handle->instance->gps);
+                switch (frameType) {
+                    case IMET_FRAME_GPS:
+                        _IMET_processGpsFrame((IMET_FrameGps *)p, &handle->instance->gps);
+                        break;
+                    case IMET_FRAME_GPSX:
+                        _IMET_processGpsxFrame((IMET_FrameGpsx *)p, &handle->instance->gps);
+                        break;
+                    case IMET_FRAME_PTU:
+                        _IMET_processPtuFrame((IMET_FramePtu *)p, &handle->instance->metro);
+                        break;
+                    case IMET_FRAME_PTUX:
+                        _IMET_processPtuxFrame((IMET_FramePtux *)p, &handle->instance->metro);
+                        break;
                 }
 
-                /* Remember RX frequency (difference to nominal sonde frequency will be reported as frequency offset) */
-                handle->rxFrequencyHz = rxFrequencyHz;
+                /* Remember RX (set) frequency and RX offset */
+                handle->rxFrequencyHz = rxSetFrequencyHz;
+                handle->instance->rxOffset = rxOffset;
 
                 /* If there is a position update, send it out */
                 if (handle->instance->gps.updated) {
@@ -208,7 +226,7 @@ LPCLIB_Result IMET_processBlock (IMET_Handle handle, void *buffer, uint32_t leng
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
                     event.block = SONDE_DETECTOR_IMET;
-                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                    event.parameter = (void *)((uint32_t)lrintf(rxSetFrequencyHz));
                     SYS_handleEvent(event);
                 }
             }

@@ -71,7 +71,6 @@ enum {
     SYS_OPCODE_EVENT,
     SYS_OPCODE_BUFFER_COMPLETE,
     SYS_OPCODE_GET_RSSI,
-    SYS_OPCODE_GET_OFFSET,
 };
 
 
@@ -136,7 +135,6 @@ struct SYS_Context {
     float currentFrequency;
     float currentRssi;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
-    float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
 
     float vbatFilter[VBAT_FILTER_LENGTH];               /**< Taps for VBAT filter */
     int vbatFilterIndex;                                /**< Index for writing to VBAT filter */
@@ -361,7 +359,7 @@ static const ADF7021_Config radioModeC34C50[] = {
 static const ADF7021_Config radioModeImet[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
-        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN4, }},
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN5, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
         {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
@@ -1079,13 +1077,6 @@ float SYS_getFrameRssi (SYS_Handle handle)
 }
 
 
-/* Return frequency offset for this frame */
-float SYS_getFrameOffsetKhz (SYS_Handle handle)
-{
-    return handle->packetOffsetKhz;
-}
-
-
 /* Submit a job for the system handler. */
 LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
 {
@@ -1094,13 +1085,6 @@ LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
 
     if (!sysContext.queue) {
         return LPCLIB_ERROR;
-    }
-
-    if ((event.id == LPCLIB_EVENTID_GPIO) && (event.opcode == GPIO_EVENT_GROUP_INTERRUPT)) {
-        pMessage = osMailAlloc(sysContext.queue, 0);
-        if (pMessage) {
-            pMessage->opcode = SYS_OPCODE_GET_OFFSET;
-        }
     }
 
     if (event.id == LPCLIB_EVENTID_APPLICATION) {
@@ -1662,18 +1646,28 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                 case APP_EVENT_RAW_FRAME:
                     /* Check which type of sonde this is for */
                     if ((SONDE_Type)pMessage->event.block == SONDE_C34) {
+                        float rxOffset = 0;
+#if (BOARD_RA == 2)
+                        rxOffset = PDM_getDcOffset(handle->pdm) / (-5.3f);     //TODO factor
+#endif
                         SRSC_processBlock(
                                     handle->srsc,
                                     (uint8_t *)pMessage->event.parameter,
                                     7,
-                                    handle->currentFrequency);
+                                    handle->currentFrequency,
+                                    rxOffset);
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_IMET_RSB) {
+                        float rxOffset = 0;
+#if (BOARD_RA == 2)
+                        rxOffset = PDM_getDcOffset(handle->pdm) / (-2.65f);     //TODO factor
+#endif
                         IMET_processBlock(
                                     handle->imet,
                                     (uint8_t *)pMessage->event.parameter,
                                     0,  /* variable packet length */
-                                    handle->currentFrequency);
+                                    handle->currentFrequency,
+                                    rxOffset);
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_BEACON) {
                         BEACON_processBlock(
@@ -1839,12 +1833,6 @@ SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         _SYS_reportVbat(handle);
                     }
 
-#if (BOARD_RA == 2)
-                    //TODO
-                    /* Get frequency offset from PDM DC bias (only AFSK modes) */
-                    SRSC_setRxOffset(handle->srsc, PDM_getDcOffset(handle->pdm) / 1.32f); //TODO factor
-#endif
-
                     /* On Ra hardware prior to Ra2fix the VBAT measurement has a systematic error.
                      * The measurement can be too low if there is a voltage drop on a resistor
                      * in series with the battery.
@@ -1884,15 +1872,6 @@ SYS_controlAutoAttenuator(handle, handle->currentRssi);
 
                     /* This is our consolidated result */
                     handle->vbat = f / nValid;
-                }
-                break;
-
-            case SYS_OPCODE_GET_OFFSET:
-                {
-                    int32_t offset;
-
-                    ADF7021_readOffset(radio, &offset);
-                    handle->packetOffsetKhz = offset / 1000.0f;
                 }
                 break;
             }
