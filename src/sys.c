@@ -71,7 +71,6 @@ enum {
     SYS_OPCODE_EVENT,
     SYS_OPCODE_BUFFER_COMPLETE,
     SYS_OPCODE_GET_RSSI,
-    SYS_OPCODE_GET_OFFSET,
 };
 
 
@@ -136,7 +135,6 @@ struct SYS_Context {
     float currentFrequency;
     float currentRssi;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
-    float packetOffsetKhz;                              /**< Frequency offset at end of sync word */
 
     float vbatFilter[VBAT_FILTER_LENGTH];               /**< Taps for VBAT filter */
     int vbatFilterIndex;                                /**< Index for writing to VBAT filter */
@@ -1079,13 +1077,6 @@ float SYS_getFrameRssi (SYS_Handle handle)
 }
 
 
-/* Return frequency offset for this frame */
-float SYS_getFrameOffsetKhz (SYS_Handle handle)
-{
-    return handle->packetOffsetKhz;
-}
-
-
 /* Submit a job for the system handler. */
 LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
 {
@@ -1094,13 +1085,6 @@ LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
 
     if (!sysContext.queue) {
         return LPCLIB_ERROR;
-    }
-
-    if ((event.id == LPCLIB_EVENTID_GPIO) && (event.opcode == GPIO_EVENT_GROUP_INTERRUPT)) {
-        pMessage = osMailAlloc(sysContext.queue, 0);
-        if (pMessage) {
-            pMessage->opcode = SYS_OPCODE_GET_OFFSET;
-        }
     }
 
     if (event.id == LPCLIB_EVENTID_APPLICATION) {
@@ -1888,15 +1872,6 @@ SYS_controlAutoAttenuator(handle, handle->currentRssi);
 
                     /* This is our consolidated result */
                     handle->vbat = f / nValid;
-                }
-                break;
-
-            case SYS_OPCODE_GET_OFFSET:
-                {
-                    int32_t offset;
-
-                    ADF7021_readOffset(radio, &offset);
-                    handle->packetOffsetKhz = offset / 1000.0f;
                 }
                 break;
             }

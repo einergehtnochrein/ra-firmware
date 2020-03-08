@@ -40,9 +40,6 @@ LPCLIB_Result SYS_readRssi (SYS_Handle handle, float *rssi);
 /* Return last RSSI measurement in an RX frame */
 float SYS_getFrameRssi (SYS_Handle handle);
 
-/* Return frequency offset for this frame */
-float SYS_getFrameOffsetKhz (SYS_Handle handle);
-
 #define HOST_CHANNEL_PING           0
 #define HOST_CHANNEL_KISS           1
 #define HOST_CHANNEL_INFO           2
