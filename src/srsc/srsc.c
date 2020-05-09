@@ -149,7 +149,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     }
 
     if (1) { //TODO must check for C50 (NOTE: Every sonde must send a HOST_CHANNEL_INFO packet!)
-        length = sprintf(s, "%ld,8,0,%s,,%.1f,%.1f,%.1f,%.1f,%.3f,,%ld,%ld,%d,%ld,%.2f,%d,%ld",
+        length = sprintf(s, "%ld,8,0,%s,,%.1f,%.1f,%.1f,%.1f,%.3f,,%ld,%ld,%d,%ld,%.2f,%d,%ld,%ld,%ld",
                     instance->id,
                     instance->name,
                     instance->metro.temperatureRefBlock,    /* Reference temperature [°C] */
@@ -163,7 +163,9 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                     instance->config.errorFlags,
                     instance->config.vdop / 100.0f,
                     (int)instance->config.sondeType,
-                    instance->config.serialSensorboom
+                    instance->config.serialSensorboom,
+                    instance->config.firmwareVersion,
+                    instance->config.gpsInterferer
                  );
 
         if (length > 0) {

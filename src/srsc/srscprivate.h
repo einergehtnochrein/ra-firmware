@@ -52,7 +52,7 @@ typedef enum {
     SRSC_FRAME_CONFIG_STATE = 115,
     SRSC_FRAME_CONFIG_ERROR_FLAGS = 116,
     SRSC_FRAME_CONFIG_VDOP = 119,
-    SRSC_FRAME_CONFIG_120 = 120,
+    SRSC_FRAME_CONFIG_GPS_INTERFERER = 120,
 } SRSC_FrameType;
 
 
@@ -133,7 +133,7 @@ typedef struct {
     int state;
     uint32_t errorFlags;
     uint32_t vdop;
-    uint32_t info120;
+    uint32_t gpsInterferer;
 } SRSC_CookedConfig;
 
 
