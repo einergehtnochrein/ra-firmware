@@ -7,7 +7,7 @@ PROJECT = ra1_m0
 
 PDL = $(shell pwd)/../../../../..
 OBJDIR = obj_m0_ra1
-MAKEFILE = Makefile_m0
+MAKEFILE = Makefile_m0_ra1
 
 C_SRCS = \
     main_m0.c sync_detect.c

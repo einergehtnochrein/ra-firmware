@@ -2,20 +2,7 @@
 #ifndef __SYNCDETECT_H
 #define __SYNCDETECT_H
 
-
-/********** MUST BE DEFINED SAME AS IN M4 PROJECT ***********/
-#define IPC_S2M_DATA_SIZE                   1024
-#define IPC_S2M_NUM_BUFFERS                 4
-
-typedef struct {
-    volatile uint8_t valid;
-    uint8_t opcode;
-    uint16_t param;
-    uint32_t rxTime;
-
-    uint8_t data8[IPC_S2M_DATA_SIZE];
-} IPC_S2M;
-/************************************************************/
+#include "common.h"
 
 typedef enum {
     SYNC_STATE_HUNT = 0,
