@@ -6,7 +6,7 @@
 #include "scanner.h"
 #include "sys.h"
 
-#define FIRMWARE_VERSION_MAJOR              41
+#define FIRMWARE_VERSION_MAJOR              42
 #define FIRMWARE_VERSION_MINOR              0
 #define FIRMWARE_NAME                       ""
 
