@@ -240,8 +240,8 @@ LPCLIB_Result _SRSC_processConfigFrame (
             case SRSC_FRAME_CONFIG_VDOP:
                 instance->config.vdop = data;
                 break;
-            case SRSC_FRAME_CONFIG_120:
-                instance->config.info120 = data;
+            case SRSC_FRAME_CONFIG_GPS_INTERFERER:
+                instance->config.gpsInterferer = data;
                 break;
 
             default:

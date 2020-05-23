@@ -1,6 +1,4 @@
 
-//#include <string.h>
-
 #include "lpclib.h"
 #include "sync_detect.h"
 
@@ -26,7 +24,7 @@ static const SYNC_Config configVaisala = {
     .nPatterns = 2,
     .conf = {
         {
-            .id = 0,
+            .id = IPC_PACKET_TYPE_VAISALA_RS92,
             .nSyncLen = 116,
             .pattern = {0x9A6669A6669AA9A9LL, 0x0006669A6669A666LL},
             .nMaxDifference = 5,
@@ -36,7 +34,7 @@ static const SYNC_Config configVaisala = {
             .inverted = false,
         },
         {
-            .id = 1,
+            .id = IPC_PACKET_TYPE_VAISALA_RS41,
             .nSyncLen = 40,
             .pattern = {0x000000884469481FLL, 0},
             .nMaxDifference = 3,
@@ -53,7 +51,7 @@ static const SYNC_Config configGraw = {
     .nPatterns = 2,
     .conf = {
         {
-            .id = 2,
+            .id = IPC_PACKET_TYPE_GRAW_INVERTED,
             .nSyncLen = 32,
             .pattern = {0x000000009A995A55LL, 0},
             .nMaxDifference = 2,
@@ -63,7 +61,7 @@ static const SYNC_Config configGraw = {
             .inverted = true,
         },
         {
-            .id = 3,
+            .id = IPC_PACKET_TYPE_GRAW_NORMAL,
             .nSyncLen = 32,
             .pattern = {0x000000006566A5AALL, 0},
             .nMaxDifference = 2,
@@ -87,20 +85,30 @@ static void _m10PostProcess100Inverse (volatile IPC_S2M *buffer)
     buffer->data8[0] = 0x2B;
     buffer->data8[1] = 0x2C;
 }
+static void _m20PostProcess69Normal (volatile IPC_S2M *buffer)
+{
+    buffer->data8[0] = 0xD3;
+    buffer->data8[1] = 0x2D;
+}
+static void _m20PostProcess69Inverse (volatile IPC_S2M *buffer)
+{
+    buffer->data8[0] = 0x2C;
+    buffer->data8[1] = 0xD2;
+}
 
 
 static const SYNC_Config configModem = {
-    .nPatterns = 2,
+    .nPatterns = 4,
     .conf = {
         /* The first byte after the sync word in an M10 frame contains the (remaining) frame length,
-         * in this case 100. This byte is included in the sync pattern to increase the confidence in
-         * the detection. The payload is therefore reduced to 99 bytes, and the M10 driver will add
+         * in this case N=100 or N=69. This byte is included in the sync pattern to increase the confidence in
+         * the detection. The payload is therefore reduced to N-1 bytes, and the M10 driver will add
          * the length byte before evaluating the checksum.
          *
          * Two patterns are checked: Normal and inverted.
          */
         {
-            .id = 4,
+            .id = IPC_PACKET_TYPE_MODEM_M10,
             .nSyncLen = 48,
             .pattern = {0x0000CCCCA64CD4D3LL, 0},
             .nMaxDifference = 1,
@@ -111,7 +119,7 @@ static const SYNC_Config configModem = {
             .postProcess = _m10PostProcess100Normal,
         },
         {
-            .id = 4,
+            .id = IPC_PACKET_TYPE_MODEM_M10,
             .nSyncLen = 48,
             .pattern = {0x0000333359B32B2CLL, 0},
             .nMaxDifference = 1,
@@ -121,6 +129,28 @@ static const SYNC_Config configModem = {
             .inverted = false,
             .postProcess = _m10PostProcess100Inverse,
         },
+        {
+            .id = IPC_PACKET_TYPE_MODEM_M20,
+            .nSyncLen = 48,
+            .pattern = {0x0000CCCCA64CD32DLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 69 * 2 * 8,
+            .startOffset = 2,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+            .postProcess = _m20PostProcess69Normal,
+        },
+        {
+            .id = IPC_PACKET_TYPE_MODEM_M20,
+            .nSyncLen = 48,
+            .pattern = {0x0000333359B32CD2LL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 69 * 2 * 8,
+            .startOffset = 2,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+            .postProcess = _m20PostProcess69Inverse,
+        },
     },
 };
 
@@ -129,7 +159,7 @@ static const SYNC_Config configModemPilot = {
     .nPatterns = 2,
     .conf = {
         {
-            .id = 7,
+            .id = IPC_PACKET_TYPE_MODEM_PILOT,
             .nSyncLen = 30,
             .pattern = {0x00000000354D52FELL, 0},
             .nMaxDifference = 1,
@@ -140,7 +170,7 @@ static const SYNC_Config configModemPilot = {
             .postProcess = NULL,
         },
         {
-            .id = 7,
+            .id = IPC_PACKET_TYPE_MODEM_PILOT,
             .nSyncLen = 30,
             .pattern = {0x000000000AB2AD01LL, 0},
             .nMaxDifference = 1,
@@ -158,7 +188,7 @@ static const SYNC_Config configMeisei = {
     .nPatterns = 4,
     .conf = {
         {
-            .id = 8,
+            .id = IPC_PACKET_TYPE_MEISEI_CONFIG,
             .nSyncLen = 48,
             .pattern = {0x0000AAB52B34CACDLL, 0},
             .nMaxDifference = 0,
@@ -170,7 +200,7 @@ static const SYNC_Config configMeisei = {
             .nSubBlockBytes = 8,
         },
         {
-            .id = 8,
+            .id = IPC_PACKET_TYPE_MEISEI_CONFIG,
             .nSyncLen = 48,
             .pattern = {0x0000554AD4CB3532LL, 0},
             .nMaxDifference = 0,
@@ -182,7 +212,7 @@ static const SYNC_Config configMeisei = {
             .nSubBlockBytes = 8,
         },
         {
-            .id = 9,
+            .id = IPC_PACKET_TYPE_MEISEI_GPS,
             .nSyncLen = 48,
             .pattern = {0x0000CCD34D52ACAALL, 0},
             .nMaxDifference = 2,
@@ -194,7 +224,7 @@ static const SYNC_Config configMeisei = {
             .nSubBlockBytes = 8,
         },
         {
-            .id = 9,
+            .id = IPC_PACKET_TYPE_MEISEI_GPS,
             .nSyncLen = 48,
             .pattern = {0x0000332CB2AD5355LL, 0},
             .nMaxDifference = 2,
@@ -213,7 +243,7 @@ static const SYNC_Config configJinyang = {
     .nPatterns = 2,
     .conf = {
         {
-            .id = 10,
+            .id = IPC_PACKET_TYPE_JINYANG_RSG20,
             .nSyncLen = 56,
             .pattern = {0x00AAAAAA88888888LL, 0},
             .nMaxDifference = 0,
@@ -223,7 +253,7 @@ static const SYNC_Config configJinyang = {
             .inverted = false,
         },
         {
-            .id = 10,
+            .id = IPC_PACKET_TYPE_JINYANG_RSG20,
             .nSyncLen = 56,
             .pattern = {0x0055555577777777LL, 0},
             .nMaxDifference = 0,

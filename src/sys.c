@@ -39,6 +39,7 @@
 #include "imet.h"
 #include "jinyang.h"
 #include "m10.h"
+#include "m20.h"
 #include "meisei.h"
 #include "pdm.h"
 #include "pilot.h"
@@ -88,8 +89,10 @@ enum {
 typedef struct {
     volatile uint8_t valid;
     uint8_t opcode;
-    uint16_t param;
-    uint32_t rxTime;
+    uint8_t param;
+    uint8_t reserved;
+    uint16_t numBits;
+    uint16_t rxTime;
 
     uint8_t data8[IPC_S2M_DATA_SIZE];
 } IPC_S2M;
@@ -122,6 +125,7 @@ struct SYS_Context {
     IMET_Handle imet;
     JINYANG_Handle jinyang;
     M10_Handle m10;
+    M20_Handle m20;
     PILOT_Handle pilot;
     SRSC_Handle srsc;
     MEISEI_Handle meisei;
@@ -431,6 +435,9 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
             break;
         case SONDE_M10:
             length = (100+1) * 2;
+            break;
+        case SONDE_M20:
+            length = (69+1) * 2;
             break;
         case SONDE_PILOT:
             length = 50-4;
@@ -1246,6 +1253,7 @@ if (cl[0] != 0) {
                     IMET_resendLastPositions(handle->imet);
                     JINYANG_resendLastPositions(handle->jinyang);
                     M10_resendLastPositions(handle->m10);
+                    M20_resendLastPositions(handle->m20);
                     BEACON_resendLastPositions(handle->beacon);
                     PILOT_resendLastPositions(handle->pilot);
                     MEISEI_resendLastPositions(handle->meisei);
@@ -1317,6 +1325,7 @@ if (cl[0] != 0) {
                                 switch (decoder) {
                                     case SONDE_DECODER_MODEM:
                                         M10_removeFromList(handle->m10, id, &frequency);
+                                        M20_removeFromList(handle->m20, id, &frequency);
                                         detector = SONDE_DETECTOR_MODEM;
                                         break;
                                     case SONDE_DECODER_RS41:
@@ -1599,6 +1608,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     IMET_open(&handle->imet);
     JINYANG_open(&handle->jinyang);
     M10_open(&handle->m10);
+    M20_open(&handle->m20);
     MEISEI_open(&handle->meisei);
     PILOT_open(&handle->pilot);
     PDM_open(0, &handle->pdm);
@@ -1696,6 +1706,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 2:  sondeType = SONDE_DFM_INVERTED; break;
                                 case 3:  sondeType = SONDE_DFM_NORMAL; break;
                                 case 4:  sondeType = SONDE_M10; break;
+                                case 5:  sondeType = SONDE_M20; break;
                                 case 7:  sondeType = SONDE_PILOT; break;
                                 case 8:  sondeType = SONDE_MEISEI_CONFIG; break;
                                 case 9:  sondeType = SONDE_MEISEI_GPS; break;
@@ -1708,6 +1719,16 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->m10,
                                         ipc[bufferIndex].data8,
                                         _SYS_getSondeBufferLength(SONDE_M10),
+                                        handle->currentFrequency);
+
+                                /* Let scanner prepare for next frequency */
+                                SCANNER_notifyValidFrame(scanner);
+                            }
+                            else if (sondeType == SONDE_M20) {
+                                M20_processBlock(
+                                        handle->m20,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_M20),
                                         handle->currentFrequency);
 
                                 /* Let scanner prepare for next frequency */
