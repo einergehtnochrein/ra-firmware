@@ -223,7 +223,7 @@ LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t length
                     sizeof(handle->packet.packet69),
                     __REV16(handle->packet.packet69.crc));
 
-        /* At least the inner CRC must to be correct */
+        /* At least the inner CRC must be correct */
         if (innercrc) {
             /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
             handle->rxFrequencyHz = rxFrequencyHz;
