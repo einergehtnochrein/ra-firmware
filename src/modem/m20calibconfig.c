@@ -88,8 +88,24 @@ LPCLIB_Result _M20_processConfigBlock (
 {
     char s[20];
 
-    /* Get the sonde name */
-    snprintf(s, sizeof(s), "%02X-%02X-%02X",
+    /* Get the sonde name.
+     *
+     * It looks like there are three bytes B0, B1, B2 representing the serial number.
+     * Two serial number encodings are known so far:
+     * 002-2-01620    0x80 0x50 0x19 --> 10000001 01010000 00011001
+     * 002-2-01621    0x80 0x54 0x19 --> 10000001 01010100 00011001
+     *
+     * If we combine (B2(7:0) << 6) | B1(7:2), we get:
+     *                00011001010100 = 1620
+     *                00011001010101 = 1621
+     *
+     * The remaining two ones in the first byte (0x81) might represent the the "002-2-" part of the serial number,
+     * but more known serial number encodings are needed to understand the details.
+     */
+    snprintf(s, sizeof(s), "%05d|%02X%02X%02X",
+            ((uint16_t)payload->inner.serial[2] << 6)
+                | (((uint16_t)payload->inner.serial[1] & 3) << 14)
+                | ((uint16_t)payload->inner.serial[1] >> 2),
             payload->inner.serial[0],
             payload->inner.serial[1],
             payload->inner.serial[2]
