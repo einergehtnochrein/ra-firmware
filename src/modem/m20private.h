@@ -39,8 +39,8 @@ typedef struct {
 
         int16_t climbRate;      // BE Climb rate [1/100 m/s]
         uint16_t week;          // BE
-        uint32_t latitude;      // BE
-        uint32_t longitude;     // BE
+        int32_t latitude;       // BE Latitude  [10e-6 degrees]
+        int32_t longitude;      // BE Longitude [10e-6 degrees]
         uint8_t reserved23[9];
         uint8_t reserved2C[18];
         int16_t reserved3E;     // LE
