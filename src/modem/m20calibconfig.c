@@ -94,21 +94,28 @@ LPCLIB_Result _M20_processConfigBlock (
      * Two serial number encodings are known so far:
      * 002-2-01620    0x80 0x50 0x19 --> 10000001 01010000 00011001
      * 002-2-01621    0x80 0x54 0x19 --> 10000001 01010100 00011001
+     * 911-2-00059    0xF6 0xEC 0x00 --> 11110110 11101100 00000000
      *
      * If we combine (B2(7:0) << 6) | B1(7:2), we get:
-     *                00011001010100 = 1620
-     *                00011001010101 = 1621
+     *                00011001010100 = 01620
+     *                00011001010101 = 01621
+     *                00000000111011 = 00059
      *
-     * The remaining two ones in the first byte (0x81) might represent the the "002-2-" part of the serial number,
-     * but more known serial number encodings are needed to understand the details.
+     * Findings by OE5DXL for the first two numbers:
+     *
+     * B0(6:0) is 1 when the serial number starts with "002", and 118 when it starts with "911".
+     * Following Meteomodem's old numbering scheme, this could indicate the month in a decade:
+     *   2 % 12 = 2,    2 / 12 = 0  --> March 2020      "002"
+     * 118 % 12 = 10, 118 / 12 = 9  --> November 2019   "911"
+     *
+     * B0(7) is set in all cases, and very likely indicates the middle "2" of the serial number.
      */
-    snprintf(s, sizeof(s), "%05d|%02X%02X%02X",
-            ((uint16_t)payload->inner.serial[2] << 6)
-                | (((uint16_t)payload->inner.serial[1] & 3) << 14)
-                | ((uint16_t)payload->inner.serial[1] >> 2),
-            payload->inner.serial[0],
-            payload->inner.serial[1],
-            payload->inner.serial[2]
+    snprintf(s, sizeof(s), "%d%02d-%d-%05d",
+            (payload->inner.serial[0] % 128) / 12,              /* year (0...9) */
+            1 + (payload->inner.serial[0] % 128) % 12,          /* month (1...12) */
+            1 + payload->inner.serial[0] / 128,                 /* ? (1...2) */
+            ((uint16_t)payload->inner.serial[2] << 6)           /* serial (0...16383) */
+                | ((uint16_t)payload->inner.serial[1] >> 2)
             );
 
     /* Valid pointer to take the output values required */
