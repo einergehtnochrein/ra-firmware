@@ -105,7 +105,7 @@ LPCLIB_Result _M20_processConfigBlock (
      *
      * B0(6:0) is 1 when the serial number starts with "002", and 118 when it starts with "911".
      * Following Meteomodem's old numbering scheme, this could indicate the month in a decade:
-     *   1 % 12 = 2,    1 / 12 = 0  --> February 2020   "002"
+     *   1 % 12 = 1,    1 / 12 = 0  --> February 2020   "002"
      * 118 % 12 = 10, 118 / 12 = 9  --> November 2019   "911"
      *
      * B0(7) is set in all cases, and very likely indicates the middle "2" of the serial number.
