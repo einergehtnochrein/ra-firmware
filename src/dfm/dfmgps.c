@@ -278,7 +278,7 @@ static void _DFM_processGpsBurkinaFaso (DFM_InstanceData *instance, struct _DFM_
             instance->gps.utc.minute = ((uint32_t)i32 >> 0) & 0x3F;
         }
 
-        instance->gps.usedSats = 0;
+        instance->gps.usedSats = pDetect->fragment[8].i16 / 256;
         instance->gps.usedSatsMask = 0;
 
         if ((instance->gps.observerLLA.lat == 0) && (instance->gps.observerLLA.lon == 0)) {
