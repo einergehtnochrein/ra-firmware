@@ -155,9 +155,6 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance, struct _DFM_GpsDe
         instance->gps.observerLLA.alt = (double)pDetect->fragment[4].i32 / 100.0;
         instance->gps.climbRate = (float)pDetect->fragment[4].i16 / 100.0f;
         instance->gps.ehpe = (float)((uint32_t)pDetect->fragment[5].i32 & 0xFFFF) / 100.0f;
-        if (instance->model == DFM_MODEL_PS15) {
-            instance->gps.ehpe = NAN;
-        }
         instance->gps.geoidCorrection = (float)(pDetect->fragment[5].i32 / 65536) / 100.0f;
 
         i32 = pDetect->fragment[6].i32;
