@@ -197,13 +197,11 @@ LPCLIB_Result SRSC_processBlock (
                 SYS_send2Host(HOST_CHANNEL_INFO, log);
             }
 
-#if 0 //#if SEMIHOSTING
-            fprintf(handle->fpLog, "00FF %02X %04lX %02X\n",
-                    handle->packet.type,
-                    __REV(handle->packet.d_bigendian),
-                    handle->packet.parity);
-            fflush(handle->fpLog);
-#endif
+            /* Remove obfuscation */
+            handle->packet.rawData[1] ^= handle->instance->obfuscation;
+            handle->packet.rawData[2] ^= handle->instance->obfuscation;
+            handle->packet.rawData[3] ^= handle->instance->obfuscation;
+            handle->packet.rawData[4] ^= handle->instance->obfuscation;
 
             /* Always call config handler first to obtain an instance */
             if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxSetFrequencyHz) == LPCLIB_SUCCESS) {

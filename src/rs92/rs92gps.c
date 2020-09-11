@@ -299,6 +299,7 @@ if(cookedGps->hdop<20.0f){
     cookedGps->observerECEF=startPos;
 
     GPS_convertECEF2LLA(&cookedGps->observerECEF, &cookedGps->observerLLA);
+    GPS_applyGeoidHeightCorrection(&cookedGps->observerLLA);
     if((cookedGps->observerLLA.alt > -100.0f) && (cookedGps->observerLLA.alt < 50000.0f)){
         cookedGps->valid=true;
     }

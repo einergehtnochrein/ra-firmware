@@ -133,7 +133,6 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance, struct _DFM_GpsDe
     uint8_t n;
     int i;
     double d;
-    float f;
     int32_t i32;
     int16_t i16;
 
@@ -152,17 +151,11 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance, struct _DFM_GpsDe
             dir = 360*100-1;
         }
         instance->gps.observerLLA.direction = (float)dir / 100.0f * (M_PI / 180.0f);
-        d = (double)pDetect->fragment[4].i32;
-        instance->gps.observerLLA.alt = d / 100.0;
-        f = (float)pDetect->fragment[4].i16;
-        instance->gps.climbRate = f / 100.0f;
-        f = (float)((uint32_t)pDetect->fragment[5].i32 & 0xFFFF);
-        if (instance->model == DFM_MODEL_PS15) {
-            instance->gps.hdop = NAN;
-        }
-        else {
-            instance->gps.hdop = f / 1000.0f;
-        }
+        /* NOTE: Altitude over ellipsoid. Geoid height correction is sent in another fragment. */
+        instance->gps.observerLLA.alt = (double)pDetect->fragment[4].i32 / 100.0;
+        instance->gps.climbRate = (float)pDetect->fragment[4].i16 / 100.0f;
+        instance->gps.ehpe = (float)((uint32_t)pDetect->fragment[5].i32 & 0xFFFF) / 100.0f;
+        instance->gps.geoidCorrection = (float)(pDetect->fragment[5].i32 / 65536) / 100.0f;
 
         i32 = pDetect->fragment[6].i32;
         i16 = pDetect->fragment[6].i16;
@@ -231,6 +224,9 @@ if(1){//        if (n > instance->gps.usedSats) {
             instance->gps.usedSats = n;
         }
 
+        /* Geoid height correction */
+        instance->gps.observerLLA.alt += instance->gps.geoidCorrection;
+
         if (instance->gps.usedSats == 0) {
             instance->gps.observerLLA.lat = NAN;
             instance->gps.observerLLA.lon = NAN;
@@ -260,16 +256,16 @@ static void _DFM_processGpsBurkinaFaso (DFM_InstanceData *instance, struct _DFM_
         instance->gps.observerLLA.velocity = NAN;
         instance->gps.observerLLA.direction = NAN;
         d = (double)pDetect->fragment[3].i32;
-        instance->gps.observerLLA.alt = d / 100.0;
+        instance->gps.observerLLA.alt = d / 100.0;      /* Geoid height in this version of DFM-09! */
         instance->gps.climbRate = NAN;
-        instance->gps.hdop = NAN;
+        instance->gps.ehpe = NAN;
 
         for (i = 0; i < 12; i++) {
             instance->gps.sats[i].PRN = 0;
             instance->gps.sats[i].snr = 0;
         }
 
-        /* Get GPS time of that data field is available */
+        /* Get GPS time if that data field is available */
         if (pDetect->receivedFragmentsMask & (1u << 8)) {
             i32 = pDetect->fragment[8].i32;
             instance->gps.utc.year = ((uint32_t)i32 >> 20) & 0xFFF;
@@ -279,7 +275,7 @@ static void _DFM_processGpsBurkinaFaso (DFM_InstanceData *instance, struct _DFM_
             instance->gps.utc.minute = ((uint32_t)i32 >> 0) & 0x3F;
         }
 
-        instance->gps.usedSats = 0;
+        instance->gps.usedSats = pDetect->fragment[8].i16 / 256;
         instance->gps.usedSatsMask = 0;
 
         if ((instance->gps.observerLLA.lat == 0) && (instance->gps.observerLLA.lon == 0)) {

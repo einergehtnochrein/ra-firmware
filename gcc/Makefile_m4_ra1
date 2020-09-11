@@ -15,13 +15,13 @@ C_SRCS = \
     main.c bspra1.c config.c \
     adf7021.c sys.c scanner.c ephemupdate.c \
     bl652.c \
-    gps/gps.c \
+    gps/gps.c gps/rinex.c gps/observer.c \
     reedsolomon/reedsolomon.c bch/bch.c \
     sonde.c \
     beacon/beacon.c beacon/beaconconfig.c beacon/beacondsp.c beacon/beaconpdf1.c beacon/beaconpdf2.c \
     dfm/dfm.c dfm/dfmconfig.c dfm/dfmgps.c dfm/dfmmetrology.c \
     rs41/rs41.c rs41/rs41calibconfig.c rs41/rs41gps.c rs41/rs41metrology.c \
-    rs92/rs92.c rs92/rs92calibconfig.c rs92/rs92gps.c rs92/rs92metrology.c rs92/rinex.c rs92/observer.c \
+    rs92/rs92.c rs92/rs92calibconfig.c rs92/rs92gps.c rs92/rs92metrology.c \
     srsc/srsc.c srsc/srscconfig.c srsc/srscdsp.c srsc/srscgps.c \
     imet/imet.c imet/imetconfig.c imet/imetdsp.c imet/imetgps.c imet/imetmetrology.c \
     jinyang/jinyang.c jinyang/jinyangconfig.c jinyang/jinyanggps.c \

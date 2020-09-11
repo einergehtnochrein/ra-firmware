@@ -28,6 +28,7 @@
 #include <string.h>
 
 #include "lpclib.h"
+#include "config.h"
 #include "gps.h"
 
 #ifndef M_PI
@@ -39,8 +40,6 @@
 #define WGS84_e         0.0818191909316
 #define WGS84_eprime    0.0820944380396
 
-//TODO make it a user parameter
-#define GEOID_HEIGHT    (-48.0f)
 
 
 /* Convert from ECEF to LLA */
@@ -62,9 +61,6 @@ void GPS_convertECEF2LLA (
                );
     N = WGS84_a / sqrt(1.0 - WGS84_e * WGS84_e * sin(lla->lat) * sin(lla->lat));
     lla->alt = p / cos(lla->lat) - N;
-
-    //TODO Make geoid-ellipsoid difference a user parameter!
-    lla->alt += GEOID_HEIGHT;
 
     float fx = ecef->vx * cosf(lla->lat) * cosf(lla->lon);
     float fy = ecef->vy * cosf(lla->lat) * sinf(lla->lon);
@@ -287,7 +283,9 @@ void GPS_applyGeoidHeightCorrection (
        )
 {
     if (lla) {
-        lla->alt += GEOID_HEIGHT;
+        if (!isnan(lla->alt)) {
+            lla->alt += CONFIG_getGeoidHeight();
+        }
     }
 }
 

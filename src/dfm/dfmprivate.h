@@ -124,7 +124,8 @@ typedef struct {
         uint8_t PRN;
         uint8_t snr;
     } sats[12];
-    float hdop;                                 /* 2D quality indicator HDOP */
+    float ehpe;                                 /* Estimated horizontal position error [m] */
+    float geoidCorrection;                      /* Difference geoid height to ellipsoid height [m] */
 
     bool inBurkinaFaso;
     bool newPosition;

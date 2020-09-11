@@ -55,6 +55,7 @@ LPCLIB_Result _M20_processPayloadInner (
         if (lla.direction <= 0) {
             lla.direction += 2.0f * M_PI;
         }
+        GPS_applyGeoidHeightCorrection(&lla);
     }
 
     if (lla.alt < -100.0) {

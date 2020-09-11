@@ -29,6 +29,7 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
     ecef.vy = rawGps->speedY / 100.0f;
     ecef.vz = rawGps->speedZ / 100.0f;
     GPS_convertECEF2LLA(&ecef, &lla);
+    GPS_applyGeoidHeightCorrection(&lla);
 
     if (lla.alt < -100.0) {
         return LPCLIB_ERROR;

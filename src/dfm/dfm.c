@@ -193,7 +193,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     /* Print altitude string first (empty for an invalid altitude) */
     sAltitude[0] = 0;
     if (!isnan(instance->gps.observerLLA.alt)) {
-        sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt + CONFIG_getGeoidHeight());
+        sprintf(sAltitude, "%.0f", instance->gps.observerLLA.alt);
     }
 
     /* Battery voltage [V] */
@@ -255,7 +255,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%ld,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,%.2f,%.1f,,%d,,,%s",
+        length = sprintf((char *)s, "%ld,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -266,7 +266,6 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         sVelocity,                  /* Horizontal speed [km/h] */
                         sTemperature,               /* Temperature [°C] */
                         sSpecial,
-                        instance->gps.hdop,
                         SYS_getFrameRssi(sys),
                         instance->gps.usedSats,
                         sVbat                       /* Battery voltage [V] */
@@ -277,9 +276,10 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,2,0,%s",
+    length = sprintf(s, "%ld,2,0,%s,%.1f",
                 instance->id,
-                instance->name
+                instance->name,
+                instance->gps.ehpe
                 );
 
     if (length > 0) {
