@@ -9,12 +9,12 @@
 
 #include "lpclib.h"
 #include "bsp.h"
-#include "sys.h"
+#include "gps.h"
 #include "rs41.h"
 #include "rs41private.h"
 #include "reedsolomon.h"
-#include "gps.h"
-
+#include "sys.h"
+#include "xdata.h"
 
 
 /** Context */
@@ -107,7 +107,7 @@ static bool _RS41_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC)
 }
 
 
-
+//TODO: Not RS41 specific. Move to separate file and share with other sonde decoders.
 static void _RS41_readSubFrameXdata (char *p, int length, RS41_InstanceData *instance)
 {
     /* Minimum required data in XDATA subframe:
@@ -120,16 +120,41 @@ static void _RS41_readSubFrameXdata (char *p, int length, RS41_InstanceData *ins
          * However, we want to know if an ozone unit is present,
          * so we check for specific instrument ID's.
          */
-        int instrumentID;
-        int instrumentNumber;
-        if (sscanf(p, "%*c%02d%02d", &instrumentID, &instrumentNumber) == 2) {
-            switch (instrumentID) {
-                case 5:
-                    /* Sanity check for packet length */
-                    if (length == 21) {
-                        instance->metro.hasO3 = true;
+        /* Drop timestamp(?) */
+        length -= 1;
+        p += 1;
+        while (length > 0) {
+            int instrumentID;
+            int daisyChainNumber;
+            int previousDaisyChainNumber = 0;
+            if (sscanf(p, "%02d%02d", &instrumentID, &daisyChainNumber) == 2) {
+                /* Daisy chain numbers must be consecutive */
+                if (daisyChainNumber == previousDaisyChainNumber + 1) {
+                    switch (instrumentID) {
+                        case XDATA_INSTRUMENT_OIF411_OZONE:
+                            /* Sanity check for packet length */
+                            if (length >= 20) {
+                                instance->metro.hasO3 = true;
+                            }
+                            length -= 20;
+                            break;
+
+                        case XDATA_INSTRUMENT_COBALD:
+                            length -= 30;
+                            break;
+
+                        default:
+                            /* Unknown instrument. Drop remaining XDATA */
+                            length = 0;
+                            break;
                     }
+                }
+                else {
+                    length = 0;
                     break;
+                }
+
+                previousDaisyChainNumber = daisyChainNumber;
             }
         }
     }
@@ -240,10 +265,10 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
                         direction,                              /* Direction [°] */
                         velocity,                               /* Horizontal speed [km/h] */
-                        instance->metro.temperature,            /* Temperature [°C] */
+                        instance->metro.T,                      /* Temperature [°C] */
                         sPressure,                              /* Pressure sensor [hPa] */
                         special,
-                        instance->metro.humidity,
+                        instance->metro.RH,
                         instance->gps.dop,
                         SYS_getFrameRssi(sys),
                         offset,                                 /* RX frequency offset [kHz] */
@@ -260,15 +285,17 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     sModelName[0] = 0;
     if (_RS41_checkValidCalibration(instance, CALIB_MODELNAME)) {
-        memcpy(sModelName, instance->nameVariant, 10);
+        memcpy(sModelName, instance->names.variant, 10);
         sModelName[10] = 0;
     }
-    length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,%.0f,,,,%s,%d,",
+    length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,,%s,%d,",
                 instance->id,
                 instance->name,
                 instance->metro.temperatureUSensor,
-                instance->nameVariant,
+                instance->names.variant,
                 instance->temperatureTx,
+                instance->temperatureRef,
+                instance->metro.dewpoint,
                 sBurstKillTimer,                        /* Burst kill timer (frames) */
                 killer                                  /* Kill countdown (frames remaining) */
                 );
@@ -509,7 +536,8 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                     handle->instance->gps.observerLLA.lat = NAN;
                     handle->instance->gps.observerLLA.lon = NAN;
                     handle->instance->encrypted = true;
-                    snprintf(handle->instance->nameVariant, sizeof(handle->instance->nameVariant), "%s", "RS41-SGM");
+                    snprintf(handle->instance->names.variant,
+                             sizeof(handle->instance->names.variant), "%s", "RS41-SGM");
                     handle->instance->logMode = RS41_LOGMODE_RAW;
                     break;
                 case RS41_SUBFRAME_XDATA:
