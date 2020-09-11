@@ -62,6 +62,7 @@ static SRSC_InstanceData *_SRSC_getInstanceDataStructure (float frequencyMHz)
     if (instance) {
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
+        instance->obfuscation = 0;
         instance->rxFrequencyMHz = frequencyMHz;
         instance->gps.observerLLA.lat = NAN;
         instance->gps.observerLLA.lon = NAN;

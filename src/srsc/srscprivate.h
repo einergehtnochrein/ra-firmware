@@ -176,6 +176,7 @@ typedef struct _SRSC_InstanceData {
     float rxOffset;
 
     SRSC_DetectorState detectorState;
+    uint8_t obfuscation;
     uint32_t lastUpdated;
 
     struct {
