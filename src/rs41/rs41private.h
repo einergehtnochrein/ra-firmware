@@ -120,8 +120,8 @@ typedef __PACKED(struct {
     int16_t speedY;
     int16_t speedZ;
     uint8_t usedSats;
-    uint8_t reserved;
-    uint8_t dop;
+    uint8_t sAcc;
+    uint8_t pdop;
     uint16_t crc;
 }) RS41_SubFrameGpsPosition;
 
@@ -139,7 +139,7 @@ typedef __PACKED(struct {
 
 typedef __PACKED(struct {
     uint32_t minPrMes;                  /* Minimum PR measurement of all sats [m] (floor) */
-    uint8_t reserved004;
+    uint8_t mon_jam;                    /* [7:4] AGC_MON, [3:0] Jamming */
     __PACKED(struct {
         uint32_t deltaPrMes;            /* PR measurement (delta to minPrMes) [1/256 m] */
                                         /* NOTE: In general also the satellite with the minimum PR
@@ -182,9 +182,10 @@ typedef struct {
     double gpstime;
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
-    float dop;
+    float pdop;
     uint8_t visibleSats;
     uint8_t usedSats;
+    uint8_t sAcc;
 } RS41_CookedGps;
 
 
