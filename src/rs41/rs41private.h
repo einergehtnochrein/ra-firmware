@@ -38,13 +38,17 @@ typedef __PACKED(struct {
     char name[8];
     __PACKED(struct {
         uint8_t batteryVoltage100mV;        /* Battery voltage in multiples of 100 mV */
-        uint16_t reserved00B;               /* Bit field (all 16 bits in use) */
+        uint16_t reserved00B;               /* Bit field (all 16 bits in use)
+                                             * Bit 4: 1=CRC error in saved user parameters detected
+                                             * Bit 9: 1=NFC field detected
+                                             */
         uint16_t flags;                     /* Bit 0: 0=Start phase, 1=Flight mode
                                              * Bit 1: 0=Ascent, 1=Descent
+                                             * Bit 5: 1="T self-check" running
                                              * Bit 11: 0=VBATmin check disabled, 1=VBATmin check enabled
                                              * Bit 12: 0=VBAT ok, 1=VBAT too low
                                              */
-        uint8_t reserved00F;                /* ? (can be either 0 or 6) */
+        uint8_t reserved00F;                /* ? (can be either 0 or 6, depends on params.field_9.bit7) */
         int8_t temperatureRef;              /* Reference temperature (@ PCB cutout) [°C] */
         uint16_t errorLog;                  /* Error flags:
                                              * 0: Low battery capacity
@@ -63,7 +67,7 @@ typedef __PACKED(struct {
                                              * 13: P-module not detected
                                              * 14: T, Tu or U check failed
                                              */
-        uint16_t reserved013;
+        uint16_t humidityHeatingPwm;        /* PWM state for humidity sensor heating(?) (0...1000) */
         uint8_t txPower;                    /* TX power level (0...7, see Si4032 data sheet) */
     });
     uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
@@ -213,28 +217,31 @@ typedef struct _RS41_InstanceData {
     __PACKED(union {
         uint8_t rawData[RS41_CALIBRATION_MAX_INDEX + 1][16];
         __PACKED(struct {
-            uint16_t crc16;                     /* CRC16 CCITT Checksum over range 0x002...0x31F */
+            uint16_t crc;                       /* CRC16 CCITT Checksum over range 0x002...0x31F */
             uint16_t frequency;                 /* 0x002: TX is on 400 MHz + (frequency / 64) * 10 kHz */
             uint8_t startupTxPower;             /* 0x004: TX power level at startup (1...7) */
-            uint8_t reserved005;
-            uint8_t reserved006;
-            uint16_t reserved007;               /* 0x007:  ?? (some bitfield) [0],[1],[2],[3]. Init value = 0xE */
+            uint16_t reserved005;
+            uint16_t optionFlags;               /* 0x007: Bitfield [3:0]. Enables options. Init value = 0xE
+                                                 *        0: Pressure sensor
+                                                 *        1: ?
+                                                 *        2: ?
+                                                 *        3: GPS
+                                                 */
             uint16_t reserved009;               /* 0x009: ? */
-            uint8_t reserved00B;
-            uint8_t reserved00C;
+            uint16_t reserved00B;
             uint8_t serial[8];                  /* 0x00D: Sonde ID, 8 char, not terminated */
             uint16_t firmwareVersion;           /* 0x015: 10000*major + 100*minor + patch*/
             uint16_t reserved017;
             uint16_t minHeight4Flight;          /* 0x019: Height (meter above ground) where flight mode begins */
-            uint8_t lowBatteryThreshold100mV;   /* 0x01B: (Default=18) Shutdown if battery voltage below this
+            uint8_t lowBatVoltageThreshold;     /* 0x01B: (Default=18) Shutdown if battery voltage below this
                                                           threshold for some time (10s ?)
                                                 */
             uint8_t nfcDetectorThreshold;       /* 0x01C: NFC detector threshold [25mV] (Default: 0x05 = 125mV) */
             uint8_t reserved01D;                /* 0x01D: ?? (Init value = 0xB4) */
             uint8_t reserved01E;                /* 0x01E: ?? (Init value = 0x3C) */
             uint16_t reserved01F;
-            int8_t refTemperatureThreshold;     /* 0x021: Reference temperature threshold [°C] */
-            uint8_t reserved022;
+            int8_t refTemperatureTarget;        /* 0x021: Reference target temperature [°C] */
+            uint8_t lowBatCapacityThreshold;    /* 0x022: Threshold [Wmin] for low battery capacity detection */
             uint16_t reserved023;
             uint16_t reserved025;
             int16_t flightKillFrames;           /* 0x027: Number of frames in flight until kill (-1 = disabled) */
@@ -242,15 +249,19 @@ typedef struct _RS41_InstanceData {
             uint8_t burstKill;                  /* 0x02B: Burst kill (0=disabled, 1=enabled) */
             uint8_t reserved02C;
             uint8_t reserved02D;
-            uint16_t reserved02E;
+            uint16_t freshBatteryCapacity;      /* 0x02E: Capacity of battery [mWh] at startup. Default: 9089 mWh
+                                                 *        Updated by sonde on shutdown.
+                                                 */
             uint16_t reserved030;
             uint8_t reserved032;
-            uint16_t reserved033;
-            uint16_t reserved035;
-            uint16_t reserved037;
-            uint16_t reserved039;               /* 0x039: */
+            uint16_t ubloxHwVersionHigh;        /* 0x033: First 4 digits of ublox hardware version */
+            uint16_t ubloxHwVersionLow;         /* 0x035: Last 4 digits of ublox hardware version
+                                                 *        Example: ...versionHigh=4, ...versionLow=7
+                                                 */
+            uint16_t ubloxSwVersion;            /* 0x037: ublox software version, e.g. 703 = version 7.03 */
+            uint16_t ubloxSwBuild;              /* 0x039: ublox software build number */
             uint8_t reserved03B;                /* 0x03B: */
-            uint8_t reserved03C;                /* 0x03C: */
+            uint8_t radioVersionCode;           /* 0x03C: Content of Si4032 register 01h */
             float refResistorLow;               /* 0x03D: Reference resistor low (750 Ohms) */
             float refResistorHigh;              /* 0x041: Reference resistor high (1100 Ohms) */
             float refCapLow;                    /* 0x045: Reference capacitance low (0) */
@@ -273,10 +284,10 @@ typedef struct _RS41_InstanceData {
             float f157;                         /* 0x157: ?? (Initialized by same value as calibU) */
             uint8_t reserved15B[0x160-0x15B];
             float f160[35];
-            uint8_t startIWDG;                  /* 0x1EC: If ==0 or ==2: Watchdog IWDG will not be started */
+            uint8_t startIWDG;                  /* 0x1EC: If ==1 or ==2: Watchdog IWDG will not be started */
             uint8_t parameterSetupDone;         /* 0x1ED: Set (!=0) if parameter setup was done */
-            uint8_t reserved1EE;
-            uint8_t reserved1EF;
+            uint8_t enableTestMode;             /* 0x1EE: Test mode (service menu) (0=disabled, 1=enabled) */
+            uint8_t enableTX;                   /* 0x1EF: 0=TX disabled, 1=TX enabled (maybe this is autostart?) */
             float f1F0[8];
             float pressureLaunchSite[2];        /* 0x210: Pressure [hPa] at launch site */
             __PACKED(struct {
@@ -291,8 +302,7 @@ typedef struct _RS41_InstanceData {
                 uint16_t reserved24B;           /* 0x24B: */
             }) serials;
             uint16_t reserved24D;               /* 0x24D: */
-            uint8_t reserved24F;
-            uint8_t reserved250;
+            uint16_t reserved24F;               /* 0x24F: */
             uint16_t reserved251;               /* 0x251: (Init value = 0x21A = 538) */
             uint8_t xdataUartBaud;              /* 0x253: 1=9k6, 2=19k2, 3=38k4, 4=57k6, 5=115k2 */
             uint8_t reserved254;
@@ -303,7 +313,7 @@ typedef struct _RS41_InstanceData {
             float f2A6[17];
             uint8_t reserved2EA[0x2FA-0x2EA];
             uint16_t halfword2FA[9];
-            float reserved30C;
+            float reserved30C;                  /* 0x30C: */
             float reserved310;                  /* 0x310: */
             uint8_t reserved314;                /* 0x314: */
             uint8_t reserved315;                /* 0x315: */
@@ -312,11 +322,11 @@ typedef struct _RS41_InstanceData {
 
             /* This is fragment 50. It only uses 14 valid bytes! */
             int16_t killCountdown;              /* 0x320: Counts frames remaining until kill (-1 = inactive) */
-            uint8_t reserved322[6];
+            uint16_t reserved322;
+            uint8_t reserved324[4];
             int8_t intTemperatureCpu;           /* 0x328: Temperature [°C] of CPU */
             int8_t intTemperatureRadio;         /* 0x329: Temperature [°C] of radio chip */
-            int8_t reserved32A;                 /* 0x32A: */
-            uint8_t reserved32B;                /* 0x32B: */
+            uint16_t remainingBatteryCapacity;  /* 0x32A: */
             uint8_t reserved32C;                /* 0x32C: ? (the sum of two slow 8-bit counters) */
             uint8_t reserved32D;                /* 0x32D: ? (the sum of two slow 8-bit counters) */
         });
