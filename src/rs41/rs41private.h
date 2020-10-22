@@ -231,8 +231,7 @@ typedef struct _RS41_InstanceData {
             uint16_t reserved009;               /* 0x009: ? */
             uint16_t reserved00B;
             uint8_t serial[8];                  /* 0x00D: Sonde ID, 8 char, not terminated */
-            uint16_t firmwareVersion;           /* 0x015: 10000*major + 100*minor + patch*/
-            uint16_t reserved017;
+            uint32_t firmwareVersion;           /* 0x015: 10000*major + 100*minor + patch*/
             uint16_t minHeight4Flight;          /* 0x019: Height (meter above ground) where flight mode begins */
             uint8_t lowBatVoltageThreshold;     /* 0x01B: (Default=18) Shutdown if battery voltage below this
                                                           threshold for some time (10s ?)
@@ -253,15 +252,21 @@ typedef struct _RS41_InstanceData {
             uint16_t freshBatteryCapacity;      /* 0x02E: Capacity of battery [mWh] at startup. Default: 9089 mWh
                                                  *        Updated by sonde on shutdown.
                                                  */
-            uint16_t reserved030;
-            uint8_t reserved032;
+            uint16_t reserved030;               /* 0x030: */
+            uint8_t skipIntro;                  /* 0x032: Only bit 0 used(?). Determines if intro message is shown
+                                                 *        when enabling test mode (service menu).
+                                                 *        0=show intro, 1=skip intro
+                                                 *        (just a guess so far...)
+                                                 */
             uint16_t ubloxHwVersionHigh;        /* 0x033: First 4 digits of ublox hardware version */
             uint16_t ubloxHwVersionLow;         /* 0x035: Last 4 digits of ublox hardware version
                                                  *        Example: ...versionHigh=4, ...versionLow=7
                                                  */
             uint16_t ubloxSwVersion;            /* 0x037: ublox software version, e.g. 703 = version 7.03 */
             uint16_t ubloxSwBuild;              /* 0x039: ublox software build number */
-            uint8_t reserved03B;                /* 0x03B: */
+            uint8_t ubloxConfigErrors;          /* 0x03B: Bitfield [6:0]. Each bit when set indicates a failure
+                                                 *        to initialize a certain ublox feature.
+                                                 */
             uint8_t radioVersionCode;           /* 0x03C: Content of Si4032 register 01h */
             float refResistorLow;               /* 0x03D: Reference resistor low (750 Ohms) */
             float refResistorHigh;              /* 0x041: Reference resistor high (1100 Ohms) */
@@ -282,8 +287,9 @@ typedef struct _RS41_InstanceData {
 
             float f152;
             uint8_t u156;
-            float f157;                         /* 0x157: ?? (Initialized by same value as calibU) */
-            uint8_t reserved15B[0x160-0x15B];
+            float f157;                         /* 0x157: ?? (Initialized by same value as calibU[0]) */
+            uint8_t reserved15B;                /* 0x15B: */
+            uint32_t reserved15C;               /* 0x15C: */
             float f160[35];
             uint8_t startIWDG;                  /* 0x1EC: If ==1 or ==2: Watchdog IWDG will not be started */
             uint8_t parameterSetupDone;         /* 0x1ED: Set (!=0) if parameter setup was done */
