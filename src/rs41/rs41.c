@@ -507,42 +507,54 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                     handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
                     break;
                 case RS41_SUBFRAME_METROLOGY:
-                    _RS41_processMetrologyBlock((RS41_SubFrameMetrology *)(p + 2), &handle->instance->metro, handle->instance);
+                    if (handle->instance) {
+                        _RS41_processMetrologyBlock((RS41_SubFrameMetrology *)(p + 2), &handle->instance->metro, handle->instance);
+                    }
                     break;
                 case RS41_SUBFRAME_METROLOGY_SHORT:
-                    _RS41_processMetrologyShortBlock((RS41_SubFrameMetrologyShort *)(p + 2), &handle->instance->metro, handle->instance);
+                    if (handle->instance) {
+                        _RS41_processMetrologyShortBlock((RS41_SubFrameMetrologyShort *)(p + 2), &handle->instance->metro, handle->instance);
+                    }
                     break;
                 case RS41_SUBFRAME_GPS_POSITION:
-                    _RS41_processGpsPositionBlock((RS41_SubFrameGpsPosition *)(p + 2), &handle->instance->gps);
+                    if (handle->instance) {
+                        _RS41_processGpsPositionBlock((RS41_SubFrameGpsPosition *)(p + 2), &handle->instance->gps);
 
-                    LPCLIB_Event event;
-                    LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
-                    event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DETECTOR_RS41_RS92;
-                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
-                    SYS_handleEvent(event);
+                        LPCLIB_Event event;
+                        LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
+                        event.opcode = APP_EVENT_HEARD_SONDE;
+                        event.block = SONDE_DETECTOR_RS41_RS92;
+                        event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                        SYS_handleEvent(event);
+                    }
                     break;
                 case RS41_SUBFRAME_GPS_INFO:
-                    _RS41_processGpsInfoBlock(
-                            (RS41_SubFrameGpsInfo *)(p + 2),
-                            &handle->instance->gps,
-                            &handle->rawGps);
+                    if (handle->instance) {
+                        _RS41_processGpsInfoBlock(
+                                (RS41_SubFrameGpsInfo *)(p + 2),
+                                &handle->instance->gps,
+                                &handle->rawGps);
+                    }
                     break;
                 case RS41_SUBFRAME_GPS_RAW:
                     _RS41_processGpsRawBlock((RS41_SubFrameGpsRaw *)(p + 2), &handle->rawGps);
                     break;
                 case RS41_SUBFRAME_CRYPT78:
                 case RS41_SUBFRAME_CRYPT80:
-                    /* RS41-SGM */
-                    handle->instance->gps.observerLLA.lat = NAN;
-                    handle->instance->gps.observerLLA.lon = NAN;
-                    handle->instance->encrypted = true;
-                    snprintf(handle->instance->names.variant,
-                             sizeof(handle->instance->names.variant), "%s", "RS41-SGM");
-                    handle->instance->logMode = RS41_LOGMODE_RAW;
+                    if (handle->instance) {
+                        /* RS41-SGM */
+                        handle->instance->gps.observerLLA.lat = NAN;
+                        handle->instance->gps.observerLLA.lon = NAN;
+                        handle->instance->encrypted = true;
+                        snprintf(handle->instance->names.variant,
+                                sizeof(handle->instance->names.variant), "%s", "RS41-SGM");
+                        handle->instance->logMode = RS41_LOGMODE_RAW;
+                    }
                     break;
                 case RS41_SUBFRAME_XDATA:
-                    _RS41_readSubFrameXdata((char *)(p + 2), subFrameLength - 4, handle->instance);
+                    if (handle->instance) {
+                        _RS41_readSubFrameXdata((char *)(p + 2), subFrameLength - 4, handle->instance);
+                    }
                     break;
                 default:
                     /* Ignore unknown (or unhandled) frame types */
