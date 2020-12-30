@@ -329,13 +329,15 @@ typedef struct _RS41_InstanceData {
 
             /* This is fragment 50. It only uses 14 valid bytes! */
             int16_t killCountdown;              /* 0x320: Counts frames remaining until kill (-1 = inactive) */
-            uint16_t reserved322;
-            uint8_t reserved324[4];
+            int16_t launchAltitude;             /* 0x322: [m], referenced to spherical Earth model! */
+            uint16_t heightOfFlightStart;       /* 0x324: [m], height above launch site of transition to flight mode */
+            uint8_t lastTxPowerLevel;
+            uint8_t numSoftwareResets;
             int8_t intTemperatureCpu;           /* 0x328: Temperature [°C] of CPU */
             int8_t intTemperatureRadio;         /* 0x329: Temperature [°C] of radio chip */
             uint16_t remainingBatteryCapacity;  /* 0x32A: */
-            uint8_t reserved32C;                /* 0x32C: ? (the sum of two slow 8-bit counters) */
-            uint8_t reserved32D;                /* 0x32D: ? (the sum of two slow 8-bit counters) */
+            uint8_t numUbxDiscarded;            /* 0x32C: Number of discarded UBX packets */
+            uint8_t numUbxStall;                /* 0x32D: Number of occasions wher essential UBX packets are missing */
         });
     });
 } RS41_InstanceData;
