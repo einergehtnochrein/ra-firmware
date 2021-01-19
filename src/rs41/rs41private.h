@@ -166,7 +166,15 @@ typedef struct {
     float pressureAltitude;
     float temperaturePSensor;           /* Temperature [°C] pressure sensor */
 
-    bool hasO3;
+    int numXdataInstruments;
+
+    int hasO3;                          /* !=0: O3 probe */
+    float o3PumpTemperature;            /* Only valid for O3 sonde */
+    float o3CellCurrent;                /* Only valid for O3 sonde */
+    float o3BatteryVoltage;             /* Only valid for O3 sonde */
+    float o3PumpCurrent;                /* Only valid for O3 sonde */
+    float o3ExtVoltage;                 /* Only valid for O3 sonde */
+    uint16_t o3swVersion;               /* Only valid for O3 sonde */
 
     // Humidity calculations. End results and intermediates
     float temperatureUSensor;           /* Temperature [°C] humidity sensor */
@@ -253,11 +261,7 @@ typedef struct _RS41_InstanceData {
                                                  *        Updated by sonde on shutdown.
                                                  */
             uint16_t reserved030;               /* 0x030: */
-            uint8_t skipIntro;                  /* 0x032: Only bit 0 used(?). Determines if intro message is shown
-                                                 *        when enabling test mode (service menu).
-                                                 *        0=show intro, 1=skip intro
-                                                 *        (just a guess so far...)
-                                                 */
+            uint8_t allowXdata;                 /* 0x032: 0=no XDATA capability, 1=XDATA option enabled */
             uint16_t ubloxHwVersionHigh;        /* 0x033: First 4 digits of ublox hardware version */
             uint16_t ubloxHwVersionLow;         /* 0x035: Last 4 digits of ublox hardware version
                                                  *        Example: ...versionHigh=4, ...versionLow=7
