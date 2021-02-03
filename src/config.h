@@ -19,7 +19,7 @@ __PACKED(struct _Config_t {
     float rssiCorrectionLnaOn;
     float rssiCorrectionLnaOff;
     float __reserved018__[25];
-    float baudrate;
+    uint32_t baudrate;
 
     /* 0128  0x080 */
     char nameBluetooth[48];

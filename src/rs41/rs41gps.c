@@ -38,7 +38,8 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
     cookedGps->observerECEF = ecef;
     cookedGps->observerLLA = lla;
     cookedGps->usedSats = rawGps->usedSats;
-    cookedGps->dop = rawGps->dop / 10.0f;
+    cookedGps->pdop = rawGps->pdop / 10.0f;
+    cookedGps->sAcc = rawGps->sAcc;
 
     /* Invalidate position if this is not a valid position solution */
     if (cookedGps->usedSats == 0) {
@@ -70,8 +71,8 @@ LPCLIB_Result _RS41_processGpsInfoBlock (
             ++nSats;
         }
 
-        raw->sats[i].cno = rawGps->sats[i].cno_mesQI / 16;
-        raw->sats[i].mesQI = rawGps->sats[i].cno_mesQI % 16;
+        raw->sats[i].cno = rawGps->sats[i].cno_mesQI / 32;
+        raw->sats[i].mesQI = rawGps->sats[i].cno_mesQI % 32;
     }
 
     cookedGps->visibleSats = nSats;
