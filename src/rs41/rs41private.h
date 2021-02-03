@@ -139,7 +139,7 @@ typedef __PACKED(struct {
 
 typedef __PACKED(struct {
     uint32_t minPrMes;                  /* Minimum PR measurement of all sats [m] (floor) */
-    uint8_t mon_jam;                    /* [7:4] AGC_MON, [3:0] Jamming */
+    uint8_t mon_jam;                    /* Fields from UBX MON-HW: [7:4] jamInd, [3:0] agcCnt */
     __PACKED(struct {
         uint32_t deltaPrMes;            /* PR measurement (delta to minPrMes) [1/256 m] */
                                         /* NOTE: In general also the satellite with the minimum PR
@@ -321,7 +321,9 @@ typedef struct _RS41_InstanceData {
             uint8_t reserved259;
             uint8_t reserved25A[0x25E -0x25A];
             float matrixP[18];                  /* 0x25E: Coefficients for pressure sensor polynomial */
-            float f2A6[17];
+            float vectorBp[3];                  /* 0x2A6: */
+            uint8_t reserved2B2[8];             /* 0x2B2: */
+            float matrixBt[12];                 /* 0x2BA: */
             uint8_t reserved2EA[0x2FA-0x2EA];
             uint16_t halfword2FA[9];
             float reserved30C;                  /* 0x30C: */
@@ -368,7 +370,7 @@ int32_t _RS41_readS24 (const uint8_t *p24);
 #define CALIB_FREQUENCY             0x0000000000000001ll
 #define CALIB_TEMPERATURE           0x00000000000000F8ll
 #define CALIB_TEMPERATURE_U         0x00000000001C0018ll
-#define CALIB_HUMIDITY              0x00000000001FFFF8ll
+#define CALIB_HUMIDITY              0x00007C00001FFFF8ll
 #define CALIB_PRESSURE              0x000007E000000000ll
 #define CALIB_FLIGHTKILLTIMER       0x0000000000000004ll
 #define CALIB_BURSTKILLTIMER        0x0002000000000000ll

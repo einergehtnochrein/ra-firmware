@@ -154,7 +154,8 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
 
     float refmin;
     float current[3];
-    int i;
+    int i,j;
+    float sum;
 
     for (i = 0; i < 3; i++) {
         refmin = _RS41_read24(rawMetro->adc[i].refmin);
@@ -237,31 +238,57 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
             /* Apply calibration */
             cookedMetro->Cp = (cookedMetro->C / instance->calibU[0] - 1.0f) * instance->calibU[1];
 
-            int j, k;
-            float sum = 0;
-            float xj = 1.0f;
-            for (j = 0; j < 7; j++) {
-                float yk = 1.0f;
-                for (k = 0; k < 6; k++) {
-                    sum += xj * yk * instance->matrixU[j][k];
-                    yk *= (Trh - 20.0f) / 180.0f;
-                }
-                xj *= cookedMetro->Cp;
+            /* Compensation for low temperature and pressure at altitude */
+            float powc = 1.0f;
+            sum = 0;
+            float t = (Trh - 20.0f) / 180.0f;
+            float p = cookedMetro->pressure;
+            if (isnan(p)) {
+                cookedMetro->RHtu = NAN;
+                cookedMetro->RH = NAN;
+                cookedMetro->dewpoint = NAN;
             }
-            cookedMetro->RHtu = sum;
+            else {
+                p /= 1000.0f;
+                for (i = 0; i < 3; i++) {
+                    float l = 0;
+                    float powt = 1.0f;
+                    for (j = 0; j < 4; j++) {
+                        l += instance->matrixBt[4*i+j] * powt;
+                        powt *= t;
+                    }
+                    float x = instance->vectorBp[i];
+                    sum += l * ((x * p / (1.0f + x * p)) - x / (1.0f + x)) * powc;
+                    powc *= cookedMetro->Cp;
+                }
+                cookedMetro->Cp -= sum;
 
-            /* Since there is always a small difference between the temperature readings for
-             * the atmospheric (main) tempoerature sensor and the temperature sensor inside
-             * the humidity sensor device, transform the humidity value to the atmospheric conditions
-             * with its different water vapor saturation pressure.
-             */
-            cookedMetro->RH = sum
-                * _RS41_waterVaporSaturationPressure(cookedMetro->temperatureUSensor)
-                / _RS41_waterVaporSaturationPressure(cookedMetro->T);
+                int k;
+                sum = 0;
+                float xj = 1.0f;
+                for (j = 0; j < 7; j++) {
+                    float yk = 1.0f;
+                    for (k = 0; k < 6; k++) {
+                        sum += xj * yk * instance->matrixU[j][k];
+                        yk *= (Trh - 20.0f) / 180.0f;
+                    }
+                    xj *= cookedMetro->Cp;
+                }
+                cookedMetro->RHtu = sum;
 
-            /* Dew point */
-            float temp = logf(cookedMetro->RH / 100.0f) + (17.625f * cookedMetro->T / (243.04f + cookedMetro->T));
-            cookedMetro->dewpoint = 243.04f * temp / (17.625f - temp);
+                /* Since there is always a small difference between the temperature readings for
+                * the atmospheric (main) tempoerature sensor and the temperature sensor inside
+                * the humidity sensor device, transform the humidity value to the atmospheric conditions
+                * with its different water vapor saturation pressure.
+                */
+                cookedMetro->RH = sum
+                    * _RS41_waterVaporSaturationPressure(cookedMetro->temperatureUSensor)
+                    / _RS41_waterVaporSaturationPressure(cookedMetro->T);
+
+                /* Dew point */
+                float temp = logf(cookedMetro->RH / 100.0f) + (17.625f * cookedMetro->T / (243.04f + cookedMetro->T));
+                cookedMetro->dewpoint = 243.04f * temp / (17.625f - temp);
+            }
         }
     }
 
