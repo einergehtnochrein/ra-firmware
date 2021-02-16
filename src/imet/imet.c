@@ -194,6 +194,18 @@ LPCLIB_Result IMET_processBlock (
 
     if (length >= 3) {
         if (_IMET_doParityCheck(p, length)) {
+            /* Log */
+            {
+                char log[80];
+                unsigned int i;
+                snprintf(log, sizeof(log), "%ld,6,1,",
+                            handle->instance->id);
+                for (i = 0; i < length; i++) {
+                    snprintf(&log[strlen(log)], sizeof(log) - strlen(log), "%02X", p[i]);
+                }
+                SYS_send2Host(HOST_CHANNEL_INFO, log);
+            }
+
             /* Get/create an instance */
             handle->instance = _IMET_getInstanceDataStructure(rxSetFrequencyHz);
             if (handle->instance) {
