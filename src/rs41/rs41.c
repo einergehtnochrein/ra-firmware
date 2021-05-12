@@ -230,6 +230,9 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     if (instance->metro.hasO3) {
         special += (1u << 0);
     }
+    if (instance->logMode != RS41_LOGMODE_NONE) {
+        special += (1u << 2);
+    }
     if (instance->encrypted) {
         special += (1u << 1);
         special += (1u << 7);               /* Inexact location information... */

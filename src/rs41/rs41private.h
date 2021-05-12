@@ -48,7 +48,9 @@ typedef __PACKED(struct {
                                              * Bit 11: 0=VBATmin check disabled, 1=VBATmin check enabled
                                              * Bit 12: 0=VBAT ok, 1=VBAT too low
                                              */
-        uint8_t reserved00F;                /* ? (can be either 0 or 6, depends on params.field_9.bit7) */
+        uint8_t cryptoMode;                 /* Normal sonde: always 0 (can be 6 if parameter config error)
+                                             * RS41-SGM: 0...4
+                                             */
         int8_t temperatureRef;              /* Reference temperature (@ PCB cutout) [°C] */
         uint16_t errorLog;                  /* Error flags:
                                              * 0: Low battery capacity

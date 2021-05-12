@@ -23,7 +23,7 @@ struct __FILE {
 UART_Handle blePort;
 
 #define BLE_UART                            UART0
-#define BLE_PORT_TXBUF_SIZE                 1500
+#define BLE_PORT_TXBUF_SIZE                 2560
 #define BLE_PORT_RXBUF_SIZE                 512
 static uint8_t blePortTxBuf[BLE_PORT_TXBUF_SIZE];
 static uint8_t blePortRxBuf[BLE_PORT_RXBUF_SIZE];
