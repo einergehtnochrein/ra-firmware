@@ -25,8 +25,8 @@ static const SYNC_Config configVaisala = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_VAISALA_RS92,
-            .nSyncLen = 116,
-            .pattern = {0x9A6669A6669AA9A9LL, 0x0006669A6669A666LL},
+            .pattern     = {0x9A6669A6669AA9A9LL, 0x0006669A6669A666LL},
+            .patternMask = {0xFFFFFFFFFFFFFFFFLL, 0x000FFFFFFFFFFFFFLL},
             .nMaxDifference = 5,
             .frameLengthBits = 234 * 10 * 2,
             .startOffset = 0,
@@ -35,8 +35,8 @@ static const SYNC_Config configVaisala = {
         },
         {
             .id = IPC_PACKET_TYPE_VAISALA_RS41,
-            .nSyncLen = 40,
-            .pattern = {0x000000884469481FLL, 0},
+            .pattern     = {0x000000884469481FLL, 0},
+            .patternMask = {0x000000FFFFFFFFFFLL, 0},
             .nMaxDifference = 3,
             .frameLengthBits = 510 * 8,
             .startOffset = 0,
@@ -52,8 +52,8 @@ static const SYNC_Config configGraw = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_GRAW_INVERTED,
-            .nSyncLen = 32,
-            .pattern = {0x000000009A995A55LL, 0},
+            .pattern     = {0x000000009A995A55LL, 0},
+            .patternMask = {0x00000000FFFFFFFFLL, 0},
             .nMaxDifference = 2,
             .frameLengthBits = 66 * 8,
             .startOffset = 0,
@@ -62,8 +62,8 @@ static const SYNC_Config configGraw = {
         },
         {
             .id = IPC_PACKET_TYPE_GRAW_NORMAL,
-            .nSyncLen = 32,
-            .pattern = {0x000000006566A5AALL, 0},
+            .pattern     = {0x000000006566A5AALL, 0},
+            .patternMask = {0x00000000FFFFFFFFLL, 0},
             .nMaxDifference = 2,
             .frameLengthBits = 66 * 8,
             .startOffset = 0,
@@ -109,8 +109,8 @@ static const SYNC_Config configModem = {
          */
         {
             .id = IPC_PACKET_TYPE_MODEM_M10,
-            .nSyncLen = 48,
-            .pattern = {0x0000CCCCA64CD4D3LL, 0},
+            .pattern     = {0x0000CCCCA64CD4D3LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 1,
             .frameLengthBits = 100 * 2 * 8,
             .startOffset = 2,
@@ -120,8 +120,8 @@ static const SYNC_Config configModem = {
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_M10,
-            .nSyncLen = 48,
-            .pattern = {0x0000333359B32B2CLL, 0},
+            .pattern     = {0x0000333359B32B2CLL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 1,
             .frameLengthBits = 100 * 2 * 8,
             .startOffset = 2,
@@ -131,8 +131,8 @@ static const SYNC_Config configModem = {
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_M20,
-            .nSyncLen = 48,
-            .pattern = {0x0000CCCCA64CD32DLL, 0},
+            .pattern     = {0x0000CCCCA64CD32DLL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 69 * 2 * 8,
             .startOffset = 2,
@@ -142,8 +142,8 @@ static const SYNC_Config configModem = {
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_M20,
-            .nSyncLen = 48,
-            .pattern = {0x0000333359B32CD2LL, 0},
+            .pattern     = {0x0000333359B32CD2LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 69 * 2 * 8,
             .startOffset = 2,
@@ -160,8 +160,8 @@ static const SYNC_Config configModemPilot = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_MODEM_PILOT,
-            .nSyncLen = 30,
-            .pattern = {0x00000000354D52FELL, 0},
+            .pattern     = {0x00000000354D52FELL, 0},
+            .patternMask = {0x000000003FFFFFFFLL, 0},
             .nMaxDifference = 1,
             .frameLengthBits = (50 - 4) * 8,
             .startOffset = 0,
@@ -171,8 +171,8 @@ static const SYNC_Config configModemPilot = {
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_PILOT,
-            .nSyncLen = 30,
-            .pattern = {0x000000000AB2AD01LL, 0},
+            .pattern     = {0x000000000AB2AD01LL, 0},
+            .patternMask = {0x000000003FFFFFFFLL, 0},
             .nMaxDifference = 1,
             .frameLengthBits = (50 - 4) * 8,
             .startOffset = 0,
@@ -189,8 +189,8 @@ static const SYNC_Config configMeisei = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_MEISEI_CONFIG,
-            .nSyncLen = 48,
-            .pattern = {0x0000AAB52B34CACDLL, 0},
+            .pattern     = {0x0000AAB52B34CACDLL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 6 * 46,
             .startOffset = 0,
@@ -201,8 +201,8 @@ static const SYNC_Config configMeisei = {
         },
         {
             .id = IPC_PACKET_TYPE_MEISEI_CONFIG,
-            .nSyncLen = 48,
-            .pattern = {0x0000554AD4CB3532LL, 0},
+            .pattern     = {0x0000554AD4CB3532LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 6 * 46,
             .startOffset = 0,
@@ -213,8 +213,8 @@ static const SYNC_Config configMeisei = {
         },
         {
             .id = IPC_PACKET_TYPE_MEISEI_GPS,
-            .nSyncLen = 48,
-            .pattern = {0x0000CCD34D52ACAALL, 0},
+            .pattern     = {0x0000CCD34D52ACAALL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 2,
             .frameLengthBits = 6 * 46,
             .startOffset = 0,
@@ -225,8 +225,8 @@ static const SYNC_Config configMeisei = {
         },
         {
             .id = IPC_PACKET_TYPE_MEISEI_GPS,
-            .nSyncLen = 48,
-            .pattern = {0x0000332CB2AD5355LL, 0},
+            .pattern     = {0x0000332CB2AD5355LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 2,
             .frameLengthBits = 6 * 46,
             .startOffset = 0,
@@ -244,8 +244,8 @@ static const SYNC_Config configJinyang = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_JINYANG_RSG20,
-            .nSyncLen = 56,
-            .pattern = {0x00AAAAAA88888888LL, 0},
+            .pattern     = {0x00AAAAAA88888888LL, 0},
+            .patternMask = {0x00FFFFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 320,
             .startOffset = 0,
@@ -254,8 +254,8 @@ static const SYNC_Config configJinyang = {
         },
         {
             .id = IPC_PACKET_TYPE_JINYANG_RSG20,
-            .nSyncLen = 56,
-            .pattern = {0x0055555577777777LL, 0},
+            .pattern     = {0x0055555577777777LL, 0},
+            .patternMask = {0x00FFFFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 320,
             .startOffset = 0,

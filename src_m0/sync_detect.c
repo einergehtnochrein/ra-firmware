@@ -59,20 +59,11 @@ void PIN_INT3_IRQHandler (void)
 
                 /* Compare received bits with expected sync patterns */
                 for (i = 0; i < handle->config->nPatterns; i++) {
-                    uint64_t compare;
-                    nDifferences = 0;
-                    compare = handle->rxShiftReg[0] ^ handle->config->conf[i].pattern[0];
-                    for (j = 0; (j < 64) && (j < handle->config->conf[i].nSyncLen); j++) {
-                        if (compare & (1ull << j)) {
-                            ++nDifferences;
-                        }
-                    }
-                    compare = handle->rxShiftReg[1] ^ handle->config->conf[i].pattern[1];
-                    for (j = 64; j < handle->config->conf[i].nSyncLen; j++) {
-                        if (compare & (1ull << (j - 64))) {
-                            ++nDifferences;
-                        }
-                    }
+                    /* Compare with expected pattern. (Use fast functions to calculate Hamming weight.) */
+                    nDifferences = 0
+                        + __builtin_popcountll((handle->rxShiftReg[0] ^ handle->config->conf[i].pattern[0]) & handle->config->conf[i].patternMask[0])
+                        + __builtin_popcountll((handle->rxShiftReg[1] ^ handle->config->conf[i].pattern[1]) & handle->config->conf[i].patternMask[1])
+                        ;
 
                     if (nDifferences <= handle->config->conf[i].nMaxDifference) {
                         /* SYNC! Start frame reception */
