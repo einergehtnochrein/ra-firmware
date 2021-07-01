@@ -36,8 +36,16 @@ typedef union {
             uint32_t ecef_x;
             uint32_t ecef_y;
             uint32_t ecef_z;
+            int16_t ecef_vx;
+            int16_t ecef_vy;
+            int16_t ecef_vz;
         }) gps;
-        uint8_t unk11[28];
+        uint8_t unk17[7];
+        int16_t unk1E;
+        uint32_t unk20;
+        uint32_t unk24;
+        uint8_t thisCalibIndex;
+        uint32_t calibFragment;
         uint16_t crc;
     });
 } MRZ_Packet;
@@ -55,12 +63,35 @@ typedef struct {
 
 
 /* Data that needs to be stored for every instance. */
-typedef struct _JINYANG_InstanceData {
-    struct _JINYANG_InstanceData *next;
+typedef struct _MRZ_InstanceData {
+    struct _MRZ_InstanceData *next;
     uint32_t id;
     uint16_t frameCounter;
     float rxFrequencyMHz;
     uint32_t lastUpdated;
+    uint32_t fragmentValidFlags;
+
+    __PACKED(union {
+        uint32_t rawCalib[16];
+        __PACKED(struct {
+            float calib1;
+            float calib2;
+            float calib3;
+            float calib4;
+            float calib5;
+            float calib6;
+            float calib7;
+            float calib8;
+            float calib9;
+            uint32_t calib10;
+            uint32_t calib11;
+            uint32_t calib12;
+            uint32_t calib13;
+            uint32_t calib14;
+            uint32_t calib15;
+            uint32_t calib16;
+        });
+    }) calib;
 
     uint32_t lastGpsTime;
     MRZ_CookedGps gps;

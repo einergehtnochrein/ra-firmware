@@ -103,7 +103,14 @@ LPCLIB_Result _MRZ_processConfigFrame (
         return LPCLIB_ERROR;
     }
 
-//    instance->frameCounter = packet->frameCounter;
+    /* Add fragment to calibration data */
+    int fragmentIndex = packet->thisCalibIndex - 1;
+
+    if ((fragmentIndex >= 0) && (fragmentIndex < 16)) {
+        instance->fragmentValidFlags |= (1ull << fragmentIndex);
+
+        instance->calib.rawCalib[fragmentIndex] = packet->calibFragment;
+    }
 
     /* Set time marker to be able to identify old records */
     instance->lastUpdated = os_time;

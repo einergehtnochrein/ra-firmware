@@ -33,10 +33,10 @@ LPCLIB_Result _MRZ_processGpsFrame (
     instance->gps.observerECEF.x = rawGps->gps.ecef_x / 100.0f;
     instance->gps.observerECEF.y = rawGps->gps.ecef_y / 100.0f;
     instance->gps.observerECEF.z = rawGps->gps.ecef_z / 100.0f;
+    instance->gps.observerECEF.vx = rawGps->gps.ecef_vx / 100.0f;
+    instance->gps.observerECEF.vy = rawGps->gps.ecef_vy / 100.0f;
+    instance->gps.observerECEF.vz = rawGps->gps.ecef_vz / 100.0f;
     GPS_convertECEF2LLA(&instance->gps.observerECEF, &instance->gps.observerLLA);
-    instance->gps.observerLLA.velocity = NAN;
-    instance->gps.observerLLA.direction = NAN;
-    instance->gps.observerLLA.climbRate = NAN;
 
     GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
 
