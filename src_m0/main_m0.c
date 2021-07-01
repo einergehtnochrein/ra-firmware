@@ -11,6 +11,7 @@ typedef enum {
     MODE_MODEM_PILOTSONDE = 5,
     MODE_MEISEI = 6,
     MODE_JINYANG = 7,
+    MODE_MRZ = 9,
 } SYNC_Mode;
 
 
@@ -266,25 +267,42 @@ static const SYNC_Config configJinyang = {
 };
 
 
+static const SYNC_Config configMrz = {
+    .nPatterns = 1,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_MRZ,
+            .pattern     = {0x000066666555A599LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 1,
+            .frameLengthBits = 376,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_MANCHESTER,
+            .inverted = false,
+        },
+    },
+};
+
+
 
 void MAILBOX_IRQHandler (void)
 {
     uint32_t requests = LPC_MAILBOX->IRQ0;
 
-    if (requests & 1) {
+    if (requests & (1u << 0)) {
         newMode = MODE_VAISALA;
         LPC_MAILBOX->IRQ0CLR = 1;
     }
-    else if (requests & 2) {
+    else if (requests & (1u << 1)) {
         newMode = MODE_GRAW;
         LPC_MAILBOX->IRQ0CLR = 2;
     }
-    else if (requests & 4) {
+    else if (requests & (1u << 2)) {
         newMode = MODE_AFSK;
         LPC_MAILBOX->IRQ0CLR = 4;
         NVIC_DisableIRQ(PIN_INT3_IRQn);
     }
-    else if (requests & 8) {
+    else if (requests & (1u << 3)) {
         newMode = MODE_MODEM_M10;
         LPC_MAILBOX->IRQ0CLR = 8;
     }
@@ -299,6 +317,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 6)) {
         newMode = MODE_JINYANG;
         LPC_MAILBOX->IRQ0CLR = (1u << 6);
+    }
+    else if (requests & (1u << 8)) {
+        newMode = MODE_MRZ;
+        LPC_MAILBOX->IRQ0CLR = (1u << 8);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -353,6 +375,9 @@ int main (void)
                     break;
                 case MODE_JINYANG:
                     syncConfig = &configJinyang;
+                    break;
+                case MODE_MRZ:
+                    syncConfig = &configMrz;
                     break;
                 case MODE_AFSK:
                 default:
