@@ -29,6 +29,7 @@ C_SRCS = \
     modem/m20.c modem/m20calibconfig.c modem/m20payload.c \
     modem/pilot.c modem/pilotconfig.c modem/pilotgps.c \
     meisei/meisei.c meisei/meiseiconfig.c meisei/meiseigps.c meisei/meiseimetrology.c \
+    mrz/mrz.c mrz/mrzconfig.c mrz/mrzgps.c \
     \
     semihosting/syscalls.c semihosting/t32term.c semihosting/t32term_memory.c
 
@@ -56,6 +57,7 @@ INCLUDES += \
     -I../src/jinyang \
     -I../src/meisei \
     -I../src/modem \
+    -I../src/mrz \
     -I../src/reedsolomon \
     -I../src/rs41 \
     -I../src/rs92 \

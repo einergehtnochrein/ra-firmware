@@ -221,6 +221,46 @@ void PIN_INT3_IRQHandler (void)
                 }
                 break;
 
+            case SYNC_STATE_DATA_MANCHESTER:
+                /* Synchronize Manchester decoder */
+                if (bit == handle->lastBit) {
+                    handle->symbolPhase = 0;
+                }
+                handle->lastBit = bit;
+
+                if (handle->symbolPhase == 0) {
+                    handle->symbolPhase = 1;
+                }
+                else {
+                    handle->symbolPhase = 0;
+
+                    if ((handle->bitCounter % 8) == 0) {
+                        ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] = 0;
+                    }
+
+                    ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] |= (bit << (7 - (handle->bitCounter % 8)));
+
+                    ++handle->bitCounter;
+                    if ((handle->bitCounter % 8) == 0) {
+                        ++handle->writeIndex;
+                    }
+                    if (--handle->rxCounterBits <= 0) {
+                        handle->state = SYNC_STATE_HUNT;
+                        handle->writeIndex = 0;
+                        if (handle->postProcess) {
+                            handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                        }
+                        ipc_s2m[handle->activeBuffer].valid = 1;
+
+                        LPC_MAILBOX->IRQ1SET = (1u << 0);
+                    }
+                    else if (handle->rxCounterBits == handle->frameLengthBits / 2) {
+                        /* Tell M4 to keep current RSSI value */
+                        LPC_MAILBOX->IRQ1SET = (1u << 1);
+                    }
+                }
+                break;
+
             default:    /* Should never come here! */
                 handle->state = SYNC_STATE_HUNT;
                 break;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2019, DF9DQ
+/* Copyright (c) 2016-2021, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -41,6 +41,7 @@
 #include "m10.h"
 #include "m20.h"
 #include "meisei.h"
+#include "mrz.h"
 #include "pdm.h"
 #include "pilot.h"
 #include "rinex.h"
@@ -126,6 +127,7 @@ struct SYS_Context {
     JINYANG_Handle jinyang;
     M10_Handle m10;
     M20_Handle m20;
+    MRZ_Handle mrz;
     PILOT_Handle pilot;
     SRSC_Handle srsc;
     MEISEI_Handle meisei;
@@ -237,6 +239,31 @@ static const ADF7021_Config radioModeGraw[] = {
 };
 
 static const ADF7021_Config radioModeJinyang[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 1875, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeMrz[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
@@ -438,6 +465,9 @@ static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
             break;
         case SONDE_M20:
             length = (69+1) * 2;
+            break;
+        case SONDE_MRZ:
+            length = 47;
             break;
         case SONDE_PILOT:
             length = 50-4;
@@ -660,6 +690,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
             LPC_MAILBOX->IRQ0SET = (1u << 6); //TODO
+            break;
+
+        case SONDE_DETECTOR_MRZ:
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setBitRate(radio, 2400);
+            ADF7021_ioctl(radio, radioModeMrz);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+            LPC_MAILBOX->IRQ0SET = (1u << 8); //TODO
             break;
 
         case SONDE_DETECTOR_MEISEI:
@@ -1254,6 +1295,7 @@ if (cl[0] != 0) {
                     JINYANG_resendLastPositions(handle->jinyang);
                     M10_resendLastPositions(handle->m10);
                     M20_resendLastPositions(handle->m20);
+                    MRZ_resendLastPositions(handle->mrz);
                     BEACON_resendLastPositions(handle->beacon);
                     PILOT_resendLastPositions(handle->pilot);
                     MEISEI_resendLastPositions(handle->meisei);
@@ -1290,6 +1332,7 @@ if (cl[0] != 0) {
                         case 6:     detector = SONDE_DETECTOR_MEISEI; break;
                         case 7:     detector = SONDE_DETECTOR_PILOT; break;
                         case 8:     detector = SONDE_DETECTOR_JINYANG; break;
+                        case 10:    detector = SONDE_DETECTOR_MRZ; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -1359,6 +1402,10 @@ if (cl[0] != 0) {
                                     case SONDE_DECODER_JINYANG:
                                         JINYANG_removeFromList(handle->jinyang, id, &frequency);
                                         detector = SONDE_DETECTOR_JINYANG;
+                                        break;
+                                    case SONDE_DECODER_MRZ:
+                                        MRZ_removeFromList(handle->mrz, id, &frequency);
+                                        detector = SONDE_DETECTOR_MRZ;
                                         break;
                                     default:
                                         /* ignore */
@@ -1610,6 +1657,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     M10_open(&handle->m10);
     M20_open(&handle->m20);
     MEISEI_open(&handle->meisei);
+    MRZ_open(&handle->mrz);
     PILOT_open(&handle->pilot);
     PDM_open(0, &handle->pdm);
 
@@ -1711,6 +1759,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 8:  sondeType = SONDE_MEISEI_CONFIG; break;
                                 case 9:  sondeType = SONDE_MEISEI_GPS; break;
                                 case 10: sondeType = SONDE_RSG20; break;
+                                case 12: sondeType = SONDE_MRZ; break;
                             }
 
                             /* Process buffer */
@@ -1805,6 +1854,17 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         _SYS_getSondeBufferLength(SONDE_RSG20),
+                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_MRZ) {
+                                if (MRZ_processBlock(
+                                        handle->mrz,
+                                        sondeType,
+                                        ipc[bufferIndex].data8,
+                                        _SYS_getSondeBufferLength(SONDE_MRZ),
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
