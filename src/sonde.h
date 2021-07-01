@@ -47,6 +47,7 @@ typedef enum {
     SONDE_MEISEI_CONFIG,
     SONDE_MEISEI_GPS,
     SONDE_RSG20,
+    SONDE_MRZ
 } SONDE_Type;
 
 
@@ -62,6 +63,7 @@ typedef enum {
     SONDE_DECODER_PILOT = 7,
     SONDE_DECODER_MEISEI = 8,
     SONDE_DECODER_JINYANG = 9,
+    SONDE_DECODER_MRZ = 11,
     _SONDE_DECODER_UNDEFINED_ = -1,
 } SONDE_Decoder;
 
@@ -77,6 +79,7 @@ typedef enum {
     SONDE_DETECTOR_MEISEI = 6,
     SONDE_DETECTOR_PILOT = 7,
     SONDE_DETECTOR_JINYANG = 8,
+    SONDE_DETECTOR_MRZ = 10,
     _SONDE_DETECTOR_UNDEFINED_ = -1,
 } SONDE_Detector;
 

@@ -11,6 +11,7 @@ typedef enum {
     MODE_MODEM_PILOTSONDE = 5,
     MODE_MEISEI = 6,
     MODE_JINYANG = 7,
+    MODE_MRZ = 9,
 } SYNC_Mode;
 
 
@@ -25,8 +26,8 @@ static const SYNC_Config configVaisala = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_VAISALA_RS92,
-            .nSyncLen = 116,
-            .pattern = {0x9A6669A6669AA9A9LL, 0x0006669A6669A666LL},
+            .pattern     = {0x9A6669A6669AA9A9LL, 0x0006669A6669A666LL},
+            .patternMask = {0xFFFFFFFFFFFFFFFFLL, 0x000FFFFFFFFFFFFFLL},
             .nMaxDifference = 5,
             .frameLengthBits = 234 * 10 * 2,
             .startOffset = 0,
@@ -35,8 +36,8 @@ static const SYNC_Config configVaisala = {
         },
         {
             .id = IPC_PACKET_TYPE_VAISALA_RS41,
-            .nSyncLen = 40,
-            .pattern = {0x000000884469481FLL, 0},
+            .pattern     = {0x000000884469481FLL, 0},
+            .patternMask = {0x000000FFFFFFFFFFLL, 0},
             .nMaxDifference = 3,
             .frameLengthBits = 510 * 8,
             .startOffset = 0,
@@ -52,8 +53,8 @@ static const SYNC_Config configGraw = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_GRAW_INVERTED,
-            .nSyncLen = 32,
-            .pattern = {0x000000009A995A55LL, 0},
+            .pattern     = {0x000000009A995A55LL, 0},
+            .patternMask = {0x00000000FFFFFFFFLL, 0},
             .nMaxDifference = 2,
             .frameLengthBits = 66 * 8,
             .startOffset = 0,
@@ -62,8 +63,8 @@ static const SYNC_Config configGraw = {
         },
         {
             .id = IPC_PACKET_TYPE_GRAW_NORMAL,
-            .nSyncLen = 32,
-            .pattern = {0x000000006566A5AALL, 0},
+            .pattern     = {0x000000006566A5AALL, 0},
+            .patternMask = {0x00000000FFFFFFFFLL, 0},
             .nMaxDifference = 2,
             .frameLengthBits = 66 * 8,
             .startOffset = 0,
@@ -109,8 +110,8 @@ static const SYNC_Config configModem = {
          */
         {
             .id = IPC_PACKET_TYPE_MODEM_M10,
-            .nSyncLen = 48,
-            .pattern = {0x0000CCCCA64CD4D3LL, 0},
+            .pattern     = {0x0000CCCCA64CD4D3LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 1,
             .frameLengthBits = 100 * 2 * 8,
             .startOffset = 2,
@@ -120,8 +121,8 @@ static const SYNC_Config configModem = {
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_M10,
-            .nSyncLen = 48,
-            .pattern = {0x0000333359B32B2CLL, 0},
+            .pattern     = {0x0000333359B32B2CLL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 1,
             .frameLengthBits = 100 * 2 * 8,
             .startOffset = 2,
@@ -131,8 +132,8 @@ static const SYNC_Config configModem = {
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_M20,
-            .nSyncLen = 48,
-            .pattern = {0x0000CCCCA64CD32DLL, 0},
+            .pattern     = {0x0000CCCCA64CD32DLL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 69 * 2 * 8,
             .startOffset = 2,
@@ -142,8 +143,8 @@ static const SYNC_Config configModem = {
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_M20,
-            .nSyncLen = 48,
-            .pattern = {0x0000333359B32CD2LL, 0},
+            .pattern     = {0x0000333359B32CD2LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 69 * 2 * 8,
             .startOffset = 2,
@@ -160,8 +161,8 @@ static const SYNC_Config configModemPilot = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_MODEM_PILOT,
-            .nSyncLen = 30,
-            .pattern = {0x00000000354D52FELL, 0},
+            .pattern     = {0x00000000354D52FELL, 0},
+            .patternMask = {0x000000003FFFFFFFLL, 0},
             .nMaxDifference = 1,
             .frameLengthBits = (50 - 4) * 8,
             .startOffset = 0,
@@ -171,8 +172,8 @@ static const SYNC_Config configModemPilot = {
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_PILOT,
-            .nSyncLen = 30,
-            .pattern = {0x000000000AB2AD01LL, 0},
+            .pattern     = {0x000000000AB2AD01LL, 0},
+            .patternMask = {0x000000003FFFFFFFLL, 0},
             .nMaxDifference = 1,
             .frameLengthBits = (50 - 4) * 8,
             .startOffset = 0,
@@ -189,8 +190,8 @@ static const SYNC_Config configMeisei = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_MEISEI_CONFIG,
-            .nSyncLen = 48,
-            .pattern = {0x0000AAB52B34CACDLL, 0},
+            .pattern     = {0x0000AAB52B34CACDLL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 6 * 46,
             .startOffset = 0,
@@ -201,8 +202,8 @@ static const SYNC_Config configMeisei = {
         },
         {
             .id = IPC_PACKET_TYPE_MEISEI_CONFIG,
-            .nSyncLen = 48,
-            .pattern = {0x0000554AD4CB3532LL, 0},
+            .pattern     = {0x0000554AD4CB3532LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 6 * 46,
             .startOffset = 0,
@@ -213,8 +214,8 @@ static const SYNC_Config configMeisei = {
         },
         {
             .id = IPC_PACKET_TYPE_MEISEI_GPS,
-            .nSyncLen = 48,
-            .pattern = {0x0000CCD34D52ACAALL, 0},
+            .pattern     = {0x0000CCD34D52ACAALL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 2,
             .frameLengthBits = 6 * 46,
             .startOffset = 0,
@@ -225,8 +226,8 @@ static const SYNC_Config configMeisei = {
         },
         {
             .id = IPC_PACKET_TYPE_MEISEI_GPS,
-            .nSyncLen = 48,
-            .pattern = {0x0000332CB2AD5355LL, 0},
+            .pattern     = {0x0000332CB2AD5355LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 2,
             .frameLengthBits = 6 * 46,
             .startOffset = 0,
@@ -244,8 +245,8 @@ static const SYNC_Config configJinyang = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_JINYANG_RSG20,
-            .nSyncLen = 56,
-            .pattern = {0x00AAAAAA88888888LL, 0},
+            .pattern     = {0x00AAAAAA88888888LL, 0},
+            .patternMask = {0x00FFFFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 320,
             .startOffset = 0,
@@ -254,8 +255,8 @@ static const SYNC_Config configJinyang = {
         },
         {
             .id = IPC_PACKET_TYPE_JINYANG_RSG20,
-            .nSyncLen = 56,
-            .pattern = {0x0055555577777777LL, 0},
+            .pattern     = {0x0055555577777777LL, 0},
+            .patternMask = {0x00FFFFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 320,
             .startOffset = 0,
@@ -266,25 +267,42 @@ static const SYNC_Config configJinyang = {
 };
 
 
+static const SYNC_Config configMrz = {
+    .nPatterns = 1,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_MRZ,
+            .pattern     = {0x000066666555A599LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 1,
+            .frameLengthBits = 376,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_MANCHESTER,
+            .inverted = false,
+        },
+    },
+};
+
+
 
 void MAILBOX_IRQHandler (void)
 {
     uint32_t requests = LPC_MAILBOX->IRQ0;
 
-    if (requests & 1) {
+    if (requests & (1u << 0)) {
         newMode = MODE_VAISALA;
         LPC_MAILBOX->IRQ0CLR = 1;
     }
-    else if (requests & 2) {
+    else if (requests & (1u << 1)) {
         newMode = MODE_GRAW;
         LPC_MAILBOX->IRQ0CLR = 2;
     }
-    else if (requests & 4) {
+    else if (requests & (1u << 2)) {
         newMode = MODE_AFSK;
         LPC_MAILBOX->IRQ0CLR = 4;
         NVIC_DisableIRQ(PIN_INT3_IRQn);
     }
-    else if (requests & 8) {
+    else if (requests & (1u << 3)) {
         newMode = MODE_MODEM_M10;
         LPC_MAILBOX->IRQ0CLR = 8;
     }
@@ -299,6 +317,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 6)) {
         newMode = MODE_JINYANG;
         LPC_MAILBOX->IRQ0CLR = (1u << 6);
+    }
+    else if (requests & (1u << 8)) {
+        newMode = MODE_MRZ;
+        LPC_MAILBOX->IRQ0CLR = (1u << 8);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -353,6 +375,9 @@ int main (void)
                     break;
                 case MODE_JINYANG:
                     syncConfig = &configJinyang;
+                    break;
+                case MODE_MRZ:
+                    syncConfig = &configMrz;
                     break;
                 case MODE_AFSK:
                 default:

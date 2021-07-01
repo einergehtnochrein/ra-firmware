@@ -9,6 +9,7 @@ typedef enum {
     SYNC_STATE_DATA_RAW,
     SYNC_STATE_DATA_UART_8N1,
     SYNC_STATE_DATA_BIPHASE_S,
+    SYNC_STATE_DATA_MANCHESTER,
 } SYNC_State;
 
 
@@ -19,8 +20,8 @@ typedef struct {
 
     struct {
         int id;                             /* Identifies this sync pattern. Reported to M4 on match. */
-        int nSyncLen;                       /* Length in bits of sync pattern (max. 128) */
         uint64_t pattern[2];                /* The pattern. p[0].LSB=received last, p[1].MSB=received first */
+        uint64_t patternMask[2];            /* Relevant bits in pattern */
         int nMaxDifference;                 /* Maximum # differences to received pattern */
         int frameLengthBits;                /* Number of payload bits to read after sync detect */
         int startOffset;                    /* Start offset in buffer for storing first payload byte */

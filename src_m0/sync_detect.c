@@ -59,20 +59,11 @@ void PIN_INT3_IRQHandler (void)
 
                 /* Compare received bits with expected sync patterns */
                 for (i = 0; i < handle->config->nPatterns; i++) {
-                    uint64_t compare;
-                    nDifferences = 0;
-                    compare = handle->rxShiftReg[0] ^ handle->config->conf[i].pattern[0];
-                    for (j = 0; (j < 64) && (j < handle->config->conf[i].nSyncLen); j++) {
-                        if (compare & (1ull << j)) {
-                            ++nDifferences;
-                        }
-                    }
-                    compare = handle->rxShiftReg[1] ^ handle->config->conf[i].pattern[1];
-                    for (j = 64; j < handle->config->conf[i].nSyncLen; j++) {
-                        if (compare & (1ull << (j - 64))) {
-                            ++nDifferences;
-                        }
-                    }
+                    /* Compare with expected pattern. (Use fast functions to calculate Hamming weight.) */
+                    nDifferences = 0
+                        + __builtin_popcountll((handle->rxShiftReg[0] ^ handle->config->conf[i].pattern[0]) & handle->config->conf[i].patternMask[0])
+                        + __builtin_popcountll((handle->rxShiftReg[1] ^ handle->config->conf[i].pattern[1]) & handle->config->conf[i].patternMask[1])
+                        ;
 
                     if (nDifferences <= handle->config->conf[i].nMaxDifference) {
                         /* SYNC! Start frame reception */
@@ -213,6 +204,46 @@ void PIN_INT3_IRQHandler (void)
                         }
                     }
 
+                    if (--handle->rxCounterBits <= 0) {
+                        handle->state = SYNC_STATE_HUNT;
+                        handle->writeIndex = 0;
+                        if (handle->postProcess) {
+                            handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                        }
+                        ipc_s2m[handle->activeBuffer].valid = 1;
+
+                        LPC_MAILBOX->IRQ1SET = (1u << 0);
+                    }
+                    else if (handle->rxCounterBits == handle->frameLengthBits / 2) {
+                        /* Tell M4 to keep current RSSI value */
+                        LPC_MAILBOX->IRQ1SET = (1u << 1);
+                    }
+                }
+                break;
+
+            case SYNC_STATE_DATA_MANCHESTER:
+                /* Synchronize Manchester decoder */
+                if (bit == handle->lastBit) {
+                    handle->symbolPhase = 0;
+                }
+                handle->lastBit = bit;
+
+                if (handle->symbolPhase == 0) {
+                    handle->symbolPhase = 1;
+                }
+                else {
+                    handle->symbolPhase = 0;
+
+                    if ((handle->bitCounter % 8) == 0) {
+                        ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] = 0;
+                    }
+
+                    ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] |= (bit << (7 - (handle->bitCounter % 8)));
+
+                    ++handle->bitCounter;
+                    if ((handle->bitCounter % 8) == 0) {
+                        ++handle->writeIndex;
+                    }
                     if (--handle->rxCounterBits <= 0) {
                         handle->state = SYNC_STATE_HUNT;
                         handle->writeIndex = 0;
