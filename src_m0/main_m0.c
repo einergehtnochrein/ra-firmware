@@ -268,7 +268,7 @@ static const SYNC_Config configJinyang = {
 
 
 static const SYNC_Config configMrz = {
-    .nPatterns = 1,
+    .nPatterns = 2,
     .conf = {
         {
             .id = IPC_PACKET_TYPE_MRZ,
@@ -279,6 +279,16 @@ static const SYNC_Config configMrz = {
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_MANCHESTER,
             .inverted = false,
+        },
+        {
+            .id = IPC_PACKET_TYPE_MRZ,
+            .pattern     = {0x000099999AAA5A66LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 1,
+            .frameLengthBits = 376,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_MANCHESTER,
+            .inverted = true,
         },
     },
 };
