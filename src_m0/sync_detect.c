@@ -238,6 +238,9 @@ void PIN_INT3_IRQHandler (void)
                         ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] = 0;
                     }
 
+                    if (handle->inverted) {
+                        bit = bit ^ 1;
+                    }
                     ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] |= (bit << (7 - (handle->bitCounter % 8)));
 
                     ++handle->bitCounter;
