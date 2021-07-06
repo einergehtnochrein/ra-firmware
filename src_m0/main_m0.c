@@ -320,7 +320,7 @@ static const SYNC_Config configIMET54 = {
 
 
 static const SYNC_Config configWindsond = {
-    .nPatterns = 1,
+    .nPatterns = 2,
     .conf = {
         {
             .id = IPC_PACKET_TYPE_WINDSOND_S1,
@@ -331,6 +331,16 @@ static const SYNC_Config configWindsond = {
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
+        },
+        {
+            .id = IPC_PACKET_TYPE_WINDSOND_S1,
+            .pattern     = {0x00000000AAAAAAD2LL, 0},
+            .patternMask = {0x00000000FFFFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 512,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = true,
         },
     },
 };
