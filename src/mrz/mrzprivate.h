@@ -39,8 +39,12 @@ typedef union {
             int16_t ecef_vx;
             int16_t ecef_vy;
             int16_t ecef_vz;
+            uint8_t unk17;
+            uint8_t unk18;
+            uint8_t unk19;
         }) gps;
-        uint8_t unk17[7];
+        int16_t unk1A;
+        int16_t unk1C;
         int16_t unk1E;
         uint32_t unk20;
         uint32_t unk24;
