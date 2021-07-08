@@ -171,12 +171,6 @@ typedef struct {
     int numXdataInstruments;
 
     int hasO3;                          /* !=0: O3 probe */
-    float o3PumpTemperature;            /* Only valid for O3 sonde */
-    float o3CellCurrent;                /* Only valid for O3 sonde */
-    float o3BatteryVoltage;             /* Only valid for O3 sonde */
-    float o3PumpCurrent;                /* Only valid for O3 sonde */
-    float o3ExtVoltage;                 /* Only valid for O3 sonde */
-    uint16_t o3swVersion;               /* Only valid for O3 sonde */
 
     // Humidity calculations. End results and intermediates
     float temperatureUSensor;           /* Temperature [°C] humidity sensor */

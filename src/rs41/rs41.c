@@ -115,9 +115,9 @@ static void _RS41_readSubFrameXdata (char *p, int length, RS41_InstanceData *ins
      * Instrument number (position in chain), 2 ASCII digits
      */
     if (length >= 4) {
-        /* For the most part we leave decoding XDATA packets to the app.
+        /* We leave decoding XDATA packets to the app.
          * However, we want to know if an ozone unit is present,
-         * so we check for specific instrument ID's.
+         * so we check for that specific instrument ID.
          */
         int instrumentID;
         int daisyChainNumber;
@@ -135,37 +135,7 @@ static void _RS41_readSubFrameXdata (char *p, int length, RS41_InstanceData *ins
             /* TODO: Daisy chain numbers must be consecutive */
             switch (instrumentID) {
                 case XDATA_INSTRUMENT_OIF411_OZONE:
-                    /* Two possible frame lengths */
-                    if (length == 20) {
-                        unsigned int pumpTemperature = 0;
-                        unsigned int cellCurrent = 0;
-                        unsigned int batteryVoltage = 0;
-                        unsigned int pumpCurrent = 0;
-                        unsigned int extVoltage = 0;
-                        sscanf(p, "%04X%05X%02X%03X%02X",
-                               &pumpTemperature,
-                               &cellCurrent,
-                               &batteryVoltage,
-                               &pumpCurrent,
-                               &extVoltage
-                               );
-                        instance->metro.o3PumpTemperature = pumpTemperature * 0.01f;
-                        instance->metro.o3CellCurrent = cellCurrent * 1e-10f;
-                        instance->metro.o3BatteryVoltage = batteryVoltage * 0.1f;
-                        instance->metro.o3PumpCurrent = pumpCurrent * 0.001f;
-                        instance->metro.o3ExtVoltage = extVoltage * 0.1f;
-                        instance->metro.hasO3 = 3;
-                    }
-                    else if (length == 21) {
-                        unsigned int swVersion = 0;
-                        sscanf(p, "%*8s%*04X%04XI",
-                               &swVersion
-                               );
-                        instance->metro.o3swVersion = swVersion;
-                    }
-                    break;
-
-                case XDATA_INSTRUMENT_COBALD:
+                    instance->metro.hasO3 = 1;
                     break;
 
                 default:
@@ -305,7 +275,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         memcpy(sModelName, instance->names.variant, 10);
         sModelName[10] = 0;
     }
-    length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,%.1f,%.1f,%.1f,%d",
+    length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,,,,%d",
                 instance->id,
                 instance->name,
                 instance->metro.temperatureUSensor,
@@ -317,9 +287,6 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                 sBurstKillTimer,                        /* Burst kill timer (frames) */
                 killer,                                 /* Kill countdown (frames remaining) */
                 instance->gps.pdop,
-                instance->metro.o3PumpTemperature,
-                instance->metro.o3CellCurrent * 1e6f,
-                instance->metro.o3BatteryVoltage,
                 instance->metro.numXdataInstruments
                 );
 
