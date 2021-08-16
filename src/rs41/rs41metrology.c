@@ -62,17 +62,6 @@ LPCLIB_Result _RS41_processMetrologyBlock (
 
     LPCLIB_Result result;
 
-    /* The short metrology block (RS41-SGM in non-encrypted mode) is contained
-     * in the regular metrology block.
-     */
-    result = _RS41_processMetrologyShortBlock(
-        (const RS41_SubFrameMetrologyShort *)rawMetro,
-        cookedMetro,
-        instance);
-    if (result != LPCLIB_SUCCESS) {
-        return result;
-    }
-
     /**********  Pressure sensor  *********/
 
     float refmin = _RS41_read24(rawMetro->adc[3].refmin);
@@ -137,6 +126,14 @@ LPCLIB_Result _RS41_processMetrologyBlock (
             }
         }
     }
+
+    /* The short metrology block (RS41-SGM in non-encrypted mode) is contained
+     * in the regular metrology block.
+     */
+    result = _RS41_processMetrologyShortBlock(
+        (const RS41_SubFrameMetrologyShort *)rawMetro,
+        cookedMetro,
+        instance);
 
     return result;
 }
