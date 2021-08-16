@@ -2,6 +2,9 @@
 #ifndef __RS41PRIVATE_H
 #define __RS41PRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <math.h>
 #include <stdlib.h>
@@ -416,4 +419,7 @@ LPCLIB_Result _RS41_processGpsRawBlock (
         const RS41_SubFrameGpsRaw *p,
         RS41_RawGps *raw);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
