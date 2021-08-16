@@ -344,7 +344,7 @@ typedef struct _RS41_InstanceData {
             uint16_t remainingBatteryCapacity;  /* 0x32A: */
             uint8_t numUbxDiscarded;            /* 0x32C: Number of discarded UBX packets */
             uint8_t numUbxStall;                /* 0x32D: Number of occasions wher essential UBX packets are missing */
-        });
+        }) params;
     });
 } RS41_InstanceData;
 

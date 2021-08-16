@@ -97,26 +97,26 @@ LPCLIB_Result _RS41_processMetrologyBlock (
             cookedMetro->temperaturePSensor = r;
 
             float w[6];
-            w[0] = instance->matrixP[0]
-                + instance->matrixP[7]  * r
-                + instance->matrixP[11] * r * r
-                + instance->matrixP[15] * r * r * r;
-            w[1] = instance->matrixP[1]
-                + instance->matrixP[8]  * r
-                + instance->matrixP[12] * r * r
-                + instance->matrixP[16] * r * r * r;
-            w[2] = instance->matrixP[2]
-                + instance->matrixP[9]  * r
-                + instance->matrixP[13] * r * r
-                + instance->matrixP[17] * r * r * r;    // NOTE: SM uses matrixP[13] here again!
-            w[3] = instance->matrixP[3]
-                + instance->matrixP[10] * r
-                + instance->matrixP[14] * r * r;
-            w[4] = instance->matrixP[4];
-            w[5] = instance->matrixP[5];
+            w[0] = instance->params.matrixP[0]
+                + instance->params.matrixP[7]  * r
+                + instance->params.matrixP[11] * r * r
+                + instance->params.matrixP[15] * r * r * r;
+            w[1] = instance->params.matrixP[1]
+                + instance->params.matrixP[8]  * r
+                + instance->params.matrixP[12] * r * r
+                + instance->params.matrixP[16] * r * r * r;
+            w[2] = instance->params.matrixP[2]
+                + instance->params.matrixP[9]  * r
+                + instance->params.matrixP[13] * r * r
+                + instance->params.matrixP[17] * r * r * r;    // NOTE: SM uses matrixP[13] here again!
+            w[3] = instance->params.matrixP[3]
+                + instance->params.matrixP[10] * r
+                + instance->params.matrixP[14] * r * r;
+            w[4] = instance->params.matrixP[4];
+            w[5] = instance->params.matrixP[5];
 
             /* Compute pressure in hPa */
-            float x = instance->matrixP[6] / current;
+            float x = instance->params.matrixP[6] / current;
             cookedMetro->pressure = 0
                 + w[0]
                 + w[1] * x
@@ -173,22 +173,22 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
         /* Reference values for temperature are two known resistors.
          * From that we can derive the resistance of the sensor.
          */
-        float res = instance->refResistorLow
-            + (instance->refResistorHigh - instance->refResistorLow) * current[0];
-        float x = res * instance->calT;
+        float res = instance->params.refResistorLow
+            + (instance->params.refResistorHigh - instance->params.refResistorLow) * current[0];
+        float x = res * instance->params.calT;
         float Tuncal = 0
-            + instance->taylorT[0]
-            + instance->taylorT[1] * x
-            + instance->taylorT[2] * x * x
+            + instance->params.taylorT[0]
+            + instance->params.taylorT[1] * x
+            + instance->params.taylorT[2] * x * x
             ;
 
         /* Apply calibration polynomial */
-        cookedMetro->T = Tuncal + instance->polyT[0]
-                + instance->polyT[1] * Tuncal
-                + instance->polyT[2] * Tuncal * Tuncal
-                + instance->polyT[3] * Tuncal * Tuncal * Tuncal
-                + instance->polyT[4] * Tuncal * Tuncal * Tuncal * Tuncal
-                + instance->polyT[5] * Tuncal * Tuncal * Tuncal * Tuncal * Tuncal;
+        cookedMetro->T = Tuncal + instance->params.polyT[0]
+                + instance->params.polyT[1] * Tuncal
+                + instance->params.polyT[2] * Tuncal * Tuncal
+                + instance->params.polyT[3] * Tuncal * Tuncal * Tuncal
+                + instance->params.polyT[4] * Tuncal * Tuncal * Tuncal * Tuncal
+                + instance->params.polyT[5] * Tuncal * Tuncal * Tuncal * Tuncal * Tuncal;
     }
 
     /**********  Temperature sensor 2  *********/
@@ -201,13 +201,13 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
         /* Reference values for temperature are two known resistors.
          * From that we can derive the resistance of the sensor.
          */
-        float res = instance->refResistorLow
-            + (instance->refResistorHigh - instance->refResistorLow) * current[2];
-        float x = res * instance->calTU;
+        float res = instance->params.refResistorLow
+            + (instance->params.refResistorHigh - instance->params.refResistorLow) * current[2];
+        float x = res * instance->params.calTU;
         cookedMetro->temperatureUSensor = 0
-            + instance->taylorTU[0]
-            + instance->taylorTU[1] * x
-            + instance->taylorTU[2] * x * x
+            + instance->params.taylorTU[0]
+            + instance->params.taylorTU[1] * x
+            + instance->params.taylorTU[2] * x * x
             ;
     }
 
@@ -224,19 +224,20 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
             /* Temperature compensation of the humidity sensor uses a slightly modified
              * temperature value.
              */
-            float Trh = TU + instance->polyTrh[0]
-                    + instance->polyTrh[1] * TU
-                    + instance->polyTrh[2] * TU * TU
-                    + instance->polyTrh[3] * TU * TU * TU
-                    + instance->polyTrh[4] * TU * TU * TU * TU
-                    + instance->polyTrh[5] * TU * TU * TU * TU * TU;
+            float Trh = TU
+                    + instance->params.polyTrh[0]
+                    + instance->params.polyTrh[1] * TU
+                    + instance->params.polyTrh[2] * TU * TU
+                    + instance->params.polyTrh[3] * TU * TU * TU
+                    + instance->params.polyTrh[4] * TU * TU * TU * TU
+                    + instance->params.polyTrh[5] * TU * TU * TU * TU * TU;
 
             /* Compute absolute capacitance from the known references */
-            cookedMetro->C = instance->refCapLow
-                    + (instance->refCapHigh - instance->refCapLow) * current[1];
+            cookedMetro->C = instance->params.refCapLow
+                    + (instance->params.refCapHigh - instance->params.refCapLow) * current[1];
 
             /* Apply calibration */
-            cookedMetro->Cp = (cookedMetro->C / instance->calibU[0] - 1.0f) * instance->calibU[1];
+            cookedMetro->Cp = (cookedMetro->C / instance->params.calibU[0] - 1.0f) * instance->params.calibU[1];
 
             /* Compensation for low temperature and pressure at altitude */
             float powc = 1.0f;
@@ -254,10 +255,10 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
                     float l = 0;
                     float powt = 1.0f;
                     for (j = 0; j < 4; j++) {
-                        l += instance->matrixBt[4*i+j] * powt;
+                        l += instance->params.matrixBt[4*i+j] * powt;
                         powt *= t;
                     }
-                    float x = instance->vectorBp[i];
+                    float x = instance->params.vectorBp[i];
                     sum += l * ((x * p / (1.0f + x * p)) - x / (1.0f + x)) * powc;
                     powc *= cookedMetro->Cp;
                 }
@@ -269,7 +270,7 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
                 for (j = 0; j < 7; j++) {
                     float yk = 1.0f;
                     for (k = 0; k < 6; k++) {
-                        sum += xj * yk * instance->matrixU[j][k];
+                        sum += xj * yk * instance->params.matrixU[j][k];
                         yk *= (Trh - 20.0f) / 180.0f;
                     }
                     xj *= cookedMetro->Cp;
