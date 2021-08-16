@@ -190,6 +190,7 @@ typedef struct {
     uint8_t visibleSats;
     uint8_t usedSats;
     uint8_t sAcc;
+    float estimatedPressure;
 } RS41_CookedGps;
 
 
