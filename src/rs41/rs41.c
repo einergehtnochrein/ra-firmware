@@ -179,19 +179,19 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     /* Kill timers (if active) */
     sFlightKillTimer[0] = 0;
     if (_RS41_checkValidCalibration(instance, CALIB_FLIGHTKILLTIMER)) {
-        if (instance->flightKillFrames != -1) {
-            snprintf(sFlightKillTimer, sizeof(sFlightKillTimer), "%d", instance->flightKillFrames);
+        if (instance->params.flightKillFrames != -1) {
+            snprintf(sFlightKillTimer, sizeof(sFlightKillTimer), "%d", instance->params.flightKillFrames);
         }
     }
     sBurstKillTimer[0] = 0;
     if (_RS41_checkValidCalibration(instance, CALIB_BURSTKILLTIMER)) {
-        if (instance->burstKillFrames != -1) {
-            snprintf(sBurstKillTimer, sizeof(sBurstKillTimer), "%d", instance->burstKillFrames);
+        if (instance->params.burstKillFrames != -1) {
+            snprintf(sBurstKillTimer, sizeof(sBurstKillTimer), "%d", instance->params.burstKillFrames);
         }
     }
     int16_t killer = -1;
     if (_RS41_checkValidCalibration(instance, CALIB_KILLCOUNTDOWN)) {
-        if (instance->killCountdown != -1) {
+        if (instance->params.killCountdown != -1) {
             killer = instance->killCounterRefCount - (instance->frameCounter - instance->killCounterRefFrame);
         }
     }
@@ -272,14 +272,14 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
 
     sModelName[0] = 0;
     if (_RS41_checkValidCalibration(instance, CALIB_MODELNAME)) {
-        memcpy(sModelName, instance->names.variant, 10);
+        memcpy(sModelName, instance->params.names.variant, 10);
         sModelName[10] = 0;
     }
     length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,,,,%d",
                 instance->id,
                 instance->name,
                 instance->metro.temperatureUSensor,
-                instance->names.variant,
+                instance->params.names.variant,
                 instance->temperatureTx,
                 instance->temperatureRef,
                 instance->metro.dewpoint,
@@ -541,8 +541,8 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                         handle->instance->gps.observerLLA.lat = NAN;
                         handle->instance->gps.observerLLA.lon = NAN;
                         handle->instance->encrypted = true;
-                        snprintf(handle->instance->names.variant,
-                                sizeof(handle->instance->names.variant), "%s", "RS41-SGM");
+                        snprintf(handle->instance->params.names.variant,
+                                sizeof(handle->instance->params.names.variant), "%s", "RS41-SGM");
                         handle->instance->logMode = RS41_LOGMODE_RAW;
                     }
                     break;
