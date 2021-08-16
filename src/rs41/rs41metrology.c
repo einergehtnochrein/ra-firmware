@@ -256,7 +256,7 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
                         powt *= t;
                     }
                     float x = instance->params.vectorBp[i];
-                    sum += l * ((x * p / (1.0f + x * p)) - x / (1.0f + x)) * powc;
+                    sum += l * ((x * p / (1.0f + x * p)) - x * powc / (1.0f + x));
                     powc *= cookedMetro->Cp;
                 }
                 cookedMetro->Cp -= sum;
