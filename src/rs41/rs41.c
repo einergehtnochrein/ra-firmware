@@ -121,7 +121,7 @@ static void _RS41_readSubFrameXdata (char *p, int length, RS41_InstanceData *ins
          */
         int instrumentID;
         int daisyChainNumber;
-        if (sscanf(p, "%02d%02d", &instrumentID, &daisyChainNumber) == 2) {
+        if (sscanf(p, "%02X%02X", &instrumentID, &daisyChainNumber) == 2) {
             { /* Send raw data to app */
                 static char s[160];
                 if (snprintf(s, sizeof(s), "%ld,1,2,%.*s", instance->id, length, p) > 0) {
