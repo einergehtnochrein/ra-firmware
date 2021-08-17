@@ -417,6 +417,11 @@ LPCLIB_Result _RS41_processGpsRawBlock (
         const RS41_SubFrameGpsRaw *p,
         RS41_RawGps *raw);
 
+/* Do bit reversal, and remove data whitening */
+void _RS41_removeWhitening(uint8_t *buffer, int length);
+/* Reed-Solomon error correction */
+LPCLIB_Result _RS41_checkReedSolomon (uint8_t rawFrame[], int *pNumErrors, _Bool *pLongFrame);
+
 #ifdef __cplusplus
 }
 #endif
