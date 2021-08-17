@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -81,7 +82,7 @@ static void _RS41_readSubFrameXdata (char *p, int length, RS41_InstanceData *ins
         if (sscanf(p, "%02X%02X", &instrumentID, &daisyChainNumber) == 2) {
             { /* Send raw data to app */
                 static char s[160];
-                if (snprintf(s, sizeof(s), "%ld,1,2,%.*s", instance->id, length, p) > 0) {
+                if (snprintf(s, sizeof(s), "%"PRIu32",1,2,%.*s", instance->id, length, p) > 0) {
                     SYS_send2Host(HOST_CHANNEL_INFO, s);
                 }
             }
@@ -187,7 +188,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     }
 
     if (instance->encrypted) {
-        length = snprintf((char *)s, sizeof(s), "%ld,1,%.3f,,,,,,,,,,%ld,,,,%.1f,%.1f,%d,%d,%s,%.1f",
+        length = snprintf((char *)s, sizeof(s), "%"PRIu32",1,%.3f,,,,,,,,,,%"PRIu32",,,,%.1f,%.1f,%d,%d,%s,%.1f",
                         instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         special,
@@ -200,7 +201,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         );
     }
     else {
-        length = snprintf((char *)s, sizeof(s), "%ld,1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%ld,,%.1f,,%.1f,%.1f,%d,%d,%s,%.1f",
+        length = snprintf((char *)s, sizeof(s), "%"PRIu32",1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%"PRIu32",,%.1f,,%.1f,%.1f,%d,%d,%s,%.1f",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         instance->gps.usedSats,                 /* # sats in position solution */
@@ -232,7 +233,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         memcpy(sModelName, instance->params.names.variant, 10);
         sModelName[10] = 0;
     }
-    length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,,,,%d",
+    length = snprintf(s, sizeof(s), "%"PRIu32",1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,,,,%d",
                 instance->id,
                 instance->name,
                 instance->metro.TU,
@@ -267,10 +268,10 @@ static void _RS41_sendRaw (RS41_InstanceData *instance, uint8_t *buffer, uint32_
     char *s = _rs41_rawCompressed;
 
 
-    slen += snprintf(&s[slen], sizeof(_rs41_rawCompressed) - slen, "%ld,1,1,%ld,%ld,",
+    slen += snprintf(&s[slen], sizeof(_rs41_rawCompressed) - slen, "%"PRIu32",1,1,%"PRIu32",%d,",
                      instance->id,
                      length,
-                     0l
+                     0
                     );
     
     for (n = 0; n < N; n += 3) {
