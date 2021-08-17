@@ -32,7 +32,7 @@ static float _RS41_waterVaporSaturationPressure (float Tcelsius)
     /* Apply some correction magic */
     T = 0
         - 0.4931358f
-        + (1.0f + 4.61e-3f) * T
+        + (1.0f + 4.6094296e-3f) * T
         - 1.3746454e-5f * T * T
         + 1.2743214e-8f * T * T * T
         ;

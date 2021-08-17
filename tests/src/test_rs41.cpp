@@ -182,6 +182,6 @@ TEST(rs41, metro_calc)
     DOUBLES_EQUAL_TEXT(-3.897, _rs41.metro.T, 1e-3, "Main temperature");
     DOUBLES_EQUAL_TEXT(1.620, _rs41.metro.temperatureUSensor, 1e-3, "U sensor temperature");
     DOUBLES_EQUAL_TEXT(584.11, _rs41.metro.pressure, 1e-2, "Air pressure");
-    DOUBLES_EQUAL_TEXT(27.6, _rs41.metro.RH, 1e-1, "Humidity");  //TODO tolerance
+    DOUBLES_EQUAL_TEXT(27.55, _rs41.metro.RH, 1.2e-2, "Humidity");
 }
 
