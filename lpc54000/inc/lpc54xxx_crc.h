@@ -46,7 +46,6 @@ extern "C"
  */
 
 #include "lpc54xxx_libconfig.h"
-#include "lpc54xxx_clkpwr.h"
 
 
 /** \defgroup CRC_Public_Types CRC Types, enums, macros

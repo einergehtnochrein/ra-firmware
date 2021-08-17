@@ -2,6 +2,8 @@
 #include <stdbool.h>
 
 #include "CppUTest/TestHarness.h"
+#include <iostream>
+#include <iomanip>
 
 #include "rs41/rs41private.h"
 
@@ -191,6 +193,24 @@ static uint8_t _rs41_raw_rx_frame[312] = {
 };
 
 
+static RS41_SubFrameCalibConfig _rs41_configBlock = {
+    .frameCounter = 0x0544,
+    .name = {'N','3','4','2','0','1','0','0'},
+    .batteryVoltage100mV = 29,
+    .reserved00B = 0,
+    .flags = 0,
+    .cryptoMode = 0,
+    .temperatureRef = 34,
+    .errorLog = 0,
+    .humidityHeatingPwm = 49,
+    .txPower = 3,
+    .maxCalibIndex = 50,
+    .thisCalibIndex = 21,
+    .calibFragment = {0x00,0x00,0xFF,0xFF,0xFF,0xC6,0x00,0x4E,0x64,0x2E,0x42,0x00,0x00,0x00,0x00,0x00},
+    .crc = 0x387E,
+};
+
+
 
 TEST_GROUP(rs41)
 {
@@ -215,7 +235,6 @@ TEST(rs41, metro_calc)
 }
 
 
-
 /* Test of the RS41 utility function to decode and detect RS41 short/long frames */
 TEST(rs41, utils_reedsolomon)
 {
@@ -233,4 +252,11 @@ TEST(rs41, utils_reedsolomon)
     CHECK_FALSE(longFrame);
 
     /* TODO introduce errors */
+}
+
+
+/* Basic test of the block CRC check */
+TEST(rs41, utils_crc16)
+{
+    CHECK_TRUE(_RS41_checkCRC((uint8_t *)&_rs41_configBlock, sizeof(_rs41_configBlock) - sizeof(_rs41_configBlock.crc), _rs41_configBlock.crc));
 }

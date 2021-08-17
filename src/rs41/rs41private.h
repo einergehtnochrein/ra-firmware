@@ -39,23 +39,23 @@ typedef enum {
 typedef __PACKED(struct {
     uint16_t frameCounter;
     char name[8];
-    __PACKED(struct {
-        uint8_t batteryVoltage100mV;        /* Battery voltage in multiples of 100 mV */
-        uint16_t reserved00B;               /* Bit field (all 16 bits in use)
+
+    uint8_t batteryVoltage100mV;            /* Battery voltage in multiples of 100 mV */
+    uint16_t reserved00B;                   /* Bit field (all 16 bits in use)
                                              * Bit 4: 1=CRC error in saved user parameters detected
                                              * Bit 9: 1=NFC field detected
                                              */
-        uint16_t flags;                     /* Bit 0: 0=Start phase, 1=Flight mode
+    uint16_t flags;                         /* Bit 0: 0=Start phase, 1=Flight mode
                                              * Bit 1: 0=Ascent, 1=Descent
                                              * Bit 5: 1="T self-check" running
                                              * Bit 11: 0=VBATmin check disabled, 1=VBATmin check enabled
                                              * Bit 12: 0=VBAT ok, 1=VBAT too low
                                              */
-        uint8_t cryptoMode;                 /* Normal sonde: always 0 (can be 6 if parameter config error)
+    uint8_t cryptoMode;                     /* Normal sonde: always 0 (can be 6 if parameter config error)
                                              * RS41-SGM: 0...4
                                              */
-        int8_t temperatureRef;              /* Reference temperature (@ PCB cutout) [°C] */
-        uint16_t errorLog;                  /* Error flags:
+    int8_t temperatureRef;                  /* Reference temperature (@ PCB cutout) [°C] */
+    uint16_t errorLog;                      /* Error flags:
                                              * 0: Low battery capacity
                                              * 1: No parameter setup
                                              * 2: TX init failure
@@ -72,9 +72,9 @@ typedef __PACKED(struct {
                                              * 13: P-module not detected
                                              * 14: T, Tu or U check failed
                                              */
-        uint16_t humidityHeatingPwm;        /* PWM state for humidity sensor heating(?) (0...1000) */
-        uint8_t txPower;                    /* TX power level (0...7, see Si4032 data sheet) */
-    });
+    uint16_t humidityHeatingPwm;            /* PWM state for humidity sensor heating(?) (0...1000) */
+    uint8_t txPower;                        /* TX power level (0...7, see Si4032 data sheet) */
+
     uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
     uint8_t thisCalibIndex;                 /* Index of calibration fragment in this frame */
     uint8_t calibFragment[16];
@@ -417,6 +417,8 @@ LPCLIB_Result _RS41_processGpsRawBlock (
         const RS41_SubFrameGpsRaw *p,
         RS41_RawGps *raw);
 
+/* Check CRC of a sub-block */
+_Bool _RS41_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
 /* Do bit reversal, and remove data whitening */
 void _RS41_removeWhitening(uint8_t *buffer, int length);
 /* Reed-Solomon error correction */
