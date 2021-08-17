@@ -27,10 +27,17 @@
 #ifndef __REEDSOLOMON_H
 #define __REEDSOLOMON_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "lpclib.h"
 
 typedef uint8_t * (*_REEDSOLOMON_GetDataAddressFunc)(int index);
 
 LPCLIB_Result REEDSOLOMON_process (_REEDSOLOMON_GetDataAddressFunc access, int *pnErrors);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
