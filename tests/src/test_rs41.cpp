@@ -177,10 +177,10 @@ TEST_GROUP(rs41)
 
 TEST(rs41, metro_calc)
 {
-    ENUMS_EQUAL_INT(LPCLIB_ILLEGAL_PARAMETER, _RS41_processMetrologyBlock(&sfMet, NULL, NULL));
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, _RS41_processMetrologyBlock(&sfMet, &_rs41.metro, &_rs41));
+    ENUMS_EQUAL_INT(LPCLIB_ILLEGAL_PARAMETER, _RS41_processMetrologyBlock(&sfMet, NULL));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, _RS41_processMetrologyBlock(&sfMet, &_rs41));
     DOUBLES_EQUAL_TEXT(-3.897, _rs41.metro.T, 1e-3, "Main temperature");
-    DOUBLES_EQUAL_TEXT(1.620, _rs41.metro.temperatureUSensor, 1e-3, "U sensor temperature");
+    DOUBLES_EQUAL_TEXT(1.620, _rs41.metro.TU, 1e-3, "U sensor temperature");
     DOUBLES_EQUAL_TEXT(584.11, _rs41.metro.pressure, 1e-2, "Air pressure");
     DOUBLES_EQUAL_TEXT(27.55, _rs41.metro.RH, 1.2e-2, "Humidity");
 }

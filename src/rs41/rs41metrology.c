@@ -53,7 +53,6 @@ static float _RS41_waterVaporSaturationPressure (float Tcelsius)
 
 LPCLIB_Result _RS41_processMetrologyBlock (
         const RS41_SubFrameMetrology *rawMetro,
-        RS41_CookedMetrology *cookedMetro,
         RS41_InstanceData *instance)
 {
     if (!instance) {
@@ -70,20 +69,20 @@ LPCLIB_Result _RS41_processMetrologyBlock (
 
     /* If there's no pressure sensor, don't try any caclulation */
     if (current == 0) {
-        cookedMetro->pressure = NAN;
-        cookedMetro->pressureAltitude = NAN;
+        instance->metro.pressure = NAN;
+        instance->metro.pressureAltitude = NAN;
     }
     else {
         /* Result is invalid until we have enough calibration data */
         if (!_RS41_checkValidCalibration(instance, CALIB_PRESSURE)) {
-            cookedMetro->pressure = NAN;
-            cookedMetro->pressureAltitude = NAN;
+            instance->metro.pressure = NAN;
+            instance->metro.pressureAltitude = NAN;
         }
         else {
             /* Determine coefficients of polynomial */
             float r;
             r = rawMetro->temperaturePressureSensor / 100.0;
-            cookedMetro->temperaturePSensor = r;
+            instance->metro.temperaturePSensor = r;
 
             float w[6];
             w[0] = instance->params.matrixP[0]
@@ -106,7 +105,7 @@ LPCLIB_Result _RS41_processMetrologyBlock (
 
             /* Compute pressure in hPa */
             float x = instance->params.matrixP[6] / current;
-            cookedMetro->pressure = 0
+            instance->metro.pressure = 0
                 + w[0]
                 + w[1] * x
                 + w[2] * x * x
@@ -115,14 +114,14 @@ LPCLIB_Result _RS41_processMetrologyBlock (
                 + w[5] * x * x * x * x * x;
 
             /* Altitude from pressure */
-            if (cookedMetro->pressure > 226.32f) {
-                cookedMetro->pressureAltitude = 44330.8f * (1.0f - expf(0.190263f * logf(cookedMetro->pressure / 1013.25f)));
+            if (instance->metro.pressure > 226.32f) {
+                instance->metro.pressureAltitude = 44330.8f * (1.0f - expf(0.190263f * logf(instance->metro.pressure / 1013.25f)));
             }
-            else if (cookedMetro->pressure > 54.749f) {
-                cookedMetro->pressureAltitude = 11000.0f - 6341.624f * logf(cookedMetro->pressure / 226.32f);
+            else if (instance->metro.pressure > 54.749f) {
+                instance->metro.pressureAltitude = 11000.0f - 6341.624f * logf(instance->metro.pressure / 226.32f);
             }
             else {
-                cookedMetro->pressureAltitude = 20000.0f + 216650.0f * (expf(-0.0292173f * logf(cookedMetro->pressure / 54.749f)) - 1.0f);
+                instance->metro.pressureAltitude = 20000.0f + 216650.0f * (expf(-0.0292173f * logf(instance->metro.pressure / 54.749f)) - 1.0f);
             }
         }
     }
@@ -132,7 +131,6 @@ LPCLIB_Result _RS41_processMetrologyBlock (
      */
     result = _RS41_processMetrologyShortBlock(
         (const RS41_SubFrameMetrologyShort *)rawMetro,
-        cookedMetro,
         instance);
 
     return result;
@@ -142,7 +140,6 @@ LPCLIB_Result _RS41_processMetrologyBlock (
 
 LPCLIB_Result _RS41_processMetrologyShortBlock (
         const RS41_SubFrameMetrologyShort *rawMetro,
-        RS41_CookedMetrology *cookedMetro,
         RS41_InstanceData *instance)
 {
     if (!instance) {
@@ -164,7 +161,7 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
 
     /* Result is invalid until we have enough calibration data */
     if (!_RS41_checkValidCalibration(instance, CALIB_TEMPERATURE)) {
-        cookedMetro->T = NAN;
+        instance->metro.T = NAN;
     }
     else {
         /* Reference values for temperature are two known resistors.
@@ -180,7 +177,7 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
             ;
 
         /* Apply calibration polynomial */
-        cookedMetro->T = Tuncal + instance->params.polyT[0]
+        instance->metro.T = Tuncal + instance->params.polyT[0]
                 + instance->params.polyT[1] * Tuncal
                 + instance->params.polyT[2] * Tuncal * Tuncal
                 + instance->params.polyT[3] * Tuncal * Tuncal * Tuncal
@@ -192,7 +189,7 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
 
     /* Result is invalid until we have enough calibration data */
     if (!_RS41_checkValidCalibration(instance, CALIB_TEMPERATURE_U)) {
-        cookedMetro->temperatureUSensor = NAN;
+        instance->metro.TU = NAN;
     }
     else {
         /* Reference values for temperature are two known resistors.
@@ -201,7 +198,7 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
         float res = instance->params.refResistorLow
             + (instance->params.refResistorHigh - instance->params.refResistorLow) * current[2];
         float x = res * instance->params.calTU;
-        cookedMetro->temperatureUSensor = 0
+        instance->metro.TU = 0
             + instance->params.taylorTU[0]
             + instance->params.taylorTU[1] * x
             + instance->params.taylorTU[2] * x * x
@@ -212,11 +209,11 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
 
     /* Result is invalid until we have enough calibration data */
     if (!_RS41_checkValidCalibration(instance, CALIB_HUMIDITY)) {
-        cookedMetro->RH = NAN;
+        instance->metro.RH = NAN;
     }
     else {
         /* We need a valid temperature result for the humidity sensor. */
-        float TU = cookedMetro->temperatureUSensor;
+        float TU = instance->metro.TU;
         if (!isnan(TU)) {
             /* Temperature compensation of the humidity sensor uses a slightly modified
              * temperature value.
@@ -230,63 +227,68 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
                     + instance->params.polyTrh[5] * TU * TU * TU * TU * TU;
 
             /* Compute absolute capacitance from the known references */
-            cookedMetro->C = instance->params.refCapLow
+            instance->metro.C = instance->params.refCapLow
                     + (instance->params.refCapHigh - instance->params.refCapLow) * current[1];
 
             /* Apply calibration */
-            cookedMetro->Cp = (cookedMetro->C / instance->params.calibU[0] - 1.0f) * instance->params.calibU[1];
+            instance->metro.Cp = (instance->metro.C / instance->params.calibU[0] - 1.0f) * instance->params.calibU[1];
+
+            /* Get pressure (either from sensor or an estimate */
+            float p = instance->metro.pressure;
+            if (isnan(p)) {
+                /* This might be an RS41 variant without pressure sensor.
+                 * Use pressure calculated from known altitude.
+                 */
+                p = instance->gps.estimatedPressure;
+                if (isnan(p) || (p == 0)) {
+                    /* Unknown pressure. Just assume 30 hPa. Not too bad an assumption for our purpose... */
+                    p = 30.0f;
+                }
+            }
 
             /* Compensation for low temperature and pressure at altitude */
-            float powc = 1.0f;
+            float Tp = (Trh - 20.0f) / 180.0f;
             sum = 0;
-            float t = (Trh - 20.0f) / 180.0f;
-            float p = cookedMetro->pressure;
-            if (isnan(p)) {
-                cookedMetro->RHtu = NAN;
-                cookedMetro->RH = NAN;
-                cookedMetro->dewpoint = NAN;
-            }
-            else {
-                p /= 1000.0f;
-                for (i = 0; i < 3; i++) {
-                    float l = 0;
-                    float powt = 1.0f;
-                    for (j = 0; j < 4; j++) {
-                        l += instance->params.matrixBt[4*i+j] * powt;
-                        powt *= t;
-                    }
-                    float x = instance->params.vectorBp[i];
-                    sum += l * ((x * p / (1.0f + x * p)) - x * powc / (1.0f + x));
-                    powc *= cookedMetro->Cp;
+            float powc = 1.0f;
+            p /= 1000.0f;
+            for (i = 0; i < 3; i++) {
+                float l = 0;
+                float powt = 1.0f;
+                for (j = 0; j < 4; j++) {
+                    l += instance->params.matrixBt[4*i+j] * powt;
+                    powt *= Tp;
                 }
-                cookedMetro->Cp -= sum;
-
-                int k;
-                sum = 0;
-                float xj = 1.0f;
-                for (j = 0; j < 7; j++) {
-                    float yk = 1.0f;
-                    for (k = 0; k < 6; k++) {
-                        sum += xj * yk * instance->params.matrixU[j][k];
-                        yk *= (Trh - 20.0f) / 180.0f;
-                    }
-                    xj *= cookedMetro->Cp;
-                }
-                cookedMetro->RHtu = sum;
-
-                /* Since there is always a small difference between the temperature readings for
-                * the atmospheric (main) tempoerature sensor and the temperature sensor inside
-                * the humidity sensor device, transform the humidity value to the atmospheric conditions
-                * with its different water vapor saturation pressure.
-                */
-                cookedMetro->RH = sum
-                    * _RS41_waterVaporSaturationPressure(cookedMetro->temperatureUSensor)
-                    / _RS41_waterVaporSaturationPressure(cookedMetro->T);
-
-                /* Dew point */
-                float temp = logf(cookedMetro->RH / 100.0f) + (17.625f * cookedMetro->T / (243.04f + cookedMetro->T));
-                cookedMetro->dewpoint = 243.04f * temp / (17.625f - temp);
+                float x = instance->params.vectorBp[i];
+                sum += l * (x * p / (1.0f + x * p) - x * powc / (1.0f + x));
+                powc *= instance->metro.Cp;
             }
+            instance->metro.Cp -= sum;
+
+            int k;
+            sum = 0;
+            float xj = 1.0f;
+            for (j = 0; j < 7; j++) {
+                float yk = 1.0f;
+                for (k = 0; k < 6; k++) {
+                    sum += xj * yk * instance->params.matrixU[j][k];
+                    yk *= Tp;
+                }
+                xj *= instance->metro.Cp;
+            }
+            instance->metro.RHtu = sum;
+
+            /* Since there is always a small difference between the temperature readings for
+            * the atmospheric (main) tempoerature sensor and the temperature sensor inside
+            * the humidity sensor device, transform the humidity value to the atmospheric conditions
+            * with its different water vapor saturation pressure.
+            */
+            instance->metro.RH = sum
+                * _RS41_waterVaporSaturationPressure(instance->metro.TU)
+                / _RS41_waterVaporSaturationPressure(instance->metro.T);
+
+            /* Dew point */
+            float temp = logf(instance->metro.RH / 100.0f) + (17.625f * instance->metro.T / (243.04f + instance->metro.T));
+            instance->metro.dewpoint = 243.04f * temp / (17.625f - temp);
         }
     }
 

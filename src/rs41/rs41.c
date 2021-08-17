@@ -278,7 +278,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     length = snprintf(s, sizeof(s), "%ld,1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,,,,%d",
                 instance->id,
                 instance->name,
-                instance->metro.temperatureUSensor,
+                instance->metro.TU,
                 instance->params.names.variant,
                 instance->temperatureTx,
                 instance->temperatureRef,
@@ -503,12 +503,12 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                     break;
                 case RS41_SUBFRAME_METROLOGY:
                     if (handle->instance) {
-                        _RS41_processMetrologyBlock((RS41_SubFrameMetrology *)(p + 2), &handle->instance->metro, handle->instance);
+                        _RS41_processMetrologyBlock((RS41_SubFrameMetrology *)(p + 2), handle->instance);
                     }
                     break;
                 case RS41_SUBFRAME_METROLOGY_SHORT:
                     if (handle->instance) {
-                        _RS41_processMetrologyShortBlock((RS41_SubFrameMetrologyShort *)(p + 2), &handle->instance->metro, handle->instance);
+                        _RS41_processMetrologyShortBlock((RS41_SubFrameMetrologyShort *)(p + 2), handle->instance);
                     }
                     break;
                 case RS41_SUBFRAME_GPS_POSITION:

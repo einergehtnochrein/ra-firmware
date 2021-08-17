@@ -176,7 +176,7 @@ typedef struct {
     int hasO3;                          /* !=0: O3 probe */
 
     // Humidity calculations. End results and intermediates
-    float temperatureUSensor;           /* Temperature [°C] humidity sensor */
+    float TU;                           /* Temperature [°C] humidity sensor */
     float RH;                           /* Relative humidity [%] */
     float dewpoint;                     /* Dewpoint [°C] */
     float C;
@@ -389,12 +389,10 @@ void _RS41_deleteInstance (RS41_InstanceData *instance);
  */
 LPCLIB_Result _RS41_processMetrologyBlock (
         const RS41_SubFrameMetrology *rawMetro,
-        RS41_CookedMetrology *cookedMetro,
         RS41_InstanceData *instance);
 
 LPCLIB_Result _RS41_processMetrologyShortBlock (
         const RS41_SubFrameMetrologyShort *rawMetro,
-        RS41_CookedMetrology *cookedMetro,
         RS41_InstanceData *instance);
 
 
