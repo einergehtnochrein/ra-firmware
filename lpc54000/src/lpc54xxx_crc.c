@@ -26,6 +26,7 @@
  */
 
 #include "lpc54xxx_libconfig.h"
+#include "lpc54xxx_clkpwr.h"
 
 /** \file
  *  \brief CRC driver implementation.
