@@ -92,8 +92,8 @@ typedef struct _MRZ_InstanceData {
             uint32_t calib12;
             uint32_t calib13;
             uint32_t calib14;
-            uint32_t calib15;
-            uint32_t calib16;
+            uint32_t ddmmyy_production;
+            uint32_t ddmmyy_current;
         });
     }) calib;
 
