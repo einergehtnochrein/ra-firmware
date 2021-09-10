@@ -40,12 +40,14 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
     cookedGps->usedSats = rawGps->usedSats;
     cookedGps->pdop = rawGps->pdop / 10.0f;
     cookedGps->sAcc = rawGps->sAcc;
+    cookedGps->estimatedPressure = 1013.25f * expf(-1.18575919e-4f * lla.alt);
 
     /* Invalidate position if this is not a valid position solution */
     if (cookedGps->usedSats == 0) {
         cookedGps->observerLLA.lat = NAN;
         cookedGps->observerLLA.lon = NAN;
         cookedGps->observerLLA.alt = NAN;
+        cookedGps->estimatedPressure = NAN;
     }
 
     return LPCLIB_SUCCESS;

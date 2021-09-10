@@ -143,14 +143,14 @@ LPCLIB_Result _RS41_processConfigBlock (
         instance->temperatureRef = rawConfig->temperatureRef;
         instance->txPower_dBm = (rawConfig->txPower == 0) ? 1 : (-1 + 3 * rawConfig->txPower);
         if (_RS41_checkValidCalibration(instance, CALIB_FREQUENCY)) {
-            instance->rxFrequencyMHz = 400.0f + (instance->frequency * 10) / 64000.0f;
+            instance->rxFrequencyMHz = 400.0f + (instance->params.frequency * 10) / 64000.0f;
         }
 
         /* Last fragment contains volatile data */
         if (fragmentIndex == RS41_CALIBRATION_MAX_INDEX) {
             instance->killCounterRefFrame = instance->frameCounter;
-            instance->killCounterRefCount = instance->killCountdown;
-            instance->temperatureTx = instance->intTemperatureRadio;
+            instance->killCounterRefCount = instance->params.killCountdown;
+            instance->temperatureTx = instance->params.intTemperatureRadio;
         }
     }
 

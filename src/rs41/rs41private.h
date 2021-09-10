@@ -2,6 +2,9 @@
 #ifndef __RS41PRIVATE_H
 #define __RS41PRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <math.h>
 #include <stdlib.h>
@@ -36,23 +39,23 @@ typedef enum {
 typedef __PACKED(struct {
     uint16_t frameCounter;
     char name[8];
-    __PACKED(struct {
-        uint8_t batteryVoltage100mV;        /* Battery voltage in multiples of 100 mV */
-        uint16_t reserved00B;               /* Bit field (all 16 bits in use)
+
+    uint8_t batteryVoltage100mV;            /* Battery voltage in multiples of 100 mV */
+    uint16_t reserved00B;                   /* Bit field (all 16 bits in use)
                                              * Bit 4: 1=CRC error in saved user parameters detected
                                              * Bit 9: 1=NFC field detected
                                              */
-        uint16_t flags;                     /* Bit 0: 0=Start phase, 1=Flight mode
+    uint16_t flags;                         /* Bit 0: 0=Start phase, 1=Flight mode
                                              * Bit 1: 0=Ascent, 1=Descent
                                              * Bit 5: 1="T self-check" running
                                              * Bit 11: 0=VBATmin check disabled, 1=VBATmin check enabled
                                              * Bit 12: 0=VBAT ok, 1=VBAT too low
                                              */
-        uint8_t cryptoMode;                 /* Normal sonde: always 0 (can be 6 if parameter config error)
+    uint8_t cryptoMode;                     /* Normal sonde: always 0 (can be 6 if parameter config error)
                                              * RS41-SGM: 0...4
                                              */
-        int8_t temperatureRef;              /* Reference temperature (@ PCB cutout) [°C] */
-        uint16_t errorLog;                  /* Error flags:
+    int8_t temperatureRef;                  /* Reference temperature (@ PCB cutout) [°C] */
+    uint16_t errorLog;                      /* Error flags:
                                              * 0: Low battery capacity
                                              * 1: No parameter setup
                                              * 2: TX init failure
@@ -69,9 +72,9 @@ typedef __PACKED(struct {
                                              * 13: P-module not detected
                                              * 14: T, Tu or U check failed
                                              */
-        uint16_t humidityHeatingPwm;        /* PWM state for humidity sensor heating(?) (0...1000) */
-        uint8_t txPower;                    /* TX power level (0...7, see Si4032 data sheet) */
-    });
+    uint16_t humidityHeatingPwm;            /* PWM state for humidity sensor heating(?) (0...1000) */
+    uint8_t txPower;                        /* TX power level (0...7, see Si4032 data sheet) */
+
     uint8_t maxCalibIndex;                  /* Maximum index of calibration fragment */
     uint8_t thisCalibIndex;                 /* Index of calibration fragment in this frame */
     uint8_t calibFragment[16];
@@ -171,15 +174,9 @@ typedef struct {
     int numXdataInstruments;
 
     int hasO3;                          /* !=0: O3 probe */
-    float o3PumpTemperature;            /* Only valid for O3 sonde */
-    float o3CellCurrent;                /* Only valid for O3 sonde */
-    float o3BatteryVoltage;             /* Only valid for O3 sonde */
-    float o3PumpCurrent;                /* Only valid for O3 sonde */
-    float o3ExtVoltage;                 /* Only valid for O3 sonde */
-    uint16_t o3swVersion;               /* Only valid for O3 sonde */
 
     // Humidity calculations. End results and intermediates
-    float temperatureUSensor;           /* Temperature [°C] humidity sensor */
+    float TU;                           /* Temperature [°C] humidity sensor */
     float RH;                           /* Relative humidity [%] */
     float dewpoint;                     /* Dewpoint [°C] */
     float C;
@@ -196,6 +193,7 @@ typedef struct {
     uint8_t visibleSats;
     uint8_t usedSats;
     uint8_t sAcc;
+    float estimatedPressure;
 } RS41_CookedGps;
 
 
@@ -346,7 +344,7 @@ typedef struct _RS41_InstanceData {
             uint16_t remainingBatteryCapacity;  /* 0x32A: */
             uint8_t numUbxDiscarded;            /* 0x32C: Number of discarded UBX packets */
             uint8_t numUbxStall;                /* 0x32D: Number of occasions wher essential UBX packets are missing */
-        });
+        }) params;
     });
 } RS41_InstanceData;
 
@@ -391,12 +389,10 @@ void _RS41_deleteInstance (RS41_InstanceData *instance);
  */
 LPCLIB_Result _RS41_processMetrologyBlock (
         const RS41_SubFrameMetrology *rawMetro,
-        RS41_CookedMetrology *cookedMetro,
         RS41_InstanceData *instance);
 
 LPCLIB_Result _RS41_processMetrologyShortBlock (
         const RS41_SubFrameMetrologyShort *rawMetro,
-        RS41_CookedMetrology *cookedMetro,
         RS41_InstanceData *instance);
 
 
@@ -421,4 +417,14 @@ LPCLIB_Result _RS41_processGpsRawBlock (
         const RS41_SubFrameGpsRaw *p,
         RS41_RawGps *raw);
 
+/* Check CRC of a sub-block */
+_Bool _RS41_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
+/* Do bit reversal, and remove data whitening */
+void _RS41_removeWhitening(uint8_t *buffer, int length);
+/* Reed-Solomon error correction */
+LPCLIB_Result _RS41_checkReedSolomon (uint8_t rawFrame[], int *pNumErrors, _Bool *pLongFrame);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

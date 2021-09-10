@@ -27,6 +27,10 @@
 #ifndef __RS41_H
 #define __RS41_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "lpclib.h"
 #include "pt.h"
 
@@ -47,4 +51,7 @@ LPCLIB_Result RS41_resendLastPositions (RS41_Handle handle);
 LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id, float *frequency);
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif

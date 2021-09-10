@@ -259,15 +259,6 @@ LPCLIB_Result REEDSOLOMON_process (_REEDSOLOMON_GetDataAddressFunc access, int *
     uint8_t w;
     uint8_t ld;
 
-#if 0
-    int nErrors;
-    GFPoly syndroms;
-    GFPoly errorLocatorPoly;
-    GFPoly errorLocatorPolyDerived;
-    GFPoly errorMagnitudePoly;
-    uint8_t errorLocatorsInv[CODE_m / 2];
-    uint8_t errorPositions[CODE_m / 2];
-#endif
 
     nErrors = 0;
 
@@ -295,12 +286,6 @@ LPCLIB_Result REEDSOLOMON_process (_REEDSOLOMON_GetDataAddressFunc access, int *
                 /* Calculate the syndroms again after correction */
                 //TODO: Necessary?
                 result = _REEDSOLOMON_getSyndroms(access, &syndroms);
-#if 0
-for (i = 0; i < nErrors; i++) {
-    printf(" %d", errorPositions[i]);
-}
-printf("\r\n");
-#endif
             }
         }
     }
