@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -153,7 +154,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%ld,13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,,,,,,0",
+    length = sprintf((char *)s, "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,,,,,,0",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -170,7 +171,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,13,0,%s",
+    length = sprintf(s, "%"PRIu32",13,0,%s",
                 instance->id,
                 instance->hashName
                 );
@@ -190,7 +191,7 @@ static void _M20_sendRaw (M20_InstanceData *instance, uint8_t *buffer, uint32_t 
     int slen = 0;
 
 
-    slen += snprintf(&_m20_raw[slen], sizeof(_m20_raw) - slen, "%ld,13,1,,",
+    slen += snprintf(&_m20_raw[slen], sizeof(_m20_raw) - slen, "%"PRIu32",13,1,,",
                      instance->id
                     );
 

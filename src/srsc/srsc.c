@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -124,9 +125,9 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     if (instance->config.state >= 8) {
         special += (1u << 8);
     }
-    snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
+    snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = sprintf((char *)s, "%ld,8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f",
+    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f",
                     instance->id,
                     f,                                  /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -149,7 +150,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     }
 
     if (1) { //TODO must check for C50 (NOTE: Every sonde must send a HOST_CHANNEL_INFO packet!)
-        length = sprintf(s, "%ld,8,0,%s,,%.1f,%.1f,%.1f,%.1f,%.3f,,%ld,%ld,%d,%ld,%.2f,%d,%ld,%ld,%ld",
+        length = sprintf(s, "%"PRIu32",8,0,%s,,%.1f,%.1f,%.1f,%.1f,%.3f,,%ld,%ld,%d,%"PRIu32",%.2f,%d,%"PRIu32",%"PRIu32",%"PRIu32,
                     instance->id,
                     instance->name,
                     instance->metro.temperatureRefBlock,    /* Reference temperature [°C] */
@@ -190,7 +191,7 @@ LPCLIB_Result SRSC_processBlock (
             /* Log */
             if (handle->instance->detectorState == SRSC_DETECTOR_READY) {
                 char log[40];
-                snprintf(log, sizeof(log), "%s,8,1,%d,%08lX",
+                snprintf(log, sizeof(log), "%s,8,1,%d,%08"PRIX32,
                             handle->instance->name,
                             handle->packet.type,
                             handle->packet.d_bigendian);
@@ -230,7 +231,7 @@ LPCLIB_Result SRSC_processBlock (
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
                     event.block = SONDE_DETECTOR_C34_C50;
-                    event.parameter = (void *)((uint32_t)lrintf(rxSetFrequencyHz));
+                    event.parameter = (void *)((uintptr_t)lrintf(rxSetFrequencyHz));
                     SYS_handleEvent(event);
                 }
             }

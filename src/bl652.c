@@ -79,7 +79,7 @@ static void _BL652_processRx (BL652_Handle handle)
 
                 case 27:
                     sscanf(s, "%*d %s%n", handle->response.deviceName, &readPos);
-                    strncat(handle->response.deviceName, &s[readPos], sizeof(handle->response.deviceName));
+                    strncat(handle->response.deviceName, &s[readPos], sizeof(handle->response.deviceName)-1);
                     /* Remove trailing LF */
                     if (strlen(handle->response.deviceName) >= 1) {
                         handle->response.deviceName[strlen(handle->response.deviceName) - 1] = 0;

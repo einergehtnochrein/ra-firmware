@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -69,7 +70,7 @@ static void _BEACON_sendKiss (BEACON_InstanceData *instance)
         special |= 2;
     }
 
-    length = snprintf(s, sizeof(s), "%ld,9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,",
+    length = snprintf(s, sizeof(s), "%"PRIu32",9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,",
                     instance->id,
                     instance->rxFrequencyMHz,           /* Frequency [MHz] */
                     lat,
@@ -82,7 +83,7 @@ static void _BEACON_sendKiss (BEACON_InstanceData *instance)
     }
 
     /* Beacon 15 Hex ID */
-    snprintf(s, sizeof(s), "%ld,9,0,%s,%ld",
+    snprintf(s, sizeof(s), "%"PRIu32",9,0,%s,%"PRIu32,
                 instance->id,
                 instance->pdf1.hexID,
                 instance->pdf1.serialNumber

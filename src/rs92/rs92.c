@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #include <stdlib.h>
 #if !defined(M_PI)
@@ -202,7 +203,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         special += 1;
     }
 
-    length = sprintf((char *)s, "%ld,0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%ld,,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,",
+    length = sprintf((char *)s, "%"PRIu32",0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%"PRIu32",,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,",
                     instance->id,
                     instance->rxFrequencyMHz,   /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -226,7 +227,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,0,0,%s",
+    length = sprintf(s, "%"PRIu32",0,0,%s",
                 instance->id,
                 instance->name
                 );
@@ -405,7 +406,7 @@ if(1){//                    if (handle->instance->gps.valid) {
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
                     event.block = SONDE_DETECTOR_RS41_RS92;
-                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                    event.parameter = (void *)((uintptr_t)lrintf(rxFrequencyHz));
                     SYS_handleEvent(event);
                 }
             }

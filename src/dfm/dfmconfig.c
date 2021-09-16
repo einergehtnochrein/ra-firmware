@@ -123,7 +123,7 @@ dfm_config_unknown[channel].n++;
                 }
                 else {
                     /* Channels other than 0: If there is any gap (undetected subframe), reset detector */
-                    if (abs(delta - DFM_FRAME_LENGTH_MILLISEC) > DFM_FRAME_LENGTH_MILLISEC / 2.0f) {
+                    if (fabs(delta - DFM_FRAME_LENGTH_MILLISEC) > DFM_FRAME_LENGTH_MILLISEC / 2.0f) {
                         instance->confDetect.lastCh0Time = 0;
                     }
                 }

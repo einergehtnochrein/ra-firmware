@@ -24,6 +24,7 @@
  */
 
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -108,7 +109,7 @@ LPCLIB_Result EPHEMUPDATE_open (EPHEMUPDATE_Handle *pHandle)
 
 static void _EPHEMUPDATE_sendResponse (int action, const char *status)
 {
-    char s[20];
+    char s[24];
     sprintf(s, "%d,%s", action, status);
     SYS_send2Host(HOST_CHANNEL_EPHEMUPDATE, s);
 }
@@ -415,7 +416,7 @@ LPCLIB_Result EPHEMUPDATE_processCommand (EPHEMUPDATE_Handle handle, const char 
             {
                 uint32_t checksum = _EPHEMUPDATE_getEphemerisChecksum();
                 static char s[20];
-                sprintf(s, "%ld", checksum);
+                sprintf(s, "%"PRIx32, checksum);
                 response = s;
             }
             break;

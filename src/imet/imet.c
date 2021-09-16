@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -113,7 +114,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%ld,%s,%.3f,,,,%s,%s,,,,,,,,,%.1f,%.1f,0",
+        length = sprintf((char *)s, "%"PRIu32",%s,%.3f,,,,%s,%s,,,,,,,,,%.1f,%.1f,0",
                         instance->id,
                         sType,
                         f,                              /* Frequency [MHz] */
@@ -124,7 +125,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%ld,%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%.1f,%.1f,,,%.1f,,%.1f,%.1f,%d,%d,,%.1f",
+        length = sprintf((char *)s, "%"PRIu32",%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%.1f,%.1f,,,%.1f,,%.1f,%.1f,%d,%d,,%.1f",
                         instance->id,
                         sType,
                         f,                              /* Frequency [MHz] */
@@ -149,7 +150,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,6,0,%s",
+    length = sprintf(s, "%"PRIu32",6,0,%s",
                 instance->id,
                 instance->name
                 );
@@ -198,7 +199,7 @@ LPCLIB_Result IMET_processBlock (
             {
                 char log[80];
                 unsigned int i;
-                snprintf(log, sizeof(log), "%ld,6,1,",
+                snprintf(log, sizeof(log), "%"PRIu32",6,1,",
                             handle->instance->id);
                 for (i = 0; i < length; i++) {
                     snprintf(&log[strlen(log)], sizeof(log) - strlen(log), "%02X", p[i]);
@@ -238,7 +239,7 @@ LPCLIB_Result IMET_processBlock (
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
                     event.block = SONDE_DETECTOR_IMET;
-                    event.parameter = (void *)((uint32_t)lrintf(rxSetFrequencyHz));
+                    event.parameter = (void *)((uintptr_t)lrintf(rxSetFrequencyHz));
                     SYS_handleEvent(event);
                 }
             }

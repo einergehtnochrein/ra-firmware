@@ -92,8 +92,8 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     int length = 0;
     float offset;
     char sPressure[10];
-    char sFlightKillTimer[6];
-    char sBurstKillTimer[6];
+    char sFlightKillTimer[7];
+    char sBurstKillTimer[7];
     uint32_t special;
     char sModelName[10+1];
 
@@ -377,7 +377,7 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                         LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                         event.opcode = APP_EVENT_HEARD_SONDE;
                         event.block = SONDE_DETECTOR_RS41_RS92;
-                        event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                        event.parameter = (void *)((uintptr_t)lrintf(rxFrequencyHz));
                         SYS_handleEvent(event);
                     }
                     break;

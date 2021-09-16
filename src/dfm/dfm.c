@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -161,7 +162,7 @@ LPCLIB_Result DFM_open (DFM_Handle *pHandle)
 /* Send position report */
 static void _DFM_sendKiss (DFM_InstanceData *instance)
 {
-    char s[120];
+    char s[128];
     char sAltitude[20];
     char sClimbRate[20];
     char sVelocity[8];
@@ -226,7 +227,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
             /* Nothing to do */
             break;
     }
-    snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
+    snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
     /* Climb rate and ground speed may not be available (Burkina Faso version) */
     sClimbRate[0] = 0;
@@ -244,7 +245,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%ld,2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,,,,,",
+        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,,,,,",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
@@ -255,7 +256,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%ld,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s",
+        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -276,7 +277,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,2,0,%s,%.1f",
+    length = sprintf(s, "%"PRIu32",2,0,%s,%.1f",
                 instance->id,
                 instance->name,
                 instance->gps.ehpe
@@ -371,7 +372,7 @@ LPCLIB_Result DFM_processBlock (
                     | (handle->packet.gps[1].d1[11] <<  4)
                     | (handle->packet.gps[1].d1[12] <<  0)
                     ;
-            snprintf(log, sizeof(log), "%s,2,1,%07lX%05lX%08lX%05lX%08lX",
+            snprintf(log, sizeof(log), "%s,2,1,%07"PRIX32"%05"PRIX32"%08"PRIX32"%05"PRIX32"%08"PRIX32,
                         handle->instance->name,
                         confval,
                         gps0val1,
@@ -389,7 +390,7 @@ LPCLIB_Result DFM_processBlock (
                 LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                 event.opcode = APP_EVENT_HEARD_SONDE;
                 event.block = SONDE_DETECTOR_DFM;
-                event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                event.parameter = (void *)((uintptr_t)lrintf(rxFrequencyHz));
                 SYS_handleEvent(event);
 
                 result = LPCLIB_SUCCESS;
