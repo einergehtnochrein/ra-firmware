@@ -5,7 +5,7 @@ For a project overview see [Ra Hardware](https://github.com/einergehtnochrein/ra
 
 ## Compiling the Code
 
-Code development is done an a Debian Linux machine with the arm-none-eabi variant of the GCC compiler. Version 2016-q1 of the compiler was used, but any later version should do as well (although not tested). You can get the compiler from the [ARM website](https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads).
+Code development is done an a Debian Linux machine with the arm-none-eabi variant of the GCC compiler. Version 2017-q4 of the compiler was used, but any later version should do as well (although not tested). You can get the compiler from the [ARM website](https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads).
 
 Assuming the GCC compiler is in your path, go to the root directory and type
 
