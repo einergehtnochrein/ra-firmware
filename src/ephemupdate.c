@@ -416,7 +416,7 @@ LPCLIB_Result EPHEMUPDATE_processCommand (EPHEMUPDATE_Handle handle, const char 
             {
                 uint32_t checksum = _EPHEMUPDATE_getEphemerisChecksum();
                 static char s[20];
-                sprintf(s, "%"PRIx32, checksum);
+                sprintf(s, "%"PRIu32, checksum);
                 response = s;
             }
             break;
