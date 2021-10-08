@@ -101,7 +101,6 @@ typedef struct {
 
 
 typedef struct {
-    ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     struct {
         uint8_t day;

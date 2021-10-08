@@ -52,7 +52,6 @@ typedef struct {
 
 typedef struct {
     double gpstime;
-    ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
 } M20_CookedGps;
 

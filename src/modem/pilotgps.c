@@ -20,10 +20,8 @@ LPCLIB_Result _PILOT_processGpsBlock (
         const struct _PILOT_Payload *payload,
         PILOT_CookedGps *cookedGps)
 {
-    ECEF_Coordinate ecef;
     LLA_Coordinate lla;
 
-    memset(&ecef, 0, sizeof(ecef));
     memset(&lla, 0, sizeof(lla));
 
     /* Sanity check */
@@ -58,10 +56,8 @@ LPCLIB_Result _PILOT_processGpsBlock (
         lla.climbRate = (float)payload->climbRate / 100.0f;
 
         GPS_applyGeoidHeightCorrection(&lla);
-        GPS_convertLLA2ECEF(&lla, &ecef);
     }
 
-    cookedGps->observerECEF = ecef;
     cookedGps->observerLLA = lla;
     cookedGps->usedSats = payload->usedSats;
     if (payload->hdop == 9998) {

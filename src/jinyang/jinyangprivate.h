@@ -79,7 +79,6 @@ typedef struct {
 
 
 typedef struct {
-    ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
 uint16_t unk1;
 uint16_t unk2;

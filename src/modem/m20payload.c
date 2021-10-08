@@ -78,7 +78,6 @@ LPCLIB_Result _M20_processPayload (
         _Bool valid,
         M20_CookedGps *cookedGps)
 {
-    ECEF_Coordinate ecef;
     LLA_Coordinate lla;
 
     lla = cookedGps->observerLLA;
@@ -89,13 +88,10 @@ LPCLIB_Result _M20_processPayload (
         lla.climbRate = 0.01f * (float)payload->climbRate;
     }
 
-    GPS_convertLLA2ECEF(&lla, &ecef);
-
     if (lla.alt < -100.0) {
         return LPCLIB_ERROR;
     }
 
-    cookedGps->observerECEF = ecef;
     cookedGps->observerLLA = lla;
 
     return LPCLIB_SUCCESS;

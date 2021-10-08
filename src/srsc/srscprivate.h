@@ -139,7 +139,6 @@ typedef struct {
 
 typedef struct {
     double gpstime;
-    ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     float climbRate;
     struct {

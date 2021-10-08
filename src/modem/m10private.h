@@ -65,7 +65,6 @@ typedef struct {
 
 typedef struct {
     double gpstime;
-    ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     uint8_t visibleSats;
 } M10_CookedGps;

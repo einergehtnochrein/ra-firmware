@@ -50,7 +50,6 @@ typedef struct {
 
 
 typedef struct {
-    ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     float hdop;
     float vdop;
