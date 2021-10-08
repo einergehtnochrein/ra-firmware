@@ -172,5 +172,21 @@ int _write (int __fd, const char *__buf, size_t __nbyte)
 	return __nbyte;
 }
 
+#else
+pid_t _getpid (void);
+pid_t _getpid (void)
+{
+    return 1;
+}
+
+int _kill (pid_t __pid, int __signal);
+int _kill (pid_t __pid, int __signal)
+{
+    (void) __pid;
+    (void) __signal;
+
+    errno = EINVAL;
+    return -1;
+}
 #endif
 
