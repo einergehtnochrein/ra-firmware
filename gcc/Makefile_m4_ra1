@@ -43,7 +43,7 @@ CFLAGS += \
     -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
 LDFLAGS += \
-    $(OBJDIR)/$(RINEXLIB) $(OBJDIR)/$(M0LIB) ../libs/pdm/libpdm.a -u _printf_float -specs=nano.specs
+    $(OBJDIR)/$(RINEXLIB) $(OBJDIR)/$(M0LIB) ../libs/pdm/libpdm.a -u _scanf_float -u _printf_float -specs=nano.specs
 
 EXE_DEPENDENCIES += \
     $(OBJDIR)/$(RINEXLIB) $(OBJDIR)/$(M0LIB) ../libs/pdm/libpdm.a
