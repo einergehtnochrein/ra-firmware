@@ -1604,7 +1604,7 @@ static bool _SYS_checkEvent (SYS_Handle handle)
     /* Something in the mailbox? */
     handle->rtosEvent = osMailGet(handle->queue, 0);
     haveEvent |= handle->rtosEvent.status == osEventMail;
-#if 1
+
     /* Data from Bluetooth link? */
     if (UART_readLine(blePort, handle->commandLine, sizeof(handle->commandLine)) > 0) {
         haveEvent = true;
@@ -1615,7 +1615,7 @@ static bool _SYS_checkEvent (SYS_Handle handle)
          */
         handle->commandLine[0] = 0;
     }
-#endif
+
     return haveEvent;
 }
 
@@ -1818,9 +1818,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->dfm,
                                         sondeType,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_DFM_NORMAL),
-                                    handle->currentFrequency,
-                                    ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1830,9 +1830,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->dfm,
                                         sondeType,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_DFM_INVERTED),
-                                    handle->currentFrequency,
-                                    ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
