@@ -137,6 +137,7 @@ typedef struct _RS92_InstanceData {
     uint32_t lastUpdated;
     float rxFrequencyMHz;
     uint16_t frameCounter;
+    RS92_LogMode logMode;
 
     RS92_CookedGps gps;
     RS92_CookedMetrology metro;

@@ -280,6 +280,32 @@ LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold
 
 
 
+static char _rs92_raw[234+42];
+
+static void _RS92_sendRaw (RS92_InstanceData *instance, uint8_t *buffer, uint32_t length)
+{
+    int slen = 0;
+    char *s = _rs92_raw;
+
+    if (length <= 234) {
+        slen += snprintf(&s[slen], sizeof(_rs92_raw) - slen, "%"PRIu32",0,1,%"PRIu32",%d,",
+                        instance->id,
+                        length,
+                        0
+                        );
+
+        while (length) {
+            slen += snprintf(&s[slen], sizeof(_rs92_raw) - slen, "%02"PRIX32, (uint32_t)*buffer);
+
+            ++buffer;
+            --length;
+        }
+
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
+    }
+}
+
+
 LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
 {
     if (length > 1) {  //TODO
@@ -352,6 +378,10 @@ if(1){//                    if (handle->instance->gps.valid) {
                         _RS92_sendKiss(handle->instance);
                     }
 
+                    if (handle->instance->logMode == RS92_LOGMODE_RAW) {
+                        _RS92_sendRaw(handle->instance, handle->packet.rawData, sizeof(handle->packet.rawData));
+                    }
+
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
@@ -406,5 +436,26 @@ LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id, float *frequ
     }
 
     return LPCLIB_SUCCESS;
+}
+
+
+/* Control logging */
+LPCLIB_Result RS92_setLogMode (RS92_Handle handle, uint32_t id, RS92_LogMode mode)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
+    RS92_InstanceData *instance = NULL;
+    while (_RS92_iterateInstance(&instance)) {
+        if (instance->id == id) {
+            instance->logMode = mode;
+            result = LPCLIB_SUCCESS;
+            break;
+        }
+    }
+
+    return result;
 }
 

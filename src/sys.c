@@ -1446,11 +1446,18 @@ if (cl[0] != 0) {
                         case 5:
                         {
                             if (sscanf(cl, "#%*d,%*d,%d,%d", &enableValue, &extra1) == 2) {
+                                //TODO: Clean up this mess...
                                 RS41_LogMode mode = RS41_LOGMODE_NONE;
                                 if (enableValue == 1) {
                                     mode = RS41_LOGMODE_RAW;
                                 }
                                 RS41_setLogMode(handle->rs41, extra1, mode);
+
+                                RS92_LogMode mode92 = RS92_LOGMODE_NONE;
+                                if (enableValue == 1) {
+                                    mode92 = RS92_LOGMODE_RAW;
+                                }
+                                RS92_setLogMode(handle->rs92, extra1, mode92);
                             }
                             break;
                         }
