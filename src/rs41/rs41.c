@@ -283,20 +283,20 @@ static void _RS41_sendRaw (RS41_InstanceData *instance, uint8_t *buffer, uint32_
 }
 
 
-LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
 {
     bool longFrame = false;
 
 
     /* Return if raw data is shorter than a short frame. */
-    if (length < 312) {
+    if (numBits != 510*8) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
     handle->pRawData = buffer;
 
     /* Remove data whitening */
-    _RS41_removeWhitening(buffer, length);
+    _RS41_removeWhitening(buffer, numBits/8);
 
     /* Error correction */
     handle->nCorrectedErrors = 0;
@@ -311,7 +311,7 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
     }
 
     /* Limit buffer length in case of short frame */
-    length = longFrame ? 510 : 312;
+    uint32_t length = longFrame ? 510 : 312;
 
     /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
     handle->rxFrequencyHz = rxFrequencyHz;

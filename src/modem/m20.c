@@ -204,10 +204,10 @@ static void _M20_sendRaw (M20_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 
 
-LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
 {
-    if (length == (69+1)*2) {
-        handle->packetLength = length / 2;
+    if (numBits == 70*2*8) {
+        handle->packetLength = (numBits/8) / 2;
 
         /* Convert to byte array */
         _M20_buffer2raw(handle, buffer, handle->packetLength);

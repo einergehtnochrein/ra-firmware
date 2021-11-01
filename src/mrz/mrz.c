@@ -154,14 +154,14 @@ LPCLIB_Result MRZ_processBlock (
         MRZ_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
-        uint32_t length,
+        uint32_t numBits,
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
     (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
-    if (length == sizeof(MRZ_Packet)) {
+    if (numBits == 8*sizeof(MRZ_Packet)) {
         memcpy(&handle->packet, buffer, sizeof(handle->packet));
 
         /* Check CRC-16 at the end of the frame */

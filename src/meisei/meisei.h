@@ -39,7 +39,7 @@ LPCLIB_Result MEISEI_processBlock (
         MEISEI_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
-        uint32_t length,
+        uint32_t numBits,
         float rxFrequencyHz);
 LPCLIB_Result MEISEI_resendLastPositions (MEISEI_Handle handle);
 LPCLIB_Result MEISEI_removeFromList (MEISEI_Handle handle, uint32_t id, float *frequency);

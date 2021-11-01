@@ -212,14 +212,14 @@ LPCLIB_Result MEISEI_processBlock (
         MEISEI_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
-        uint32_t length,
+        uint32_t numBits,
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
     int nErrors;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
-    if (length == sizeof(MEISEI_Packet)) {
+    if (numBits == 8*sizeof(MEISEI_Packet)) {
         if (sondeType == SONDE_MEISEI_CONFIG) {
             handle->configPacketTimestamp = 10.0f * os_time;
             memcpy(&handle->configPacket, buffer, sizeof(handle->configPacket));

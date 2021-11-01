@@ -173,7 +173,7 @@ LPCLIB_Result JINYANG_processBlock (
         JINYANG_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
-        uint32_t length,
+        uint32_t numBits,
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
@@ -181,9 +181,9 @@ LPCLIB_Result JINYANG_processBlock (
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     /* Remove data whitening */
-    _JINYANG_removeWhitening(buffer, length);
+    _JINYANG_removeWhitening(buffer, numBits/8);
 
-    if (length == sizeof(JINYANG_Packet)) {
+    if (numBits == 8*sizeof(JINYANG_Packet)) {
         memcpy(&handle->packet, buffer, sizeof(handle->packet));
 
         /* Check CRC-16 at the end of the frame */

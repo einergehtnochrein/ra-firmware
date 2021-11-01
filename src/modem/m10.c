@@ -198,10 +198,10 @@ static void _M10_sendRaw (M10_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 
 
-LPCLIB_Result M10_processBlock (M10_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result M10_processBlock (M10_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
 {
-    if (length == (100+1)*2) {
-        handle->packetLength = length / 2;
+    if (numBits == 101*2*8) {
+        handle->packetLength = (numBits/8) / 2;
 
         /* Convert to byte array */
         _M10_buffer2raw(handle, buffer, handle->packetLength);

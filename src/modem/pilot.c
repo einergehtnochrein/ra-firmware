@@ -162,9 +162,9 @@ static void _PILOT_sendRaw (PILOT_InstanceData *instance, uint8_t *buffer, uint3
 
 
 
-LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
 {
-    if (length == sizeof(struct _PILOT_Payload)) {
+    if (numBits == 8*sizeof(struct _PILOT_Payload)) {
         memcpy(&handle->payload, buffer, sizeof(handle->payload));
         
         _PILOT_sendRaw(handle->instance, (uint8_t *)&handle->payload, sizeof(handle->payload));

@@ -88,7 +88,7 @@ void PIN_INT3_IRQHandler (void)
                             handle->nSubBlockBits = handle->config->conf[i].nSubBlockBits;
                             handle->nSubBlockBytes = handle->config->conf[i].nSubBlockBytes;
                             ipc_s2m[handle->activeBuffer].opcode = 0;
-                            ipc_s2m[handle->activeBuffer].numBits = handle->frameLengthBits;
+                            ipc_s2m[handle->activeBuffer].numBits = handle->frameLengthBits + handle->config->conf[i].startOffset * 8;
                             ipc_s2m[handle->activeBuffer].param = handle->config->conf[i].id;
                             ipc_s2m[handle->activeBuffer].rxTime = os_time;
                         }
@@ -205,6 +205,8 @@ void PIN_INT3_IRQHandler (void)
                     }
 
                     if (--handle->rxCounterBits <= 0) {
+                        ipc_s2m[handle->activeBuffer].numBits = 8*handle->writeIndex; //TODO
+
                         handle->state = SYNC_STATE_HUNT;
                         handle->writeIndex = 0;
                         if (handle->postProcess) {

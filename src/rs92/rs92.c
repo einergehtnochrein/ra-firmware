@@ -306,9 +306,9 @@ static void _RS92_sendRaw (RS92_InstanceData *instance, uint8_t *buffer, uint32_
 }
 
 
-LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
 {
-    if (length > 1) {  //TODO
+    if (numBits == 585*8) {
         /* Convert to byte array */
         _RS92_buffer2raw(handle, buffer);
 
