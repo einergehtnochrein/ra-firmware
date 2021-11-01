@@ -75,7 +75,7 @@ LPCLIB_Result _PILOT_processGpsBlock (
 
     uint8_t n = 0;
     for (int i = 0; i < 12; i++) {
-        if (payload->unk36[i] > 0) {
+        if (payload->sats[i] > 0) {
             ++n;
         }
     }
