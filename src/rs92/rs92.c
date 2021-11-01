@@ -26,11 +26,6 @@ typedef struct RS92_Context {
     int nSymbolErrors;
 
     RS92_InstanceData *instance;
-
-#if SEMIHOSTING_RS92
-    FILE *fpAnalog;
-    FILE *fpLog;
-#endif
 } RS92_Context;
 
 
@@ -244,11 +239,6 @@ LPCLIB_Result RS92_open (RS92_Handle *pHandle)
 {
     *pHandle = &_rs92;
 
-#if SEMIHOSTING_RS92
-    _rs92.fpAnalog = fopen("rs92_analog.csv", "w");
-    _rs92.fpLog = fopen("rs92.csv", "w");
-#endif
-
     return LPCLIB_SUCCESS;
 }
 
@@ -269,16 +259,6 @@ static uint8_t * _RS92_getDataAddress(int index)
         return &_RS92_null;
     }
 }
-
-
-/* Read 24-bit little-endian integer from memory */
-#if SEMIHOSTING_RS92
-static uint32_t _RS92_read24 (const uint8_t *p24)
-{
-    return p24[0] + 256 * p24[1] + 65536 * p24[2];
-}
-#endif
-
 
 
 LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold)
@@ -354,28 +334,6 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
                         _RS92_processMetrologyBlock(&handle->packet.metrology, &handle->instance->metro, handle->instance);
                     }
 
-#if SEMIHOSTING_RS92
-                    if (!isnan(handle->instance->metro.pressureAltitude)) {
-                        fprintf(handle->fpAnalog, "%u, %.0f, ",
-                                handle->instance->frameCounter,
-                                handle->instance->metro.pressureAltitude);
-                        struct _RS92_MetrologyBlock *pm = &handle->packet.metrology;
-                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                _RS92_read24(pm->T),
-                                _RS92_read24(pm->U1),
-                                _RS92_read24(pm->U2));
-                        fprintf(handle->fpAnalog, "%lu, %lu, ",
-                                _RS92_read24(pm->REF1),
-                                _RS92_read24(pm->REF2));
-                        fprintf(handle->fpAnalog, "%lu, %lu, %lu ",
-                                _RS92_read24(pm->P),
-                                _RS92_read24(pm->REF3),
-                                _RS92_read24(pm->REF4));
-                        fprintf(handle->fpAnalog, "\n");
-                        fflush(handle->fpAnalog);
-                    }
-#endif
-
                     /* Process the (valid) GPS block */
                     if (handle->crcOK[2]) {
                         _RS92_processGpsBlock(&handle->packet.gps,
@@ -393,14 +351,6 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
 if(1){//                    if (handle->instance->gps.valid) {
                         _RS92_sendKiss(handle->instance);
                     }
-
-#if SEMIHOSTING_RS92
-                    {
-                        char s[40];
-                        sprintf(s, "%d,%f\n", handle->instance->frameCounter, handle->instance->gps.observerLLA.alt);
-                        fwrite(s, strlen(s), 1, handle->fpLog);
-                    }
-#endif
 
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
