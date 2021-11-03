@@ -29,9 +29,9 @@ static const SYNC_Config configVaisala = {
             .pattern     = {0x9A6669A6669AA9A9LL, 0x0006669A6669A666LL},
             .patternMask = {0xFFFFFFFFFFFFFFFFLL, 0x000FFFFFFFFFFFFFLL},
             .nMaxDifference = 5,
-            .frameLengthBits = 234 * 10 * 2,
+            .frameLengthBits = 234 * 8,
             .startOffset = 0,
-            .dataState = SYNC_STATE_DATA_RAW,
+            .dataState = SYNC_STATE_DATA_MANCHESTER_UART_8N1,
             .inverted = false,
         },
         {
