@@ -280,7 +280,7 @@ LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold
 
 
 
-static char _rs92_raw[234+42];
+static char _rs92_raw[2*234+42];
 
 static void _RS92_sendRaw (RS92_InstanceData *instance, uint8_t *buffer, uint32_t length)
 {
