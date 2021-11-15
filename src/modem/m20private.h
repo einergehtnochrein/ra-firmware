@@ -25,13 +25,13 @@ typedef struct {
         uint8_t packetType;
 
         __PACKED(struct _M20_PayloadInner {
-            uint16_t analog01;      // LE
-            uint16_t analog03;      // LE
-            uint16_t analog05;      // LE
-            uint8_t altitude[3];    // BE Altitude [1/100 m]
-            int16_t speedE;         // BE Speed eastwards [1/100 m/s]
-            int16_t speedN;         // BE Speed northwards [1/100 m/s]
-            uint8_t tow[3];         // BE GPS time of week [seconds since Sunday 00:00]
+            uint16_t humidity;          // LE
+            uint16_t adc_temperature;   // LE, value in [11:0], range in [13:12]
+            uint16_t analog05;          // LE
+            uint8_t altitude[3];        // BE Altitude [1/100 m]
+            int16_t speedE;             // BE Speed eastwards [1/100 m/s]
+            int16_t speedN;             // BE Speed northwards [1/100 m/s]
+            uint8_t tow[3];             // BE GPS time of week [seconds since Sunday 00:00]
             uint8_t serial[3];
             uint8_t counter;
             uint16_t crc;
@@ -48,7 +48,7 @@ typedef struct {
         uint8_t reserved2A;
         uint16_t reserved2B;
         uint8_t reserved2D;
-        uint16_t reserved2E;
+        uint16_t humidityCalibration;
         uint16_t reserved30;
         uint8_t reserved32[5];
         uint8_t reserved37[3];
@@ -75,6 +75,8 @@ typedef struct {
     float temperature;
     float humidity;
     float cpuTemperature;
+
+    float humidityCalibration;
 } M20_CookedMetrology;
 
 

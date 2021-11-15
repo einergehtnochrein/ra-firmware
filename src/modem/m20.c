@@ -154,7 +154,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,,,,,%.1f,%.1f,",
+    length = sprintf((char *)s, "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,,,%.1f,%.1f,",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -164,6 +164,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
                     direction,                              /* Direction [degrees} */
                     velocity,                               /* Velocity [km/h] */
                     instance->metro.temperature,            /* Temperature [°C] */
+                    instance->metro.humidity,               /* Relative humidity [%] */
                     SYS_getFrameRssi(sys),
                     instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
                     instance->metro.cpuTemperature          /* CPU temperature [°C] */

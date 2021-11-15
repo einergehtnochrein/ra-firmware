@@ -59,6 +59,7 @@ static M20_InstanceData *_M20_getInstanceDataStructure (const char *name)
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
         strcpy(instance->hashName, name);
+        instance->metro.humidityCalibration = NAN;
 
         /* Insert into list */
         p = instanceList;

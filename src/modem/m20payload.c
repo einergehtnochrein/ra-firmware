@@ -63,6 +63,20 @@ LPCLIB_Result _M20_processPayloadInner (
     cookedMetro->temperature = NAN;
     cookedMetro->humidity = NAN;
 
+    // Humidity
+    uint16_t humval = payload->humidity;
+    if (!isnan(cookedMetro->temperature)) {
+        float T = cookedMetro->temperature - 25.0f;
+        if ((humval > 0) && (humval < 48000) && !isnan(cookedMetro->humidityCalibration)) {
+            float x = (humval + 80000.0f) * cookedMetro->humidityCalibration * (1.0f - 5.8e-4f * T);
+            x = 4.16e9f / x;
+            x = 10.087f*x*x*x - 211.62f*x*x + 1388.2f*x - 2797.0f;
+            x = fmaxf(x, 0.0f);
+            x = fminf(x, 100.0f);
+            cookedMetro->humidity = x;
+        }
+    }
+
     return LPCLIB_SUCCESS;
 }
 
@@ -85,6 +99,7 @@ LPCLIB_Result _M20_processPayload (
 
         cookedMetro->batteryVoltage = payload->vbat * (3.0f / 228.0f);  //TODO use ADC VDD and resistor divider
         cookedMetro->cpuTemperature = payload->cpuTemperature * 0.4f;
+        cookedMetro->humidityCalibration = 6.4e8f / (payload->humidityCalibration + 80000.0f);
     }
 
     cookedGps->observerLLA = lla;
