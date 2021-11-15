@@ -41,10 +41,24 @@ typedef struct {
         uint16_t week;          // BE
         int32_t latitude;       // BE Latitude  [10e-6 degrees]
         int32_t longitude;      // BE Longitude [10e-6 degrees]
-        uint8_t reserved23[9];
-        uint8_t reserved2C[18];
+        uint16_t reserved23;    // LE
+        uint8_t vbat;           // Battery voltage, upper 8 bits of 12-bit ADC result (ADC_IN8, PB0)
+        int8_t cpuTemperature;
+        uint8_t reserved27[3];
+        uint8_t reserved2A;
+        uint16_t reserved2B;
+        uint8_t reserved2D;
+        uint16_t reserved2E;
+        uint16_t reserved30;
+        uint8_t reserved32[5];
+        uint8_t reserved37[3];
+        uint8_t reserved3A;
+        uint8_t reserved3B;
+        uint8_t reserved3C;
+        uint8_t reserved3D;
         int16_t reserved3E;     // LE
-        uint8_t reserved40[3];
+        uint16_t reserved40;
+        uint8_t reserved42;
         uint16_t crc;
     }) packet69;
 } M20_Packet;
@@ -60,6 +74,7 @@ typedef struct {
     float batteryVoltage;
     float temperature;
     float humidity;
+    float cpuTemperature;
 } M20_CookedMetrology;
 
 
@@ -89,7 +104,8 @@ LPCLIB_Result _M20_processPayloadInner (
 LPCLIB_Result _M20_processPayload (
         const struct _M20_Payload *payload,
         _Bool valid,
-        M20_CookedGps *cookedGps);
+        M20_CookedGps *cookedGps,
+        M20_CookedMetrology *cookedMetro);
 
 /* Iterate through instances */
 bool _M20_iterateInstance (M20_InstanceData **instance);

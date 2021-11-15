@@ -37,17 +37,16 @@ LPCLIB_Result _M20_processPayloadInner (
 {
     LLA_Coordinate lla;
 
-    /* Sanity check */
-    bool ok = true;
-
     lla.lat = NAN;
     lla.lon = NAN;
     lla.alt = NAN;
     lla.climbRate = NAN;
     lla.velocity = NAN;
     lla.direction = NAN;
-    if (ok) {
-        lla.alt = _M20_read24_BigEndian(&payload->altitude[0]) / 100.0;
+
+    float altitude = _M20_read24_BigEndian(&payload->altitude[0]) / 100.0f;
+    if (altitude > -100.0) {
+        lla.alt = altitude;
         float ve = payload->speedE * 0.01f;
         float vn = payload->speedN * 0.01f;
         lla.velocity = sqrtf(ve * ve + vn * vn);
@@ -56,10 +55,6 @@ LPCLIB_Result _M20_processPayloadInner (
             lla.direction += 2.0f * M_PI;
         }
         GPS_applyGeoidHeightCorrection(&lla);
-    }
-
-    if (lla.alt < -100.0) {
-        return LPCLIB_ERROR;
     }
 
     cookedGps->observerLLA = lla;
@@ -76,7 +71,8 @@ LPCLIB_Result _M20_processPayloadInner (
 LPCLIB_Result _M20_processPayload (
         const struct _M20_Payload *payload,
         _Bool valid,
-        M20_CookedGps *cookedGps)
+        M20_CookedGps *cookedGps,
+        M20_CookedMetrology *cookedMetro)
 {
     LLA_Coordinate lla;
 
@@ -86,10 +82,9 @@ LPCLIB_Result _M20_processPayload (
         lla.lat = (double)payload->latitude * _m20_coordinateFactor;
         lla.lon = (double)payload->longitude * _m20_coordinateFactor;
         lla.climbRate = 0.01f * (float)payload->climbRate;
-    }
 
-    if (lla.alt < -100.0) {
-        return LPCLIB_ERROR;
+        cookedMetro->batteryVoltage = payload->vbat * (3.0f / 228.0f);  //TODO use ADC VDD and resistor divider
+        cookedMetro->cpuTemperature = payload->cpuTemperature * 0.4f;
     }
 
     cookedGps->observerLLA = lla;
