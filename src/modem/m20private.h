@@ -79,6 +79,11 @@ typedef struct {
     float cpuTemperature;
 
     float humidityCalibration;
+    float adc_pb1;
+    float adc_pc3;
+    float adc_pc0;
+    float adc_pc1;
+    float adc_pc2;
 } M20_CookedMetrology;
 
 
