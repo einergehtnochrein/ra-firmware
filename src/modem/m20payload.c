@@ -100,6 +100,20 @@ LPCLIB_Result _M20_processPayload (
         cookedMetro->batteryVoltage = payload->vbat * (3.0f / 228.0f);  //TODO use ADC VDD and resistor divider
         cookedMetro->cpuTemperature = payload->cpuTemperature * 0.4f;
         cookedMetro->humidityCalibration = 6.4e8f / (payload->humidityCalibration + 80000.0f);
+
+        cookedGps->sats[0] = payload->satStatus[0] & 7;
+        cookedGps->sats[1] = (payload->satStatus[0] >> 3) & 7;
+        cookedGps->sats[2] = ((payload->satStatus[0] >> 6) & 3) | ((payload->satStatus[1] & 1) << 2);
+        cookedGps->sats[3] = (payload->satStatus[1] >> 1) & 7;
+        cookedGps->sats[4] = (payload->satStatus[1] >> 4) & 7;
+        cookedGps->sats[5] = ((payload->satStatus[1] >> 7) & 1) | ((payload->satStatus[2] & 3) << 1);
+        cookedGps->sats[6] = (payload->satStatus[2] >> 2) & 7;
+        cookedGps->sats[7] = (payload->satStatus[2] >> 5) & 7;
+        cookedGps->sats[8] = payload->satStatus[3] & 7;
+        cookedGps->sats[9] = (payload->satStatus[3] >> 3) & 7;
+        cookedGps->sats[10] = ((payload->satStatus[3] >> 6) & 3) | ((payload->satStatus[4] & 1) << 2);
+        cookedGps->sats[11] = (payload->satStatus[4] >> 1) & 7;
+        cookedGps->sats[12] = (payload->satStatus[4] >> 4) & 7;
     }
 
     cookedGps->observerLLA = lla;
