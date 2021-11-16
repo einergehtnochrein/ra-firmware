@@ -44,21 +44,21 @@ typedef struct {
         uint16_t reserved23;    // LE
         uint8_t vbat;           // Battery voltage, upper 8 bits of 12-bit ADC result (ADC_IN8, PB0)
         int8_t cpuTemperature;
-        uint8_t reserved27[3];
+        uint8_t adc_pb1_pc3[3]; // LE, ADC inputs from heater current sensor
         uint8_t reserved2A;
-        uint16_t reserved2B;
-        uint8_t reserved2D;
+        uint16_t reserved2B;    // from EEPROM
+        uint8_t reserved2D;     // from EEPROM
         uint16_t humidityCalibration;
         uint16_t reserved30;
-        uint8_t reserved32[5];
-        uint8_t reserved37[3];
+        uint8_t satStatus[5];   // 3 bits each from 13 satellites (?)
+        uint8_t adc_pc0_pc1[3]; // LE, ADC inputs from extension connector (if not in UART mode)
         uint8_t reserved3A;
         uint8_t reserved3B;
         uint8_t reserved3C;
         uint8_t reserved3D;
-        int16_t reserved3E;     // LE
+        uint16_t adc_pc2;       // LE, ADC input from unknown source
         uint16_t reserved40;
-        uint8_t reserved42;
+        uint8_t version;        // program/packet version number?
         uint16_t crc;
     }) packet69;
 } M20_Packet;
