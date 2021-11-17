@@ -41,7 +41,7 @@ typedef struct {
         uint16_t week;          // BE
         int32_t latitude;       // BE Latitude  [10e-6 degrees]
         int32_t longitude;      // BE Longitude [10e-6 degrees]
-        uint16_t reserved23;    // LE
+        uint16_t pressure;      // LE Pressure [1/16 hPa]
         uint8_t vbat;           // Battery voltage, upper 8 bits of 12-bit ADC result (ADC_IN8, PB0)
         int8_t cpuTemperature;
         uint8_t adc_pb1_pc3[3]; // LE, ADC inputs from heater current sensor
@@ -76,6 +76,7 @@ typedef struct {
     float batteryVoltage;
     float temperature;
     float humidity;
+    float pressure;
     float cpuTemperature;
 
     float humidityCalibration;
