@@ -83,7 +83,7 @@ LPCLIB_Result _M20_processPayloadInner (
 
 
 LPCLIB_Result _M20_processPayload (
-        const struct _M20_Payload *payload,
+        const M20_Packet *payload,
         _Bool valid,
         M20_CookedGps *cookedGps,
         M20_CookedMetrology *cookedMetro)

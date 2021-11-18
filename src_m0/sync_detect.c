@@ -172,6 +172,57 @@ void PIN_INT3_IRQHandler (void)
                 }
                 break;
 
+            case SYNC_STATE_DATA_BIPHASE_M:
+                if (handle->symbolPhase == 0) {
+                    /* First bit in a Manchester symbol: Remember for later evaluation */
+                    handle->lastBit = bit;
+                    ++handle->symbolPhase;
+                }
+                else {
+                    if ((handle->bitCounter % 8) == 0) {
+                        ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] = 0;
+                    }
+
+                    /* Second bit in a Manchester symbol: Determine and save data bit */
+                    int offset = 7 - (handle->bitCounter % 8);  //TODO reverse, make this a config option!
+                    bit = (bit == handle->lastBit) ? 0 : 1;
+                    ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] |= (bit << offset);
+
+                    handle->symbolPhase = 0;
+
+                    ++handle->bitCounter;
+                    if ((handle->bitCounter % 8) == 0) {
+                        ++handle->writeIndex;
+                    }
+                    if (handle->nSubBlockBits != 0) {
+                        if (handle->bitCounter >= handle->nSubBlockBits) {
+                            handle->bitCounter = 0;
+                            int bits2skip = 8 * handle->nSubBlockBytes - handle->nSubBlockBits;
+                            if (bits2skip > 0) {
+                                handle->writeIndex += 1 + (bits2skip - 1) / 8;
+                            }
+                        }
+                    }
+
+                    if (--handle->rxCounterBits <= 0) {
+                        ipc_s2m[handle->activeBuffer].numBits = 8*handle->writeIndex; //TODO
+
+                        handle->state = SYNC_STATE_HUNT;
+                        handle->writeIndex = 0;
+                        if (handle->postProcess) {
+                            handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                        }
+                        ipc_s2m[handle->activeBuffer].valid = 1;
+
+                        LPC_MAILBOX->IRQ1SET = (1u << 0);
+                    }
+                    else if (handle->rxCounterBits == handle->frameLengthBits / 2) {
+                        /* Tell M4 to keep current RSSI value */
+                        LPC_MAILBOX->IRQ1SET = (1u << 1);
+                    }
+                }
+                break;
+
             case SYNC_STATE_DATA_BIPHASE_S:
                 if (handle->symbolPhase == 0) {
                     /* First bit in a Manchester symbol: Remember for later evaluation */

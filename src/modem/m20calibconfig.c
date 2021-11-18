@@ -84,7 +84,7 @@ static M20_InstanceData *_M20_getInstanceDataStructure (const char *name)
 
 /* Process the config/calib block. */
 LPCLIB_Result _M20_processConfigBlock (
-        const struct _M20_Payload *payload,
+        const M20_Packet *payload,
         M20_InstanceData **instancePointer)
 {
     char s[20];
