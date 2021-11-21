@@ -22,8 +22,8 @@ typedef __PACKED(struct {
 
     __PACKED(struct _M20_PayloadInner {
         uint16_t humidity;          // LE
-        uint16_t adc_temperature;   // LE, value in [11:0], range in [13:12]
-        uint16_t analog05;          // LE
+        uint16_t adc_T;             // LE Temperature main sensor, value in [11:0], range in [13:12]
+        uint16_t adc_TU;            // LE Temperature U sensor
         uint8_t altitude[3];        // BE Altitude [1/100 m]
         int16_t speedE;             // BE Speed eastwards [1/100 m/s]
         int16_t speedN;             // BE Speed northwards [1/100 m/s]
@@ -69,7 +69,8 @@ typedef struct {
 
 typedef struct {
     float batteryVoltage;
-    float temperature;
+    float T;                        // Main temperature [°C]
+    float TU;                       // Temperature of humidity sensor [°C]
     float humidity;
     float pressure;                 // Measured by LPS22HB sensor [hPa]
     float cpuTemperature;           // Temperature measured by STM32 sensor [°C]

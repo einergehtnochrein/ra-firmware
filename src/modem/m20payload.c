@@ -60,13 +60,21 @@ LPCLIB_Result _M20_processPayloadInner (
     cookedGps->observerLLA = lla;
 
     /* Sensors */
-    cookedMetro->temperature = NAN;
+    cookedMetro->T = NAN;
+    cookedMetro->TU = NAN;
     cookedMetro->humidity = NAN;
 
-    // Humidity
+
+    /* Temperature humidity sensor */
+    float y = payload->adc_TU;
+    y = logf((22100.0f * y) / (4095.0f - y));
+    y = 8.4543096e-8f * y*y*y + 2.41157e-4f * y + 1.4592243e-3f;
+    cookedMetro->TU = 1.0f / y - 273.15f;
+
+    /* Humidity */
     uint16_t humval = payload->humidity;
-    if (!isnan(cookedMetro->temperature)) {
-        float T = cookedMetro->temperature - 25.0f;
+    if (!isnan(cookedMetro->TU)) {
+        float T = cookedMetro->TU - 25.0f;
         if ((humval > 0) && (humval < 48000) && !isnan(cookedMetro->humidityCalibration)) {
             float x = (humval + 80000.0f) * cookedMetro->humidityCalibration * (1.0f - 5.8e-4f * T);
             x = 4.16e9f / x;
