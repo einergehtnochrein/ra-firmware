@@ -71,8 +71,8 @@ typedef struct {
     float batteryVoltage;
     float temperature;
     float humidity;
-    float pressure;
-    float cpuTemperature;
+    float pressure;                 // Measured by LPS22HB sensor [hPa]
+    float cpuTemperature;           // Temperature measured by STM32 sensor [°C]
 
     float humidityCalibration;
     float adc_pb1;

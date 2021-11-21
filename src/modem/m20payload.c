@@ -97,7 +97,12 @@ LPCLIB_Result _M20_processPayload (
         lla.lon = (double)payload->longitude * _m20_coordinateFactor;
         lla.climbRate = 0.01f * (float)payload->climbRate;
 
-        cookedMetro->pressure = payload->pressure / 16.0f;
+        if (payload->pressure == 0) {
+            cookedMetro->pressure = NAN;
+        }
+        else {
+            cookedMetro->pressure = payload->pressure / 16.0f;
+        }
         cookedMetro->batteryVoltage = payload->vbat * (3.0f / 228.0f);  //TODO use ADC VDD and resistor divider
         cookedMetro->cpuTemperature = payload->cpuTemperature * 0.4f;
         cookedMetro->humidityCalibration = 6.4e8f / (payload->humidityCalibration + 80000.0f);
