@@ -469,7 +469,6 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
                         handle->manualFrequency = SYS_getCurrentFrequency(sys);
                     }
 //durationMs = 0xFFFFFFFF;
-printf("scanner @ %.3f\r\n", frequency / 1e6f);
                 }
                 osTimerStart(handle->scanTick, durationMs);
             }
