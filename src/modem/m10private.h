@@ -18,49 +18,41 @@
 
 
 /* A collection of all known packet types */
-typedef struct {
-    uint8_t packetLength;
+typedef __PACKED(struct {
+    __PACKED(struct {
+        uint8_t packetType;
 
-    __PACKED(union {
-        uint8_t rawData[100];
+        __PACKED(struct _M10_GpsBlock {
+            uint8_t unknown1;
+            uint8_t unknown2;
+            int16_t speedEast;
+            int16_t speedNorth;
+            int16_t speedVertical;
+            uint32_t tow;
+            int32_t latitude;
+            int32_t longitude;
+            int32_t altitude;
+            uint8_t reserved1[4];
+            uint8_t visibleSats;
+            uint8_t reserved2[1];
+            uint16_t week;
+            uint8_t prn[12];
+        }) gps;
 
-        __PACKED(struct {
-            uint8_t packetType;
+        __PACKED(struct _M10_ConfigBlock {
+            uint8_t nnc0[16];
+            uint8_t adc_temperature_range;
+            uint16_t adc_temperature;
+            uint8_t nnc1[4];
+            uint16_t adc_vbat;
+            uint8_t nnc2[22];
+            uint8_t serial[5];
+            uint8_t nn1[1];
+        }) config;
+    }) data;
 
-            __PACKED(struct {
-                __PACKED(struct _M10_GpsBlock {
-                    uint8_t unknown1;
-                    uint8_t unknown2;
-                    int16_t speedEast;
-                    int16_t speedNorth;
-                    int16_t speedVertical;
-                    uint32_t tow;
-                    int32_t latitude;
-                    int32_t longitude;
-                    int32_t altitude;
-                    uint8_t reserved1[4];
-                    uint8_t visibleSats;
-                    uint8_t reserved2[1];
-                    uint16_t week;
-                    uint8_t prn[12];
-                }) gps;
-
-                __PACKED(struct _M10_ConfigBlock {
-                    uint8_t nnc0[16];
-                    uint8_t adc_temperature_range;
-                    uint16_t adc_temperature;
-                    uint8_t nnc1[4];
-                    uint16_t adc_vbat;
-                    uint8_t nnc2[22];
-                    uint8_t serial[5];
-                    uint8_t nn1[1];
-                }) config;
-            }) data;
-
-            uint16_t crc;
-        });
-    }) packet100;
-} M10_Packet;
+    uint16_t crc;
+}) M10_Packet;
 
 
 typedef struct {

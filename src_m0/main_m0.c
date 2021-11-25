@@ -75,50 +75,19 @@ static const SYNC_Config configGraw = {
 };
 
 
-/* Add missing bytes (frame length) after frame reception */
-static void _m10PostProcess100Normal (volatile IPC_S2M *buffer)
-{
-    buffer->data8[0] = 0xD4;
-    buffer->data8[1] = 0xD3;
-}
-static void _m10PostProcess100Inverse (volatile IPC_S2M *buffer)
-{
-    buffer->data8[0] = 0x2B;
-    buffer->data8[1] = 0x2C;
-}
-
-
 static const SYNC_Config configModem = {
-    .nPatterns = 3,
+    .nPatterns = 2,
     .conf = {
-        /* The first byte after the sync word in an M10 frame contains the (remaining) frame length,
-         * in this case N=100 or N=69. This byte is included in the sync pattern to increase the confidence in
-         * the detection. The payload is therefore reduced to N-1 bytes, and the M10 driver will add
-         * the length byte before evaluating the checksum.
-         *
-         * Two patterns are checked: Normal and inverted.
-         */
         {
             .id = IPC_PACKET_TYPE_MODEM_M10,
             .pattern     = {0x0000CCCCA64CD4D3LL, 0},
             .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 1,
-            .frameLengthBits = 100 * 2 * 8,
-            .startOffset = 2,
-            .dataState = SYNC_STATE_DATA_RAW,
+            .frameLengthBits = 100 * 8,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_M,
             .inverted = false,
-            .postProcess = _m10PostProcess100Normal,
-        },
-        {
-            .id = IPC_PACKET_TYPE_MODEM_M10,
-            .pattern     = {0x0000333359B32B2CLL, 0},
-            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
-            .nMaxDifference = 1,
-            .frameLengthBits = 100 * 2 * 8,
-            .startOffset = 2,
-            .dataState = SYNC_STATE_DATA_RAW,
-            .inverted = false,
-            .postProcess = _m10PostProcess100Inverse,
+            .postProcess = NULL,
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_M20,
