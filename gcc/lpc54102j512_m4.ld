@@ -48,8 +48,8 @@ SECTIONS
 
     .data0 :
     {
-        *(.data .data.*)
         *(.pdm_buffer_align2048)
+        *(.data .data.*)
     } >sram0 AT>flash
 
     .ramcode :
