@@ -92,8 +92,8 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     int length = 0;
     float offset;
     char sPressure[10];
-    char sFlightKillTimer[6];
-    char sBurstKillTimer[6];
+    char sFlightKillTimer[7];
+    char sBurstKillTimer[7];
     uint32_t special;
     char sModelName[10+1];
 
@@ -283,20 +283,20 @@ static void _RS41_sendRaw (RS41_InstanceData *instance, uint8_t *buffer, uint32_
 }
 
 
-LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
 {
     bool longFrame = false;
 
 
     /* Return if raw data is shorter than a short frame. */
-    if (length < 312) {
+    if (numBits != 510*8) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
     handle->pRawData = buffer;
 
     /* Remove data whitening */
-    _RS41_removeWhitening(buffer, length);
+    _RS41_removeWhitening(buffer, numBits/8);
 
     /* Error correction */
     handle->nCorrectedErrors = 0;
@@ -311,7 +311,7 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
     }
 
     /* Limit buffer length in case of short frame */
-    length = longFrame ? 510 : 312;
+    uint32_t length = longFrame ? 510 : 312;
 
     /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
     handle->rxFrequencyHz = rxFrequencyHz;
@@ -377,7 +377,7 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t leng
                         LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                         event.opcode = APP_EVENT_HEARD_SONDE;
                         event.block = SONDE_DETECTOR_RS41_RS92;
-                        event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                        event.parameter = (void *)((uintptr_t)lrintf(rxFrequencyHz));
                         SYS_handleEvent(event);
                     }
                     break;

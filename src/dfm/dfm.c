@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -15,27 +16,6 @@
 #include "dfmprivate.h"
 
 
-
-
-static const uint8_t _DFM_manchester2bin[256] = {
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00, 0x00,0x02,0x03,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x04,0x05,0x00, 0x00,0x06,0x07,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x08,0x09,0x00, 0x00,0x0A,0x0B,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x0C,0x0D,0x00, 0x00,0x0E,0x0F,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-};
 
 
 /* Generator matrix used for Hamming(8,4) code:
@@ -98,23 +78,20 @@ typedef struct DFM_Context {
 static DFM_Context _dfm;
 
 
-/* Manchester decoding */
-static void _DFM_buffer2raw (uint8_t *buffer, uint8_t *out, uint8_t length)
+/* Deinterleave from RX buffer into target buffer */
+static void _DFM_deinterleave (uint8_t *buffer, uint8_t *out, uint8_t length)
 {
     uint16_t i, j;
 
     memset(out, 0, length);
 
     for (i = 0; i < length; i++) {
-        /* Get next two RX bytes and Manchester decode into a data byte */
-        uint8_t byte = (_DFM_manchester2bin[buffer[2 * i + 0]] << 4) | _DFM_manchester2bin[buffer[2 * i + 1]];
-
         /* Deinterleave */
         for (j = 0; j < 8; j++) {
             int offset = (8 * i + j) % length;
             int bitpos = 7 - ((8 * i + j) / length);
 
-            if (byte & (1 << (7 - j))) {
+            if (buffer[i] & (1 << (7 - j))) {
                 out[offset] |= (1 << bitpos);
             }
         }
@@ -161,7 +138,7 @@ LPCLIB_Result DFM_open (DFM_Handle *pHandle)
 /* Send position report */
 static void _DFM_sendKiss (DFM_InstanceData *instance)
 {
-    char s[120];
+    char s[128];
     char sAltitude[20];
     char sClimbRate[20];
     char sVelocity[8];
@@ -226,7 +203,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
             /* Nothing to do */
             break;
     }
-    snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
+    snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
     /* Climb rate and ground speed may not be available (Burkina Faso version) */
     sClimbRate[0] = 0;
@@ -244,7 +221,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 
     /* Avoid sending the position if any of the values is undefined */
     if (isnan(latitude) || isnan(longitude)) {
-        length = sprintf((char *)s, "%ld,2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,,,,,",
+        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,,,%s,%s,,,%s,,%s,,,,%.1f,,,,,",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         sAltitude,                  /* Altitude [m] */
@@ -255,7 +232,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%ld,2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s",
+        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -276,7 +253,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,2,0,%s,%.1f",
+    length = sprintf(s, "%"PRIu32",2,0,%s,%.1f",
                 instance->id,
                 instance->name,
                 instance->gps.ehpe
@@ -292,18 +269,18 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
 LPCLIB_Result DFM_processBlock (
         DFM_Handle handle,
         SONDE_Type type,
-        void *buffer,
-        uint32_t length,
+        uint8_t *buffer,
+        uint32_t numBits,
         float rxFrequencyHz,
         uint32_t rxTime)
 {
     LPCLIB_Result result = LPCLIB_ERROR;
 
-    if (length >= 66) {  //TODO
-        /* Convert to byte array */
-        _DFM_buffer2raw((uint8_t *)buffer + 2*0, (uint8_t *)&handle->packet.config, 7);
-        _DFM_buffer2raw((uint8_t *)buffer + 2*7, (uint8_t *)&handle->packet.gps[0], 13);
-        _DFM_buffer2raw((uint8_t *)buffer + 2*(7+13), (uint8_t *)&handle->packet.gps[1], 13);
+    if (numBits >= 33*8) {  //TODO
+        /* Extract the three sub blocks (PTU/GPS1/GPS2) */
+        _DFM_deinterleave(&buffer[0], (uint8_t *)&handle->packet.config, 7);
+        _DFM_deinterleave(&buffer[7], (uint8_t *)&handle->packet.gps[0], 13);
+        _DFM_deinterleave(&buffer[7+13], (uint8_t *)&handle->packet.gps[1], 13);
 
         DFM_InstanceData *instance = NULL;
 
@@ -371,7 +348,7 @@ LPCLIB_Result DFM_processBlock (
                     | (handle->packet.gps[1].d1[11] <<  4)
                     | (handle->packet.gps[1].d1[12] <<  0)
                     ;
-            snprintf(log, sizeof(log), "%s,2,1,%07lX%05lX%08lX%05lX%08lX",
+            snprintf(log, sizeof(log), "%s,2,1,%07"PRIX32"%05"PRIX32"%08"PRIX32"%05"PRIX32"%08"PRIX32,
                         handle->instance->name,
                         confval,
                         gps0val1,
@@ -389,7 +366,7 @@ LPCLIB_Result DFM_processBlock (
                 LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                 event.opcode = APP_EVENT_HEARD_SONDE;
                 event.block = SONDE_DETECTOR_DFM;
-                event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                event.parameter = (void *)((uintptr_t)lrintf(rxFrequencyHz));
                 SYS_handleEvent(event);
 
                 result = LPCLIB_SUCCESS;

@@ -39,7 +39,7 @@ LPCLIB_Result JINYANG_processBlock (
         JINYANG_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
-        uint32_t length,
+        uint32_t numBits,
         float rxFrequencyHz);
 LPCLIB_Result JINYANG_resendLastPositions (JINYANG_Handle handle);
 LPCLIB_Result JINYANG_removeFromList (JINYANG_Handle handle, uint32_t id, float *frequency);

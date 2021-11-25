@@ -438,56 +438,6 @@ static const UART_Config _uartFlushTx[] = {
 
 
 
-static uint32_t _SYS_getSondeBufferLength (SONDE_Type type)
-{
-    uint32_t length = 2;
-
-    switch (type) {
-        case SONDE_RS41:
-            length = 510;
-            break;
-        case SONDE_RS92:
-            length = 585;
-            break;
-        case SONDE_DFM_NORMAL:
-        case SONDE_DFM_INVERTED:
-            length = 66;
-            break;
-        case SONDE_RSG20:
-            length = 40;
-            break;
-        case SONDE_MEISEI_CONFIG:
-        case SONDE_MEISEI_GPS:
-            length = 48;
-            break;
-        case SONDE_M10:
-            length = (100+1) * 2;
-            break;
-        case SONDE_M20:
-            length = (69+1) * 2;
-            break;
-        case SONDE_MRZ:
-            length = 47;
-            break;
-        case SONDE_PILOT:
-            length = 50-4;
-            break;
-        case SONDE_BEACON:
-        case SONDE_C34:
-        case SONDE_C50:
-        case SONDE_IMET_RSB:
-            /* Doesn't use SPI */
-            break;
-        case SONDE_UNDEFINED:
-            /* Nothing to do */
-            break;
-    }
-
-    return length;
-}
-
-
-
 //TODO need a mailbox driver
 void MAILBOX_IRQHandler (void)
 {
@@ -1446,11 +1396,18 @@ if (cl[0] != 0) {
                         case 5:
                         {
                             if (sscanf(cl, "#%*d,%*d,%d,%d", &enableValue, &extra1) == 2) {
+                                //TODO: Clean up this mess...
                                 RS41_LogMode mode = RS41_LOGMODE_NONE;
                                 if (enableValue == 1) {
                                     mode = RS41_LOGMODE_RAW;
                                 }
                                 RS41_setLogMode(handle->rs41, extra1, mode);
+
+                                RS92_LogMode mode92 = RS92_LOGMODE_NONE;
+                                if (enableValue == 1) {
+                                    mode92 = RS92_LOGMODE_RAW;
+                                }
+                                RS92_setLogMode(handle->rs92, extra1, mode92);
                             }
                             break;
                         }
@@ -1604,7 +1561,7 @@ static bool _SYS_checkEvent (SYS_Handle handle)
     /* Something in the mailbox? */
     handle->rtosEvent = osMailGet(handle->queue, 0);
     haveEvent |= handle->rtosEvent.status == osEventMail;
-#if 1
+
     /* Data from Bluetooth link? */
     if (UART_readLine(blePort, handle->commandLine, sizeof(handle->commandLine)) > 0) {
         haveEvent = true;
@@ -1615,7 +1572,7 @@ static bool _SYS_checkEvent (SYS_Handle handle)
          */
         handle->commandLine[0] = 0;
     }
-#endif
+
     return haveEvent;
 }
 
@@ -1767,7 +1724,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 M10_processBlock(
                                         handle->m10,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_M10),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency);
 
                                 /* Let scanner prepare for next frequency */
@@ -1777,7 +1734,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 M20_processBlock(
                                         handle->m20,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_M20),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency);
 
                                 /* Let scanner prepare for next frequency */
@@ -1787,7 +1744,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 PILOT_processBlock(
                                         handle->pilot,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_PILOT),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency);
 
                                 /* Let scanner prepare for next frequency */
@@ -1797,7 +1754,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 RS41_processBlock(
                                         handle->rs41,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_RS41),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency);
 
                                 /* Let scanner prepare for next frequency */
@@ -1807,7 +1764,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 RS92_processBlock(
                                         handle->rs92,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_RS92),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency);
 
                                 /* Let scanner prepare for next frequency */
@@ -1818,9 +1775,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->dfm,
                                         sondeType,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_DFM_NORMAL),
-                                    handle->currentFrequency,
-                                    ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1830,9 +1787,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->dfm,
                                         sondeType,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_DFM_INVERTED),
-                                    handle->currentFrequency,
-                                    ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1842,7 +1799,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->meisei,
                                         sondeType,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(sondeType),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
@@ -1853,7 +1810,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->jinyang,
                                         sondeType,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_RSG20),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
@@ -1864,7 +1821,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->mrz,
                                         sondeType,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_MRZ),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);

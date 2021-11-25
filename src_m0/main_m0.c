@@ -29,9 +29,9 @@ static const SYNC_Config configVaisala = {
             .pattern     = {0x9A6669A6669AA9A9LL, 0x0006669A6669A666LL},
             .patternMask = {0xFFFFFFFFFFFFFFFFLL, 0x000FFFFFFFFFFFFFLL},
             .nMaxDifference = 5,
-            .frameLengthBits = 234 * 10 * 2,
+            .frameLengthBits = 234 * 8,
             .startOffset = 0,
-            .dataState = SYNC_STATE_DATA_RAW,
+            .dataState = SYNC_STATE_DATA_MANCHESTER_UART_8N1,
             .inverted = false,
         },
         {
@@ -56,101 +56,49 @@ static const SYNC_Config configGraw = {
             .pattern     = {0x000000009A995A55LL, 0},
             .patternMask = {0x00000000FFFFFFFFLL, 0},
             .nMaxDifference = 2,
-            .frameLengthBits = 66 * 8,
+            .frameLengthBits = 33 * 8,
             .startOffset = 0,
-            .dataState = SYNC_STATE_DATA_RAW,
-            .inverted = true,
+            .dataState = SYNC_STATE_DATA_MANCHESTER,
+            .inverted = false,
         },
         {
             .id = IPC_PACKET_TYPE_GRAW_NORMAL,
             .pattern     = {0x000000006566A5AALL, 0},
             .patternMask = {0x00000000FFFFFFFFLL, 0},
             .nMaxDifference = 2,
-            .frameLengthBits = 66 * 8,
+            .frameLengthBits = 33 * 8,
             .startOffset = 0,
-            .dataState = SYNC_STATE_DATA_RAW,
-            .inverted = false,
+            .dataState = SYNC_STATE_DATA_MANCHESTER,
+            .inverted = true,
         },
     },
 };
 
 
-/* Add missing bytes (frame length) after frame reception */
-static void _m10PostProcess100Normal (volatile IPC_S2M *buffer)
-{
-    buffer->data8[0] = 0xD4;
-    buffer->data8[1] = 0xD3;
-}
-static void _m10PostProcess100Inverse (volatile IPC_S2M *buffer)
-{
-    buffer->data8[0] = 0x2B;
-    buffer->data8[1] = 0x2C;
-}
-static void _m20PostProcess69Normal (volatile IPC_S2M *buffer)
-{
-    buffer->data8[0] = 0xD3;
-    buffer->data8[1] = 0x2D;
-}
-static void _m20PostProcess69Inverse (volatile IPC_S2M *buffer)
-{
-    buffer->data8[0] = 0x2C;
-    buffer->data8[1] = 0xD2;
-}
-
-
 static const SYNC_Config configModem = {
-    .nPatterns = 4,
+    .nPatterns = 2,
     .conf = {
-        /* The first byte after the sync word in an M10 frame contains the (remaining) frame length,
-         * in this case N=100 or N=69. This byte is included in the sync pattern to increase the confidence in
-         * the detection. The payload is therefore reduced to N-1 bytes, and the M10 driver will add
-         * the length byte before evaluating the checksum.
-         *
-         * Two patterns are checked: Normal and inverted.
-         */
         {
             .id = IPC_PACKET_TYPE_MODEM_M10,
             .pattern     = {0x0000CCCCA64CD4D3LL, 0},
             .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 1,
-            .frameLengthBits = 100 * 2 * 8,
-            .startOffset = 2,
-            .dataState = SYNC_STATE_DATA_RAW,
+            .frameLengthBits = 100 * 8,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_M,
             .inverted = false,
-            .postProcess = _m10PostProcess100Normal,
-        },
-        {
-            .id = IPC_PACKET_TYPE_MODEM_M10,
-            .pattern     = {0x0000333359B32B2CLL, 0},
-            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
-            .nMaxDifference = 1,
-            .frameLengthBits = 100 * 2 * 8,
-            .startOffset = 2,
-            .dataState = SYNC_STATE_DATA_RAW,
-            .inverted = false,
-            .postProcess = _m10PostProcess100Inverse,
+            .postProcess = NULL,
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_M20,
             .pattern     = {0x0000CCCCA64CD32DLL, 0},
             .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
-            .frameLengthBits = 69 * 2 * 8,
-            .startOffset = 2,
-            .dataState = SYNC_STATE_DATA_RAW,
+            .frameLengthBits = 69 * 8,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_M,
             .inverted = false,
-            .postProcess = _m20PostProcess69Normal,
-        },
-        {
-            .id = IPC_PACKET_TYPE_MODEM_M20,
-            .pattern     = {0x0000333359B32CD2LL, 0},
-            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
-            .nMaxDifference = 0,
-            .frameLengthBits = 69 * 2 * 8,
-            .startOffset = 2,
-            .dataState = SYNC_STATE_DATA_RAW,
-            .inverted = false,
-            .postProcess = _m20PostProcess69Inverse,
+            .postProcess = NULL,
         },
     },
 };

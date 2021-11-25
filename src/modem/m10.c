@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -31,48 +32,14 @@ typedef struct M10_Context {
 static M10_Context _m10;
 
 
-static const uint8_t manchester2bin[256] = {
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x07,0x06,0x04,0x05,0x00,0x00,
-    0x00,0x00,0x01,0x00,0x02,0x03,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x0B,0x0A,0x08,0x09,0x00,0x00,
-    0x00,0x00,0x0D,0x0C,0x0E,0x0F,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x0F,0x0E,0x0C,0x0D,0x00,0x00,
-    0x00,0x00,0x09,0x08,0x0A,0x0B,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x03,0x02,0x00,0x01,0x00,0x00,
-    0x00,0x00,0x05,0x04,0x06,0x07,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-};
-
-
-/* Manchester decoding */
-static void _M10_buffer2raw (M10_Handle handle, uint8_t *buffer, uint32_t length)
-{
-    uint32_t i;
-    uint8_t *p = (uint8_t *)&handle->packet;
-
-    for (i = 0; i < length; i++) {
-        p[i] =
-           (manchester2bin[buffer[2*i+0]] << 4)
-         | (manchester2bin[buffer[2*i+1]] << 0);
-    }
-}
-
-
 /* Check packet CRC */
 static bool _M10_checkCRC (M10_Handle handle)
 {
     int i;
-    uint16_t crc = 0;
+    uint16_t crc = 0x3E;    // M10 includes the packet length (100) in the CRC. This seed is the CRC
+                            // of the single byte 0x64
     uint8_t *p = (uint8_t *)&handle->packet;
-    int payloadLength = 1 + sizeof(handle->packet.packet100) - 2;
+    int payloadLength = sizeof(handle->packet) - 2;
     uint8_t b;
 
     for (i = 0; i < payloadLength; i++) {
@@ -88,7 +55,7 @@ static bool _M10_checkCRC (M10_Handle handle)
             ;
     }
 
-    return crc == __REV16(handle->packet.packet100.crc);
+    return crc == __REV16(handle->packet.crc);
 }
 
 
@@ -144,7 +111,7 @@ static void _M10_sendKiss (M10_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%ld,7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,%.1f,%d,,,%.3f",
+    length = sprintf((char *)s, "%"PRIu32",7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,%.1f,%d,,,%.3f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -164,7 +131,7 @@ static void _M10_sendKiss (M10_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,7,0,%s",
+    length = sprintf(s, "%"PRIu32",7,0,%s",
                 instance->id,
                 instance->hashName
                 );
@@ -184,7 +151,7 @@ static void _M10_sendRaw (M10_InstanceData *instance, uint8_t *buffer, uint32_t 
     int slen = 0;
 
 
-    slen += snprintf(&_m10_raw[slen], sizeof(_m10_raw) - slen, "%ld,7,1,,",
+    slen += snprintf(&_m10_raw[slen], sizeof(_m10_raw) - slen, "%"PRIu32",7,1,,",
                      instance->id
                     );
 
@@ -197,31 +164,30 @@ static void _M10_sendRaw (M10_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 
 
-LPCLIB_Result M10_processBlock (M10_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result M10_processBlock (M10_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
 {
-    if (length == (100+1)*2) {
-        handle->packetLength = length / 2;
+    if (numBits == sizeof(M10_Packet) * 8) {
+        handle->packetLength = numBits / 8;
 
-        /* Convert to byte array */
-        _M10_buffer2raw(handle, buffer, handle->packetLength);
+        memcpy(&handle->packet, buffer, handle->packetLength);
 
         if (_M10_checkCRC(handle)) {
             /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
             handle->rxFrequencyHz = rxFrequencyHz;
 
-            if (handle->packet.packet100.packetType == 0x9F) {
-                _M10_processConfigBlock(&handle->packet.packet100.data.config, &handle->instance);
+            if (handle->packet.data.packetType == 0x9F) {
+                _M10_processConfigBlock(&handle->packet.data.config, &handle->instance);
 
                 if (handle->instance) {
                     handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
 if(1){//                    if (handle->instance->logMode == M10_LOGMODE_RAW) {
-                        _M10_sendRaw(handle->instance, (uint8_t *)&handle->packet.packet100, handle->packetLength);
+                        _M10_sendRaw(handle->instance, (uint8_t *)&handle->packet, handle->packetLength);
                     }
 
-                    _M10_fromBigEndianGps(&handle->packet.packet100.data.gps);
-                    _M10_processGpsBlock(&handle->packet.packet100.data.gps, &handle->instance->gps);
-                    _M10_processMetrologyBlock(&handle->packet.packet100.data.config, &handle->instance->metro);
+                    _M10_fromBigEndianGps(&handle->packet.data.gps);
+                    _M10_processGpsBlock(&handle->packet.data.gps, &handle->instance->gps);
+                    _M10_processMetrologyBlock(&handle->packet.data.config, &handle->instance->metro);
                     _M10_sendKiss(handle->instance);
                 }
             }

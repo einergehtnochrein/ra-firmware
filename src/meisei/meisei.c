@@ -90,9 +90,9 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
             /* Nothing to do */
             break;
     }
-    snprintf(sSpecial, sizeof(sSpecial), "%lu", special);
+    snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = snprintf((char *)s, sizeof(s), "%ld,11,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,,,%.1f,,,%d,,,%.1f",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",11,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,,,%.1f,,,%d,,,%.1f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -132,7 +132,7 @@ static void _MEISEI_sendRaw (MEISEI_Handle handle, MEISEI_Packet *p1, MEISEI_Pac
 
 
     snprintf(s, sizeof(s),
-                     "%ld,11,1,"
+                     "%"PRIu32",11,1,"
                      "%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16
                      "%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16
                      ","
@@ -212,14 +212,14 @@ LPCLIB_Result MEISEI_processBlock (
         MEISEI_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
-        uint32_t length,
+        uint32_t numBits,
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
     int nErrors;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
-    if (length == sizeof(MEISEI_Packet)) {
+    if (numBits == 8*sizeof(MEISEI_Packet)) {
         if (sondeType == SONDE_MEISEI_CONFIG) {
             handle->configPacketTimestamp = 10.0f * os_time;
             memcpy(&handle->configPacket, buffer, sizeof(handle->configPacket));

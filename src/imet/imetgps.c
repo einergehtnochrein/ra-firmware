@@ -30,7 +30,6 @@ LPCLIB_Result _IMET_processGpsFrame (
     cookedGps->observerLLA.climbRate = NAN;
     cookedGps->observerLLA.velocity = NAN;
     cookedGps->observerLLA.direction = NAN;
-    GPS_convertLLA2ECEF(&cookedGps->observerLLA, &cookedGps->observerECEF);
 
     cookedGps->usedSats = rawGps->numSats;
     cookedGps->utc.hour = rawGps->hour;
@@ -65,7 +64,6 @@ LPCLIB_Result _IMET_processGpsxFrame (
     if (cookedGps->observerLLA.direction <= 0) {
         cookedGps->observerLLA.direction += 2.0f * M_PI;
     }
-    GPS_convertLLA2ECEF(&cookedGps->observerLLA, &cookedGps->observerECEF);
 
     cookedGps->usedSats = rawGps->numSats;
     cookedGps->utc.hour = rawGps->hour;

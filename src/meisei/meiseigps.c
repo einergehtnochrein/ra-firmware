@@ -42,7 +42,6 @@ LPCLIB_Result _MEISEI_processGpsFrame (
         instance->gps.observerLLA.climbRate = NAN;
 
         GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
-        GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
     }
     else if (instance->model == MEISEI_MODEL_IMS100) {
         /* Check if GPS position solution is valid */
@@ -79,7 +78,6 @@ LPCLIB_Result _MEISEI_processGpsFrame (
             instance->gps.observerLLA.climbRate = NAN;
 
             GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
-            GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
         }
 
         /* Satellite info */

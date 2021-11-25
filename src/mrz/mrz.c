@@ -91,7 +91,7 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%ld,14,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -124,7 +124,7 @@ static void _MRZ_sendRaw (MRZ_Handle handle, MRZ_Packet *p1)
 
 
     snprintf(s, sizeof(s),
-                     "%ld,14,1,"
+                     "%"PRIu32",14,1,"
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
                      "%08"PRIX32"%02"PRIX8"%02"PRIX8"%02"PRIX8,
@@ -154,14 +154,14 @@ LPCLIB_Result MRZ_processBlock (
         MRZ_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
-        uint32_t length,
+        uint32_t numBits,
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
     (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
-    if (length == sizeof(MRZ_Packet)) {
+    if (numBits == 8*sizeof(MRZ_Packet)) {
         memcpy(&handle->packet, buffer, sizeof(handle->packet));
 
         /* Check CRC-16 at the end of the frame */

@@ -41,7 +41,7 @@ typedef struct {
                 uint32_t date;      /* 10000*d + 100*m + y, year last two digits only (18 = 2018) */
                 uint16_t hdop;      /* m * 100 (9998 = invalid) TODO: only a guess... */
                 uint16_t vdop;      /* m * 100 (9998 = invalid) TODO:  " */
-                uint8_t unk36[12];
+                uint8_t sats[12];   /* Satellite status (SNR?) */
                 uint16_t crc;
             }) payload;
         });
@@ -50,7 +50,6 @@ typedef struct {
 
 
 typedef struct {
-    ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     float hdop;
     float vdop;

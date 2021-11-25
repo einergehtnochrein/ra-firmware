@@ -52,7 +52,12 @@ typedef __PACKED(struct {
                                              * Bit 12: 0=VBAT ok, 1=VBAT too low
                                              */
     uint8_t cryptoMode;                     /* Normal sonde: always 0 (can be 6 if parameter config error)
-                                             * RS41-SGM: 0...4
+                                             * RS41-SGM: 1..2: Short TU metrology subframe,
+                                             *                 normal GPS subframes
+                                             * RS41-SGM: 3..4: TU and GPS frames packed in single crypto
+                                             *                 subframe (0x80). A bit in the parameter
+                                             *                 field enables a test mode, where the 0x80
+                                             *                 frames is just packed, but not encrypted.
                                              */
     int8_t temperatureRef;                  /* Reference temperature (@ PCB cutout) [°C] */
     uint16_t errorLog;                      /* Error flags:
@@ -343,7 +348,7 @@ typedef struct _RS41_InstanceData {
             int8_t intTemperatureRadio;         /* 0x329: Temperature [°C] of radio chip */
             uint16_t remainingBatteryCapacity;  /* 0x32A: */
             uint8_t numUbxDiscarded;            /* 0x32C: Number of discarded UBX packets */
-            uint8_t numUbxStall;                /* 0x32D: Number of occasions wher essential UBX packets are missing */
+            uint8_t numUbxStall;                /* 0x32D: Number of occasions where essential UBX packets are missing */
         }) params;
     });
 } RS41_InstanceData;

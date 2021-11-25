@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #include <stdlib.h>
 #if !defined(M_PI)
@@ -25,53 +26,10 @@ typedef struct RS92_Context {
     int nSymbolErrors;
 
     RS92_InstanceData *instance;
-
-#if SEMIHOSTING_RS92
-    FILE *fpAnalog;
-    FILE *fpLog;
-#endif
 } RS92_Context;
 
 
 static RS92_Context _rs92;
-
-static const uint8_t manchester2bin[256] = {
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x0F,0x07,0x00, 0x00,0x0B,0x03,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x0D,0x05,0x00, 0x00,0x09,0x01,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x0E,0x06,0x00, 0x00,0x0A,0x02,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x0C,0x04,0x00, 0x00,0x08,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-};
-
-
-
-/* Manchester decoding and stripping of start and stop bits */
-static void _RS92_buffer2raw (RS92_Handle handle, uint8_t *buffer)
-{
-    uint32_t i, j;
-
-    for (i = 0; i < sizeof(RS92_RawData); i+=2) {
-        j = (5 * i) / 2;
-        handle->packet.rawData[i+0] =
-            manchester2bin[((buffer[j+0] << 2) | (buffer[j+1] >> 6)) & 0xFF]
-         | (manchester2bin[((buffer[j+1] << 2) | (buffer[j+2] >> 6)) & 0xFF] << 4);
-        handle->packet.rawData[i+1] =
-            manchester2bin[((buffer[j+2] << 6) | (buffer[j+3] >> 2)) & 0xFF]
-         | (manchester2bin[((buffer[j+3] << 6) | (buffer[j+4] >> 2)) & 0xFF] << 4);
-    }
-}
 
 
 /* Check CRC of sub-blocks */
@@ -202,7 +160,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         special += 1;
     }
 
-    length = sprintf((char *)s, "%ld,0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%ld,,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,",
+    length = sprintf((char *)s, "%"PRIu32",0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%"PRIu32",,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,",
                     instance->id,
                     instance->rxFrequencyMHz,   /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -226,7 +184,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,0,0,%s",
+    length = sprintf(s, "%"PRIu32",0,0,%s",
                 instance->id,
                 instance->name
                 );
@@ -242,11 +200,6 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
 LPCLIB_Result RS92_open (RS92_Handle *pHandle)
 {
     *pHandle = &_rs92;
-
-#if SEMIHOSTING_RS92
-    _rs92.fpAnalog = fopen("rs92_analog.csv", "w");
-    _rs92.fpLog = fopen("rs92.csv", "w");
-#endif
 
     return LPCLIB_SUCCESS;
 }
@@ -270,16 +223,6 @@ static uint8_t * _RS92_getDataAddress(int index)
 }
 
 
-/* Read 24-bit little-endian integer from memory */
-#if SEMIHOSTING_RS92
-static uint32_t _RS92_read24 (const uint8_t *p24)
-{
-    return p24[0] + 256 * p24[1] + 65536 * p24[2];
-}
-#endif
-
-
-
 LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
@@ -299,11 +242,37 @@ LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold
 
 
 
-LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+static char _rs92_raw[2*234+42];
+
+static void _RS92_sendRaw (RS92_InstanceData *instance, uint8_t *buffer, uint32_t length)
 {
-    if (length > 1) {  //TODO
-        /* Convert to byte array */
-        _RS92_buffer2raw(handle, buffer);
+    int slen = 0;
+    char *s = _rs92_raw;
+
+    if (length <= 234) {
+        slen += snprintf(&s[slen], sizeof(_rs92_raw) - slen, "%"PRIu32",0,1,%"PRIu32",%d,",
+                        instance->id,
+                        length,
+                        0
+                        );
+
+        while (length) {
+            slen += snprintf(&s[slen], sizeof(_rs92_raw) - slen, "%02"PRIX32, (uint32_t)*buffer);
+
+            ++buffer;
+            --length;
+        }
+
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
+    }
+}
+
+
+LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
+{
+    if (numBits == 234*8) {
+        /* Copy RX frame */
+        memcpy(handle->packet.rawData, buffer, sizeof(handle->packet.rawData));
 
         /* Reed-Solomon decoder */
         LPCLIB_Result result = REEDSOLOMON_process(_RS92_getDataAddress, &handle->nSymbolErrors);
@@ -353,28 +322,6 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t leng
                         _RS92_processMetrologyBlock(&handle->packet.metrology, &handle->instance->metro, handle->instance);
                     }
 
-#if SEMIHOSTING_RS92
-                    if (!isnan(handle->instance->metro.pressureAltitude)) {
-                        fprintf(handle->fpAnalog, "%u, %.0f, ",
-                                handle->instance->frameCounter,
-                                handle->instance->metro.pressureAltitude);
-                        struct _RS92_MetrologyBlock *pm = &handle->packet.metrology;
-                        fprintf(handle->fpAnalog, "%lu, %lu, %lu, ",
-                                _RS92_read24(pm->T),
-                                _RS92_read24(pm->U1),
-                                _RS92_read24(pm->U2));
-                        fprintf(handle->fpAnalog, "%lu, %lu, ",
-                                _RS92_read24(pm->REF1),
-                                _RS92_read24(pm->REF2));
-                        fprintf(handle->fpAnalog, "%lu, %lu, %lu ",
-                                _RS92_read24(pm->P),
-                                _RS92_read24(pm->REF3),
-                                _RS92_read24(pm->REF4));
-                        fprintf(handle->fpAnalog, "\n");
-                        fflush(handle->fpAnalog);
-                    }
-#endif
-
                     /* Process the (valid) GPS block */
                     if (handle->crcOK[2]) {
                         _RS92_processGpsBlock(&handle->packet.gps,
@@ -393,19 +340,15 @@ if(1){//                    if (handle->instance->gps.valid) {
                         _RS92_sendKiss(handle->instance);
                     }
 
-#if SEMIHOSTING_RS92
-                    {
-                        char s[40];
-                        sprintf(s, "%d,%f\n", handle->instance->frameCounter, handle->instance->gps.observerLLA.alt);
-                        fwrite(s, strlen(s), 1, handle->fpLog);
+                    if (handle->instance->logMode == RS92_LOGMODE_RAW) {
+                        _RS92_sendRaw(handle->instance, handle->packet.rawData, sizeof(handle->packet.rawData));
                     }
-#endif
 
                     LPCLIB_Event event;
                     LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                     event.opcode = APP_EVENT_HEARD_SONDE;
                     event.block = SONDE_DETECTOR_RS41_RS92;
-                    event.parameter = (void *)((uint32_t)lrintf(rxFrequencyHz));
+                    event.parameter = (void *)((uintptr_t)lrintf(rxFrequencyHz));
                     SYS_handleEvent(event);
                 }
             }
@@ -455,5 +398,26 @@ LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id, float *frequ
     }
 
     return LPCLIB_SUCCESS;
+}
+
+
+/* Control logging */
+LPCLIB_Result RS92_setLogMode (RS92_Handle handle, uint32_t id, RS92_LogMode mode)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
+    RS92_InstanceData *instance = NULL;
+    while (_RS92_iterateInstance(&instance)) {
+        if (instance->id == id) {
+            instance->logMode = mode;
+            result = LPCLIB_SUCCESS;
+            break;
+        }
+    }
+
+    return result;
 }
 

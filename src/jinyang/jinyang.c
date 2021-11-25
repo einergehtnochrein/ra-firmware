@@ -115,7 +115,7 @@ static void _JINYANG_sendKiss (JINYANG_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%ld,12,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",12,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -148,7 +148,7 @@ static void _JINYANG_sendRaw (JINYANG_Handle handle, JINYANG_Packet *p1)
 
 
     snprintf(s, sizeof(s),
-                     "%ld,12,1,"
+                     "%"PRIu32",12,1,"
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32,
                      handle->instance->id,
@@ -173,7 +173,7 @@ LPCLIB_Result JINYANG_processBlock (
         JINYANG_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
-        uint32_t length,
+        uint32_t numBits,
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
@@ -181,9 +181,9 @@ LPCLIB_Result JINYANG_processBlock (
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     /* Remove data whitening */
-    _JINYANG_removeWhitening(buffer, length);
+    _JINYANG_removeWhitening(buffer, numBits/8);
 
-    if (length == sizeof(JINYANG_Packet)) {
+    if (numBits == 8*sizeof(JINYANG_Packet)) {
         memcpy(&handle->packet, buffer, sizeof(handle->packet));
 
         /* Check CRC-16 at the end of the frame */

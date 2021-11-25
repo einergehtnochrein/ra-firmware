@@ -38,8 +38,8 @@ LPCLIB_Result DFM_open (DFM_Handle *pHandle);
 LPCLIB_Result DFM_processBlock (
         DFM_Handle handle,
         SONDE_Type type,
-        void *buffer,
-        uint32_t length,
+        uint8_t *buffer,
+        uint32_t numBits,
         float rxFrequencyHz,
         uint32_t rxTime);
 LPCLIB_Result DFM_resendLastPositions (DFM_Handle handle);

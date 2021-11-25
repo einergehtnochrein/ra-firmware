@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #if !defined(M_PI)
 #  define M_PI 3.14159265358979323846
@@ -29,41 +30,6 @@ typedef struct M20_Context {
 
 
 static M20_Context _m20;
-
-
-static const uint8_t manchester2bin[256] = {
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x07,0x06,0x04,0x05,0x00,0x00,
-    0x00,0x00,0x01,0x00,0x02,0x03,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x0B,0x0A,0x08,0x09,0x00,0x00,
-    0x00,0x00,0x0D,0x0C,0x0E,0x0F,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x0F,0x0E,0x0C,0x0D,0x00,0x00,
-    0x00,0x00,0x09,0x08,0x0A,0x0B,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x03,0x02,0x00,0x01,0x00,0x00,
-    0x00,0x00,0x05,0x04,0x06,0x07,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-};
-
-
-/* Manchester decoding */
-static void _M20_buffer2raw (M20_Handle handle, uint8_t *buffer, uint32_t length)
-{
-    uint32_t i;
-    uint8_t *p = (uint8_t *)&handle->packet;
-
-    for (i = 0; i < length; i++) {
-        p[i] =
-           (manchester2bin[buffer[2*i+0]] << 4)
-         | (manchester2bin[buffer[2*i+1]] << 0);
-    }
-}
 
 
 /* Process one byte for CRC.
@@ -107,7 +73,7 @@ static _Bool _M20_checkCRC (const uint8_t *p, int length, uint16_t expectedCRC)
 
 
 
-static void _M20_fromBigEndian (struct _M20_Payload *data)
+static void _M20_fromBigEndian (M20_Packet *data)
 {
     data->inner.speedE = __REV16(data->inner.speedE);
     data->inner.speedN = __REV16(data->inner.speedN);
@@ -153,7 +119,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%ld,13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,,,,,,0",
+    length = sprintf((char *)s, "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,,,%.1f,%.1f,%.1f,",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -162,15 +128,21 @@ static void _M20_sendKiss (M20_InstanceData *instance)
                     instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
                     direction,                              /* Direction [degrees} */
                     velocity,                               /* Velocity [km/h] */
-                    instance->metro.temperature,            /* Temperature [°C] */
-                    SYS_getFrameRssi(sys)
+//                    instance->metro.T,                      /* Temperature main sensor [°C] */
+                instance->metro.TU,                      /* Temperature humidity sensor [°C] (main sensor calibration broken) */
+                    instance->metro.pressure,               /* Pressure [hPa] */
+                    instance->metro.humidity,               /* Relative humidity [%] */
+                    SYS_getFrameRssi(sys),
+                    instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
+                    instance->metro.cpuTemperature,         /* CPU temperature [°C] */
+                    instance->metro.TU                      /* Temperature humidity sensor [°C] */
                     );
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,13,0,%s",
+    length = sprintf(s, "%"PRIu32",13,0,%s",
                 instance->id,
                 instance->hashName
                 );
@@ -190,7 +162,7 @@ static void _M20_sendRaw (M20_InstanceData *instance, uint8_t *buffer, uint32_t 
     int slen = 0;
 
 
-    slen += snprintf(&_m20_raw[slen], sizeof(_m20_raw) - slen, "%ld,13,1,,",
+    slen += snprintf(&_m20_raw[slen], sizeof(_m20_raw) - slen, "%"PRIu32",13,1,,",
                      instance->id
                     );
 
@@ -203,25 +175,26 @@ static void _M20_sendRaw (M20_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 
 
-LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t length, float rxFrequencyHz)
+LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
 {
-    if (length == (69+1)*2) {
-        handle->packetLength = length / 2;
-
-        /* Convert to byte array */
-        _M20_buffer2raw(handle, buffer, handle->packetLength);
+    if (numBits == sizeof(M20_Packet) * 8) {
+        handle->packetLength = numBits / 8;
+        memcpy(&handle->packet, buffer, handle->packetLength);
 
         /* There are two CRC's: One for the whole packet, one for an inner block only. */
         volatile _Bool innercrc;
         innercrc = _M20_checkCRC(
-                    (uint8_t *)&handle->packet.packet69.inner,
-                    sizeof(handle->packet.packet69.inner),
-                    __REV16(handle->packet.packet69.inner.crc));
+                    (uint8_t *)&handle->packet.inner,
+                    sizeof(handle->packet.inner),
+                    __REV16(handle->packet.inner.crc));
         volatile _Bool outercrc;
         outercrc = _M20_checkCRC(
-                    (uint8_t *)&handle->packet.packet69,
-                    sizeof(handle->packet.packet69),
-                    __REV16(handle->packet.packet69.crc));
+                    (uint8_t *)&handle->packet,
+                    sizeof(handle->packet),
+                    __REV16(handle->packet.crc));
+        if (outercrc) {
+            innercrc = true;    // Firmware 6 transmits an invalid inner CRC (always 0)!
+        }
 
         /* At least the inner CRC must be correct */
         if (innercrc) {
@@ -229,25 +202,26 @@ LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t length
             handle->rxFrequencyHz = rxFrequencyHz;
 
 if(1){//            if (handle->instance->logMode == M20_LOGMODE_RAW) {
-                _M20_sendRaw(handle->instance, (uint8_t *)&handle->packet.packet69, handle->packetLength);
+                _M20_sendRaw(handle->instance, (uint8_t *)&handle->packet, handle->packetLength);
             }
 
             /* Convert big-endian fields to little-endian */
-            _M20_fromBigEndian(&handle->packet.packet69);
+            _M20_fromBigEndian(&handle->packet);
 
             /* Get an instance */
-            _M20_processConfigBlock(&handle->packet.packet69, &handle->instance);
+            _M20_processConfigBlock(&handle->packet, &handle->instance);
             if (handle->instance) {
                 handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
                 /* Process the inner data block */
-                if (_M20_processPayloadInner(&handle->packet.packet69.inner,
+                if (_M20_processPayloadInner(&handle->packet.inner,
                                             &handle->instance->gps,
                                             &handle->instance->metro) == LPCLIB_SUCCESS) {
                     /* Process the outer data block (if CRC is correct) */
-                    _M20_processPayload(&handle->packet.packet69,
+                    _M20_processPayload(&handle->packet,
                                         outercrc,
-                                        &handle->instance->gps);
+                                        &handle->instance->gps,
+                                        &handle->instance->metro);
                 }
 
                 _M20_sendKiss(handle->instance);

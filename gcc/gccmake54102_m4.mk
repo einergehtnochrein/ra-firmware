@@ -76,7 +76,7 @@ CPPFLAGS += \
 LDFLAGS += \
     -nostartfiles -Wl,-Map=$(OBJDIR)/$(PROJECT).map,--cref,--gc-sections,-o$@,--no-wchar-size-warning,--print-memory-usage -lm
 EXE_DEPENDENCIES += \
-    $(MAKEFILE) $(C_OBJ) $(CPP_OBJ) $(OBJDIR)/$(PDL_LIBRARY).a $(LINKER_SCRIPT) $(OBJDIR)/$(PDL_LIBRARY).a
+    $(MAKEFILE) $(C_OBJ) $(CPP_OBJ) $(ASM_OBJ) $(OBJDIR)/$(PDL_LIBRARY).a $(LINKER_SCRIPT) $(OBJDIR)/$(PDL_LIBRARY).a
 export BASEINCLUDE= \
     -I../src \
     -I../lpc54000/inc \
@@ -89,6 +89,7 @@ STARTUP_CFLAGS += \
 
 
 
+vpath %.s   ../src
 vpath %.cpp ../src
 vpath %.c   ../src
 vpath %     ../lpc54000/src
@@ -112,6 +113,7 @@ PDL_LIBRARY_SRCS = \
 
 # Object files corresponding to C files.
 C_OBJ = $(patsubst %,$(OBJDIR)/%,$(C_SRCS:.c=.o))
+ASM_OBJ = $(patsubst %,$(OBJDIR)/%,$(ASM_SRCS:.s=.o))
 CPP_OBJ = $(patsubst %,$(OBJDIR)/%,$(CPP_SRCS:.cpp=.o))
 PDL_LIBRARY_C_OBJ = $(patsubst %,$(OBJDIR)/%,$(PDL_LIBRARY_SRCS:.c=.o))
 STARTUP_OBJ = $(patsubst %,$(OBJDIR)/%,$(STARTUP_SRCS:.c=.o))
@@ -130,7 +132,7 @@ $(OBJDIR)/$(PROJECT).hex : $(MAKEFILE) $(OBJDIR)/$(PROJECT).axf
 
 $(OBJDIR)/$(PROJECT).axf : $(EXE_DEPENDENCIES)
 	@echo "Linking into $@..."
-	@$(CC) $(CFLAGS) $(C_OBJ) $(CPP_OBJ) $(OBJDIR)/$(PDL_LIBRARY).a $(LDFLAGS)
+	@$(CC) $(CFLAGS) $(C_OBJ) $(CPP_OBJ) $(ASM_OBJ) $(OBJDIR)/$(PDL_LIBRARY).a $(LDFLAGS)
 	@$(OBJDUMP) -d -S $@ >$(OBJDIR)/$(PROJECT).lst
 
 $(C_OBJ) : $(OBJDIR)/%.o : %.c $(MAKEFILE)
@@ -144,6 +146,13 @@ $(CPP_OBJ) : $(OBJDIR)/%.o : %.cpp $(MAKEFILE)
 	@echo $(notdir $<)
 	@mkdir -p $(dir $@)
 	@$(CPP) -c $(CPPFLAGS) $< -o $@
+
+$(ASM_OBJ) : $(OBJDIR)/%.o : %.s $(MAKEFILE)
+	@echo $(notdir $<)
+	@mkdir -p $(dir $@)
+	@$(CC) -c $(CFLAGS) $< -o $@
+	@printf "$(dir $@)" > $(OBJDIR)/$*.d
+	@$(CC) $(CFLAGS) -MM $< >> $(OBJDIR)/$*.d
 
 $(PDL_LIBRARY_C_OBJ) : $(OBJDIR)/%.o : %.c $(MAKEFILE)
 	@echo $(notdir $<)

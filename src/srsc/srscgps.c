@@ -116,9 +116,6 @@ LPCLIB_Result _SRSC_processGpsFrame (
         cookedGps->observerLLA.lon = NAN;
         cookedGps->observerLLA.alt = NAN;
     }
-    else {
-        GPS_convertLLA2ECEF(&cookedGps->observerLLA, &cookedGps->observerECEF);
-    }
 
     return LPCLIB_SUCCESS;
 }

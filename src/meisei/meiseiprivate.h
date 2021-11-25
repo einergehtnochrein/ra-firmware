@@ -38,7 +38,6 @@ typedef struct {
 
 
 typedef struct {
-    ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
 
     uint16_t milliseconds;
