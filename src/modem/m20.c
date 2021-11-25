@@ -192,6 +192,9 @@ LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t numBit
                     (uint8_t *)&handle->packet,
                     sizeof(handle->packet),
                     __REV16(handle->packet.crc));
+        if (outercrc) {
+            innercrc = true;    // Firmware 6 transmits an invalid inner CRC (always 0)!
+        }
 
         /* At least the inner CRC must be correct */
         if (innercrc) {
