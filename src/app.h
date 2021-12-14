@@ -8,7 +8,9 @@
 
 #define FIRMWARE_VERSION_MAJOR              46
 #define FIRMWARE_VERSION_MINOR              0
-#define FIRMWARE_NAME                       ""
+#if !defined(FIRMWARE_NAME)
+#  define FIRMWARE_NAME                     ""
+#endif
 
 #if (BOARD_RA == 1)
 #define FIRMWARE_START_ADDRESS              0x00008000
