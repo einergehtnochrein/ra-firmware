@@ -43,6 +43,7 @@ LPCLIB_Result WINDSOND_open (WINDSOND_Handle *pHandle)
 /* Send report */
 static void _WINDSOND_sendKiss (WINDSOND_InstanceData *instance)
 {
+    (void)instance;
 }
 
 
@@ -53,8 +54,10 @@ LPCLIB_Result WINDSOND_processBlock (
         uint32_t length,
         float rxFrequencyHz)
 {
+    (void)handle;
+    (void)sondeType,
+    (void)buffer,
     (void)rxFrequencyHz;
-    int nErrors;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (length == sizeof(WINDSOND_Packet)) {
