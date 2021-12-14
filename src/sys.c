@@ -2088,7 +2088,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->windsond,
                                         sondeType,
                                         ipc[bufferIndex].data8,
-                                        _SYS_getSondeBufferLength(SONDE_WINDSOND_S1),
+                                        ipc[bufferIndex].numBits,
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
