@@ -933,6 +933,14 @@ static float _SYS_measureVbat (SYS_Handle handle)
     CLKPWR_unitPowerUp(CLKPWR_UNIT_VDDA);
     CLKPWR_unitPowerUp(CLKPWR_UNIT_VREFP);
 
+    /* PIO1_5: switch to analog mode */
+    IOCON_configurePin(PIN_P1_5, IOCON_makeConfigA(PIN_FUNCTION_0,              /* ADC0_8       VBAT_P_ADC */
+                                                   PIN_PULL_NONE,
+                                                   PIN_INPUT_NOT_INVERTED,
+                                                   PIN_ADMODE_ANALOG,
+                                                   PIN_FILTER_OFF,
+                                                   PIN_OPENDRAIN_OFF));
+
     //TODO need at least 10µs delay here before ADC can be enabled */
     volatile int delay = SystemCoreClock / 100000;
     while (delay--);
@@ -977,6 +985,9 @@ static float _SYS_measureVbat (SYS_Handle handle)
     else {
         vbat = (float)(vbatAdcDat & 0xFFFF) / 65536.0f * 3.0f * 2;
     }
+
+    /* PIO1_5: back to digital mode (analog mode pins draw extra input curent when VDDA is off! */
+    IOCON_configurePinDefault(PIN_P1_5,  PIN_FUNCTION_0, PIN_PULL_NONE);
 
     CLKPWR_unitPowerDown(CLKPWR_UNIT_VREFP);
     CLKPWR_unitPowerDown(CLKPWR_UNIT_VDDA);
