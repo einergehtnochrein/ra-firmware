@@ -62,6 +62,9 @@ static void _RS41_readSubFrameXdata (char *p, int length, RS41_InstanceData *ins
             p += 4;
             ++instance->metro.numXdataInstruments;
 
+            /* Force logging sondes with XDATA payloads */
+            instance->logMode = RS41_LOGMODE_RAW;
+
             /* TODO: Daisy chain numbers must be consecutive */
             switch (instrumentID) {
                 case XDATA_INSTRUMENT_OIF411_OZONE:
@@ -367,6 +370,7 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numB
                 case RS41_SUBFRAME_METROLOGY_SHORT:
                     if (handle->instance) {
                         _RS41_processMetrologyShortBlock((RS41_SubFrameMetrologyShort *)(p + 2), handle->instance);
+                        handle->instance->logMode = RS41_LOGMODE_RAW;
                     }
                     break;
                 case RS41_SUBFRAME_GPS_POSITION:
