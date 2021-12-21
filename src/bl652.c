@@ -103,27 +103,24 @@ LPCLIB_Result BL652_setMode (BL652_Handle handle, int mode)
         case BL652_MODE_COMMAND:
             GPIO_writeBit(handle->gpioSIO02, 0);
             GPIO_writeBit(handle->gpioNAUTORUN, 1);
-            GPIO_writeBit(handle->gpioNRESET, 0);
-            osDelay(5);
-            GPIO_writeBit(handle->gpioNRESET, 1);
             break;
 
         case BL652_MODE_VSP_COMMAND:
             GPIO_writeBit(handle->gpioSIO02, 1);
             GPIO_writeBit(handle->gpioNAUTORUN, 0);
-            GPIO_writeBit(handle->gpioNRESET, 0);
-            osDelay(5);
-            GPIO_writeBit(handle->gpioNRESET, 1);
             break;
 
         case BL652_MODE_VSP_BRIDGE:
             GPIO_writeBit(handle->gpioSIO02, 1);
             GPIO_writeBit(handle->gpioNAUTORUN, 1);
-            GPIO_writeBit(handle->gpioNRESET, 0);
-            osDelay(5);
-            GPIO_writeBit(handle->gpioNRESET, 1);
             break;
     }
+    GPIO_writeBit(handle->gpioNRESET, 0);
+    osDelay(5);
+    GPIO_writeBit(handle->gpioNRESET, 1);
+    osDelay(500);
+    GPIO_writeBit(handle->gpioNAUTORUN, 0);
+    GPIO_writeBit(handle->gpioSIO02, 0);
 
     return LPCLIB_SUCCESS;
 }
