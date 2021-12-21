@@ -43,7 +43,7 @@ struct BL652_Context {
     uint32_t baudrate;
     struct {
         bool success;
-        char firmwareVersion[40];
+        uint32_t firmwareVersion;
         char deviceName[80];
         char macAddress[40];
     } response;
@@ -56,6 +56,7 @@ static void _BL652_processRx (BL652_Handle handle)
     int code;
     int param;
     int readPos;
+    int versionBytes[4];
 
     if (UART_readLine(handle->uart, s, sizeof(s)) > 0) {
         if (sscanf(s, "%d", &code) == 1) {
@@ -68,7 +69,18 @@ static void _BL652_processRx (BL652_Handle handle)
                     if (sscanf(s, "%*d %d", &param) == 1) {
                         switch (param) {
                             case 3:
-                                sscanf(s, "%*d %*d %s", handle->response.firmwareVersion);
+                                if (sscanf(s, "%*d %*d %d.%d.%d.%d",
+                                            &versionBytes[0],
+                                            &versionBytes[1],
+                                            &versionBytes[2],
+                                            &versionBytes[3]) == 4) {
+                                    handle->response.firmwareVersion = 0
+                                        | (versionBytes[0] << 24)
+                                        | (versionBytes[1] << 16)
+                                        | (versionBytes[2] << 8)
+                                        | (versionBytes[3] << 0)
+                                        ;
+                                }
                                 break;
                             case 4:
                                 sscanf(s, "%*d %*d %*s %s", handle->response.macAddress);
@@ -269,23 +281,7 @@ LPCLIB_Result BL652_getFirmwareVersion (BL652_Handle handle, uint32_t *pFirmware
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    *pFirmwareVersion = 0;
-
-    int versionBytes[4];
-    if (sscanf(handle->response.firmwareVersion,
-                "%d.%d.%d.%d",
-                &versionBytes[0],
-                &versionBytes[1],
-                &versionBytes[2],
-                &versionBytes[3]) == 4) {
-
-        *pFirmwareVersion = 0
-            | (versionBytes[0] << 24)
-            | (versionBytes[1] << 16)
-            | (versionBytes[2] << 8)
-            | (versionBytes[3] << 0)
-            ;
-    }
+    *pFirmwareVersion = handle->response.firmwareVersion;
 
     return LPCLIB_SUCCESS;
 }
