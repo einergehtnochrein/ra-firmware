@@ -1,4 +1,4 @@
-/* Copyright (c) 2018, DF9DQ
+/* Copyright (c) 2018-2021, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -53,6 +53,7 @@ struct BL652_Context {
         int advertInterval;
         int att_mtu;
         int att_data_length;
+        int max_packet_length;
     } response;
 } _bl652Context;
 
@@ -238,12 +239,9 @@ LPCLIB_Result BL652_findBaudrate (BL652_Handle handle)
 #define BL652_REQ_GET_ADVERT_INTERVAL       "AT+CFG 113 ?\r"
 #define BL652_REQ_SET_ADVERT_INTERVAL(x)    "AT+CFG 113 " #x "\r"
 #define BL652_REQ_SET_ADVERT_INTERVAL2(x)   "AT+CFG 102 " #x "\r"
-#define BL652_ATT_MTU                       247
 #define BL652_REQ_GET_ATT_MTU               "AT+CFG 211 ?\r"
-#define BL652_REQ_SET_ATT_MTU(x)            "AT+CFG 211 " #x "\r"
-#define BL652_ATT_DATA_LENGTH               244
 #define BL652_REQ_GET_ATT_DATA_LENGTH       "AT+CFG 212 ?\r"
-#define BL652_REQ_SET_ATT_DATA_LENGTH(x)    "AT+CFG 212 " #x "\r"
+#define BL652_REQ_GET_MAX_PACKET_LENGTH     "AT+CFG 216 ?\r"
 
 
 LPCLIB_Result BL652_readParameters (BL652_Handle handle)
@@ -280,7 +278,7 @@ LPCLIB_Result BL652_readParameters (BL652_Handle handle)
             _BL652_processRx(handle);
         }
 
-        /* Data length extensions require a minimum firmware 28.6.2.0 */
+        /* ATT_MTU and Attribute Data Length require a minimum firmware 28.6.2.0 */
         if (handle->response.firmwareVersion >= BL652_FIRMWARE_VERSION(28,6,2,0)) {
             handle->cfg_response_ptr = &handle->response.att_mtu;
             UART_write(handle->uart, BL652_REQ_GET_ATT_MTU, strlen(BL652_REQ_GET_ATT_MTU));
@@ -291,6 +289,16 @@ LPCLIB_Result BL652_readParameters (BL652_Handle handle)
 
             handle->cfg_response_ptr = &handle->response.att_data_length;
             UART_write(handle->uart, BL652_REQ_GET_ATT_DATA_LENGTH, strlen(BL652_REQ_GET_ATT_DATA_LENGTH));
+            for (delay = 0; delay < 10; delay++) {
+                osDelay(10);
+                _BL652_processRx(handle);
+            }
+        }
+
+        /* Maximum Packet Length requires a minimum firmware 28.8 */
+        if (handle->response.firmwareVersion >= BL652_FIRMWARE_VERSION(28,8,0,0)) {
+            handle->cfg_response_ptr = &handle->response.max_packet_length;
+            UART_write(handle->uart, BL652_REQ_GET_MAX_PACKET_LENGTH, strlen(BL652_REQ_GET_MAX_PACKET_LENGTH));
             for (delay = 0; delay < 10; delay++) {
                 osDelay(10);
                 _BL652_processRx(handle);
@@ -333,21 +341,6 @@ LPCLIB_Result BL652_updateParameters (BL652_Handle handle)
         UART_write(handle->uart, BL652_REQ_SET_ADVERT_INTERVAL2(BL652_ADVERT_INTERVAL),
                                  strlen(BL652_REQ_SET_ADVERT_INTERVAL2(BL652_ADVERT_INTERVAL)));
         osDelay(100);
-    }
-
-    /* Data length extensions require a minimum firmware 28.6.2.0 */
-    if (handle->response.firmwareVersion >= BL652_FIRMWARE_VERSION(28,6,2,0)) {
-        if (handle->response.att_mtu != BL652_ATT_MTU) {
-            UART_write(handle->uart, BL652_REQ_SET_ATT_MTU(BL652_ATT_MTU),
-                                    strlen(BL652_REQ_SET_ATT_MTU(BL652_ATT_MTU)));
-            osDelay(100);
-        }
-
-        if (handle->response.att_mtu != BL652_ATT_DATA_LENGTH) {
-            UART_write(handle->uart, BL652_REQ_SET_ATT_DATA_LENGTH(BL652_ATT_DATA_LENGTH),
-                                    strlen(BL652_REQ_SET_ATT_DATA_LENGTH(BL652_ATT_DATA_LENGTH)));
-            osDelay(100);
-        }
     }
 
     return LPCLIB_SUCCESS;
