@@ -181,12 +181,21 @@ static UART_Config uartConfigBaudrate[] = {
 
 static bool _BL652_testBaudrate (BL652_Handle handle, uint32_t baudrate)
 {
+    char c_dummy;
+
     handle->baudrate = baudrate;
 
+    /* Change UART baudrate */
     uartConfigBaudrate[0].baudrate = baudrate;
     UART_ioctl(handle->uart, uartConfigBaudrate);
+
+    /* Make sure all spurious characters due to baudrate change get flushed */
+    UART_write(handle->uart, "\r", 1);
     osDelay(10);
-    _BL652_initResponse(handle);
+    while (UART_read(handle->uart, &c_dummy, 1))
+        ;
+    osDelay(10);
+
     UART_write(handle->uart, "\r", 1);
     for (int delay = 0; delay < 10; delay++) {
         osDelay(10);
@@ -202,6 +211,7 @@ static bool _BL652_testBaudrate (BL652_Handle handle, uint32_t baudrate)
 
 LPCLIB_Result BL652_findBaudrate (BL652_Handle handle)
 {
+    _BL652_initResponse(handle);
     BL652_setMode(handle, BL652_MODE_COMMAND);
 
     if (!_BL652_testBaudrate(handle, 115200)) {
