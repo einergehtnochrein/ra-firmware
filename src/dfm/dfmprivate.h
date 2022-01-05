@@ -125,6 +125,7 @@ typedef struct {
         uint8_t snr;
     } sats[12];
     float ehpe;                                 /* Estimated horizontal position error [m] */
+    float evpe;                                 /* Estimated vertical position error [m] */
     float geoidCorrection;                      /* Difference geoid height to ellipsoid height [m] */
 
     bool inBurkinaFaso;
