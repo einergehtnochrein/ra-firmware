@@ -948,6 +948,8 @@ static float _SYS_measureVbat (SYS_Handle handle)
     LPC_ADC0->STARTUP = 0
         | (1 << 0)                          /* Enable */
         ;
+    while (LPC_ADC0->STARTUP & (1u << 1))   /* Wait for end of initialization */
+        ;
     LPC_ADC0->CALIB = 0
         | (1 << 0)                          /* Start a calibration */
         ;
