@@ -206,14 +206,10 @@ static void BSP_initPins (void)
         IOCON_configurePinDefault(PIN_P1_4,  PIN_FUNCTION_0, PIN_PULL_NONE);    /* GPIO_1_4     ADF7021_CE */
     }
         /* Leave ADC input in digital mode until needed for measurement.
-         * Pin draws 300µA in analog mode!
+         * Pin draws 200µA in analog mode!
          */
-    IOCON_configurePin(PIN_P1_5, IOCON_makeConfigA(PIN_FUNCTION_0,              /* ADC0_8       VBAT_P_ADC */
-                                                   PIN_PULL_NONE,
-                                                   PIN_INPUT_NOT_INVERTED,
-                                                   PIN_ADMODE_ANALOG,
-                                                   PIN_FILTER_OFF,
-                                                   PIN_OPENDRAIN_OFF));
+    IOCON_configurePinDefault(PIN_P1_5,  PIN_FUNCTION_0, PIN_PULL_NONE);        /* (ADC0_8      VBAT_P_ADC) */
+
     IOCON_configurePinDefault(PIN_P1_6,  PIN_FUNCTION_2, PIN_PULL_NONE);        /* FC7_SCK      SCLK_C */
     IOCON_configurePinDefault(PIN_P1_7,  PIN_FUNCTION_2, PIN_PULL_REPEATER);    /* FC7_MOSI     MOSI_C */
     IOCON_configurePinDefault(PIN_P1_8,  PIN_FUNCTION_2, PIN_PULL_REPEATER);    /* FC7_MISO     MISO_C */

@@ -253,10 +253,11 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%"PRIu32",2,0,%s,%.1f",
+    length = sprintf(s, "%"PRIu32",2,0,%s,%.1f,%.1f",
                 instance->id,
                 instance->name,
-                instance->gps.ehpe
+                instance->gps.ehpe,
+                instance->gps.evpe
                 );
 
     if (length > 0) {

@@ -8,6 +8,12 @@ PROJECT = ra2_firmware
 PDL = $(shell pwd)/../../../../..
 OBJDIR = obj_m4_ra2
 MAKEFILE = Makefile_m4_ra2
+GIT_FULL_VERSION = $(shell git describe --tags --abbrev=6)
+GIT_NEAREST_TAG = $(shell git describe --tags --abbrev=0)
+
+
+CFLAGS += \
+    -DFIRMWARE_NAME=\"$(subst $(GIT_NEAREST_TAG)-,,$(GIT_FULL_VERSION))\"
 
 C_SRCS = \
     main.c bspra2.c config.c \
@@ -84,6 +90,7 @@ $(OBJDIR)/$(RINEXLIB): $(MAKEFILE) $(RINEXDATA).bin
             --rename-section .data=.rinexdata,contents,alloc,load,readonly,data \
             $(RINEXDATA).bin $(OBJDIR)/$(RINEXDATA).o
 	@$(AR) r $@ $(OBJDIR)/$(RINEXDATA).o
+
 
 #
 # M0 code is wrapped in a library

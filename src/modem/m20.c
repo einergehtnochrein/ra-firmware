@@ -119,7 +119,8 @@ static void _M20_sendKiss (M20_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,,,%.1f,%.1f,%.1f,",
+    length = snprintf((char *)s, sizeof(s),
+                "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,,,%.1f,%.1f,%.1f,",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -142,9 +143,10 @@ static void _M20_sendKiss (M20_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%"PRIu32",13,0,%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",13,0,%s,,,,%.1f",
                 instance->id,
-                instance->hashName
+                instance->hashName,
+                instance->metro.boardTemperature
                 );
 
     if (length > 0) {

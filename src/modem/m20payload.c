@@ -61,9 +61,7 @@ LPCLIB_Result _M20_processPayloadInner (
 
     /* Sensors */
     cookedMetro->T = NAN;
-    cookedMetro->TU = NAN;
     cookedMetro->humidity = NAN;
-
 
     /* Temperature humidity sensor */
     float y = payload->adc_TU;
@@ -118,7 +116,12 @@ LPCLIB_Result _M20_processPayload (
         cookedMetro->adc_pc3 = (payload->adc_pb1_pc3[1] / 16) + (16 * payload->adc_pb1_pc3[2]);
         cookedMetro->adc_pc0 = payload->adc_pc0_pc1[0] + (256 * (payload->adc_pc0_pc1[1] % 16));
         cookedMetro->adc_pc1 = (payload->adc_pc0_pc1[1] / 16) + (16 * payload->adc_pc0_pc1[2]);
-        cookedMetro->adc_pc2 = payload->adc_pc2;
+
+        /* Temperature on-board NTC sensor */
+        float y = payload->boardTemperature;
+        y = logf((22100.0f * y) / (4095.0f - y));
+        y = 8.4543096e-8f * y*y*y + 2.41157e-4f * y + 1.4592243e-3f;
+        cookedMetro->boardTemperature = 1.0f / y - 273.15f;
 
         cookedGps->sats[0] = payload->satStatus[0] & 7;
         cookedGps->sats[1] = (payload->satStatus[0] >> 3) & 7;
