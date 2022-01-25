@@ -46,8 +46,8 @@ typedef union {
         int16_t unk1A;
         int16_t unk1C;
         int16_t unk1E;
-        uint32_t unk20;
-        uint32_t unk24;
+        uint32_t rawTemperature;
+        uint32_t rawHumidity;
         uint8_t thisCalibIndex;
         uint32_t calibFragment;
         uint16_t crc;
@@ -90,8 +90,8 @@ typedef struct _MRZ_InstanceData {
             uint32_t calib10;
             uint32_t calib11;
             uint32_t calib12;
-            uint32_t calib13;
-            uint32_t calib14;
+            uint32_t serialSonde;
+            uint32_t serialSensor;
             uint32_t ddmmyy_production;
             uint32_t ddmmyy_current;
         });
