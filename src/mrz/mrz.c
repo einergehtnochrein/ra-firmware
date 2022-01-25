@@ -130,7 +130,7 @@ static void _MRZ_sendRaw (MRZ_Handle handle, MRZ_Packet *p1)
                      "%"PRIu32",14,1,"
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
-                     "%08"PRIX32"%02"PRIX8"%02"PRIX8"%02"PRIX8,
+                     "%08"PRIX32"%02"PRIX32"%02"PRIX32"%02"PRIX32,
                      handle->instance->id,
                      __REV(p1->rawData.dat32[0]),
                      __REV(p1->rawData.dat32[1]),
@@ -143,9 +143,9 @@ static void _MRZ_sendRaw (MRZ_Handle handle, MRZ_Packet *p1)
                      __REV(p1->rawData.dat32[8]),
                      __REV(p1->rawData.dat32[9]),
                      __REV(p1->rawData.dat32[10]),
-                     p1->rawData.dat8[44],
-                     p1->rawData.dat8[45],
-                     p1->rawData.dat8[46]
+                     (uint32_t)p1->rawData.dat8[44],
+                     (uint32_t)p1->rawData.dat8[45],
+                     (uint32_t)p1->rawData.dat8[46]
                     );
 
     SYS_send2Host(HOST_CHANNEL_INFO, s);
