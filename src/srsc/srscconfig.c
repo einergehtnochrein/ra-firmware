@@ -136,7 +136,8 @@ LPCLIB_Result _SRSC_processConfigFrame (
 
                             instance->confDetect.nDetections = 0;
 
-                            if ((instance->config.sondeType == 228) ||
+                            if ((instance->config.sondeType == 160) ||
+                                (instance->config.sondeType == 228) ||
                                 (instance->config.sondeType == 229)) {
                                 instance->config.isC34 = false;
                                 instance->config.isC50 = true;
