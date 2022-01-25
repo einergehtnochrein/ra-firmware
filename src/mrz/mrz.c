@@ -107,13 +107,16 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",14,0,%s",
-                instance->id,
-                "MRZ"
-                );
+    if (_MRZ_checkValidCalibration(instance, CALIB_SERIALSONDE | CALIB_SERIALSENSOR)) {
+        length = snprintf(s, sizeof(s), "%"PRIu32",14,0,%s,%"PRIu32,
+                    instance->id,
+                    instance->name,
+                    instance->calib.serialSensor
+                    );
 
-    if (length > 0) {
-        SYS_send2Host(HOST_CHANNEL_INFO, s);
+        if (length > 0) {
+            SYS_send2Host(HOST_CHANNEL_INFO, s);
+        }
     }
 }
 

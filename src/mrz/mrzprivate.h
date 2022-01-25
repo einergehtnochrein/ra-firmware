@@ -70,6 +70,7 @@ typedef struct {
 typedef struct _MRZ_InstanceData {
     struct _MRZ_InstanceData *next;
     uint32_t id;
+    char name[20];
     uint16_t frameCounter;
     float rxFrequencyMHz;
     uint32_t lastUpdated;
@@ -108,6 +109,13 @@ LPCLIB_Result _MRZ_processConfigFrame (
         MRZ_Packet *packet,
         MRZ_InstanceData **instancePointer,
         float rxFrequencyHz);
+
+
+/* Check if the calibration block contains valid data for a given purpose */
+#define CALIB_SERIALSONDE           0x00004000l
+#define CALIB_SERIALSENSOR          0x00008000l
+
+bool _MRZ_checkValidCalibration(MRZ_InstanceData *instance, uint32_t purpose);
 
 /* Iterate through instances */
 bool _MRZ_iterateInstance (MRZ_InstanceData **instance);
