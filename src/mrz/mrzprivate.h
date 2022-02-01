@@ -112,8 +112,8 @@ LPCLIB_Result _MRZ_processConfigFrame (
 
 
 /* Check if the calibration block contains valid data for a given purpose */
-#define CALIB_SERIALSONDE           0x00004000l
-#define CALIB_SERIALSENSOR          0x00008000l
+#define CALIB_SERIALSONDE           0x00001000l
+#define CALIB_SERIALSENSOR          0x00002000l
 
 bool _MRZ_checkValidCalibration(MRZ_InstanceData *instance, uint32_t purpose);
 
