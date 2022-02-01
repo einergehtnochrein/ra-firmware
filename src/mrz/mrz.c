@@ -91,7 +91,7 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,%d,,%.1f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -99,8 +99,12 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
+                    instance->metro.temperature,            /* Temperature [°C] */
+                    instance->metro.pressure,               /* Pressure [hPa] */
+                    instance->metro.humidity,               /* Relative humidity [%] */
                     SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->frameCounter,
+                    instance->metro.batteryVoltage          /* Battery voltage [V] */
                     );
 
     if (length > 0) {
@@ -173,6 +177,7 @@ LPCLIB_Result MRZ_processBlock (
 
             result = _MRZ_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
             if (result == LPCLIB_SUCCESS) {
+                _MRZ_processMetrology(&handle->packet, handle->instance);
                 result = _MRZ_processGpsFrame(&handle->packet, handle->instance);
                 if (result == LPCLIB_SUCCESS) {
                     _MRZ_sendKiss(handle->instance);

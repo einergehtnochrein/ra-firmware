@@ -45,9 +45,9 @@ typedef union {
         }) gps;
         int16_t unk1A;
         int16_t unk1C;
-        int16_t unk1E;
-        uint32_t rawTemperature;
-        uint32_t rawHumidity;
+        int16_t rawPressure;
+        int32_t rawTemperature;
+        int32_t rawHumidity;
         uint8_t thisCalibIndex;
         uint32_t calibFragment;
         uint16_t crc;
@@ -57,6 +57,9 @@ typedef union {
 
 typedef struct {
     float temperature;                          /* Temperature [°C] */
+    float humidity;                             /* Relative humidity [%] */
+    float batteryVoltage;                       /* Battery voltage [V] */
+    float pressure;                             /* Pressure [hPa] */
 } MRZ_CookedMetrology;
 
 
@@ -79,16 +82,12 @@ typedef struct _MRZ_InstanceData {
     __PACKED(union {
         uint32_t rawCalib[16];
         __PACKED(struct {
-            float calib1;
-            float calib2;
-            float calib3;
-            float calib4;
-            float calib5;
-            float calib6;
-            float calib7;
-            float calib8;
-            float calib9;
-            uint32_t calib10;
+            float calibNTC_A;
+            float calibNTC_B;
+            float calibNTC_C;
+            float calibADC_T[3];
+            float calibADC_U[3];
+            uint32_t rawVbat;
             uint32_t calib11;
             uint32_t calib12;
             uint32_t serialSonde;
@@ -112,6 +111,9 @@ LPCLIB_Result _MRZ_processConfigFrame (
 
 
 /* Check if the calibration block contains valid data for a given purpose */
+#define CALIB_TEMPERATURE           0x0000003Fl
+#define CALIB_HUMIDITY              0x000001FFl
+#define CALIB_VBAT                  0x00000200l
 #define CALIB_SERIALSONDE           0x00001000l
 #define CALIB_SERIALSENSOR          0x00002000l
 
@@ -126,6 +128,11 @@ void _MRZ_deleteInstance (MRZ_InstanceData *instance);
 /* Process the GPS frame */
 LPCLIB_Result _MRZ_processGpsFrame (
         MRZ_Packet *rawGps,
+        MRZ_InstanceData *instance);
+
+/* Process the PTU measurements */
+LPCLIB_Result _MRZ_processMetrology (
+        MRZ_Packet *packet,
         MRZ_InstanceData *instance);
 
 #endif
