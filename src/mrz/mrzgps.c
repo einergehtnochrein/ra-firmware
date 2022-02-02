@@ -30,6 +30,7 @@ LPCLIB_Result _MRZ_processGpsFrame (
     }
     instance->lastGpsTime = thisTime;
 
+    instance->gps.usedSats = rawGps->gps.usedSats;
     instance->gps.observerECEF.x = rawGps->gps.ecef_x / 100.0f;
     instance->gps.observerECEF.y = rawGps->gps.ecef_y / 100.0f;
     instance->gps.observerECEF.z = rawGps->gps.ecef_z / 100.0f;

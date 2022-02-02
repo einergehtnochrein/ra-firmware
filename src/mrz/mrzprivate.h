@@ -70,6 +70,7 @@ typedef struct {
 typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+    uint8_t usedSats;
 } MRZ_CookedGps;
 
 
