@@ -55,8 +55,8 @@ LPCLIB_Result _MRZ_processMetrology (
     }
 
     /* Sonde sends -1 if not equipped with pressure sensor */
-    if (packet->rawPressure != -1) {
-        pressure = packet->rawPressure * 0.2f;
+    if (packet->cookedPressure != -1) {
+        pressure = packet->cookedPressure * 0.2f;
     }
 
     instance->metro.temperature = temperature;

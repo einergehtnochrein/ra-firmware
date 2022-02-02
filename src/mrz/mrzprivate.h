@@ -39,16 +39,20 @@ typedef union {
             int16_t ecef_vx;
             int16_t ecef_vy;
             int16_t ecef_vz;
-            uint8_t unk17;
-            uint8_t unk18;
-            uint8_t unk19;
+            uint8_t usedSats;                   /* #sats in position solution. 0=position invalid */
+            uint8_t pAcc_m_mod256;              /* pAcc [m] mod256. Max range 255m.
+                                                 * Must have valid position.
+                                                 */
+            uint8_t pAcc_dm_mod256;             /* pAcc [dm] mod256. Max range 25m. Ignore if
+                                                 * pAcc_m_mod256 > 24.
+                                                 */
         }) gps;
-        int16_t unk1A;
-        int16_t unk1C;
-        int16_t rawPressure;
+        int16_t cookedTemperature;              /* Temperature [1/100 °C] */
+        int16_t cookedHumidity;                 /* Humidity [1/100 %] */
+        int16_t cookedPressure;                 /* [0.2 hPa], -1 if no sensor */
         int32_t rawTemperature;
         int32_t rawHumidity;
-        uint8_t thisCalibIndex;
+        uint8_t thisCalibIndex;                 /* 1...16 */
         uint32_t calibFragment;
         uint16_t crc;
     });
