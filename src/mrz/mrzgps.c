@@ -41,6 +41,13 @@ LPCLIB_Result _MRZ_processGpsFrame (
 
     GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
 
+    /* Invalidate position if this is not a valid position solution */
+    if (instance->gps.usedSats == 0) {
+        instance->gps.observerLLA.lat = NAN;
+        instance->gps.observerLLA.lon = NAN;
+        instance->gps.observerLLA.alt = NAN;
+    }
+
     return LPCLIB_SUCCESS;
 }
 
