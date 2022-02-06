@@ -113,10 +113,11 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
     }
 
     if (_MRZ_checkValidCalibration(instance, CALIB_SERIALSONDE | CALIB_SERIALSENSOR)) {
-        length = snprintf(s, sizeof(s), "%"PRIu32",14,0,%s,%"PRIu32,
+        length = snprintf(s, sizeof(s), "%"PRIu32",14,0,%s,%"PRIu32",%.1f",
                     instance->id,
                     instance->name,
-                    instance->calib.serialSensor
+                    instance->calib.serialSensor,
+                    instance->gps.pAcc
                     );
 
         if (length > 0) {
