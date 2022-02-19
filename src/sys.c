@@ -50,6 +50,9 @@
 #include "srsc.h"
 #include "sys.h"
 #include "config.h"
+#if (BOARD_RA == 2)
+#include "usbuser_config.h"
+#endif
 
 
 /** \file
@@ -728,15 +731,24 @@ LPCLIB_Result SYS_send2Host (int channel, const char *message)
         checksum += s[i];
     }
     UART_write(blePort, s, strlen(s));
+#if (BOARD_RA == 2)
+    USBSerial_write(s, strlen(s));
+#endif
 
     for (i = 0; i < (int)strlen(message); i++) {
         checksum += message[i];
     }
     UART_write(blePort, (uint8_t *)message, strlen(message));
+#if (BOARD_RA == 2)
+    USBSerial_write(message, strlen(message));
+#endif
 
     checksum += ',';
     snprintf(s, sizeof(s), ",%d\r", checksum % 100);
     UART_write(blePort, s, strlen(s));
+#if (BOARD_RA == 2)
+    USBSerial_write(s, strlen(s));
+#endif
 
     return LPCLIB_SUCCESS;
 }
@@ -1579,6 +1591,11 @@ static bool _SYS_checkEvent (SYS_Handle handle)
     if (UART_readLine(blePort, handle->commandLine, sizeof(handle->commandLine)) > 0) {
         haveEvent = true;
     }
+#if (BOARD_RA == 2)
+    else if (USBSERIAL_readLine(handle->commandLine, sizeof(handle->commandLine)) > 0) {
+        haveEvent = true;
+    }
+#endif
     else {
         /* There may have been partial data already copied into commandLine buffer (no complete line yet).
          * Make sure this won't be misinterpreted as a command.
