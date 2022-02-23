@@ -182,9 +182,6 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     /* DFM type indicator */
     special = 0;
     switch (instance->model) {
-        case DFM_MODEL_DFM09_AFRICA:
-            special |= (1u << 2);
-            break;
         case DFM_MODEL_DFM09_OLD:
         case DFM_MODEL_DFM09_NEW:
             special |= (1u << 3);
@@ -205,7 +202,6 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    /* Climb rate and ground speed may not be available (Burkina Faso version) */
     sClimbRate[0] = 0;
     if (!isnan(instance->gps.climbRate)) {
         sprintf(sClimbRate, "%.1f", instance->gps.climbRate);
@@ -253,11 +249,12 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%"PRIu32",2,0,%s,%.1f,%.1f",
+    length = sprintf(s, "%"PRIu32",2,0,%s,%.1f,%.1f,%d",
                 instance->id,
                 instance->name,
                 instance->gps.ehpe,
-                instance->gps.evpe
+                instance->gps.evpe,
+                instance->gps.mode
                 );
 
     if (length > 0) {

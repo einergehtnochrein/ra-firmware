@@ -26,7 +26,6 @@ typedef enum {
     DFM_MODEL_DFM06_NEW,
     DFM_MODEL_DFM09_OLD,
     DFM_MODEL_DFM09_NEW,
-    DFM_MODEL_DFM09_AFRICA,
     DFM_MODEL_PS15,
     DFM_MODEL_DFM17,
 } DFM_Model;
@@ -128,7 +127,7 @@ typedef struct {
     float evpe;                                 /* Estimated vertical position error [m] */
     float geoidCorrection;                      /* Difference geoid height to ellipsoid height [m] */
 
-    bool inBurkinaFaso;
+    uint8_t mode;                               /* DFM GPS mode (2, 3, 4) */
     bool newPosition;
 } DFM_CookedGps;
 

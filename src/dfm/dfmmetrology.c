@@ -82,7 +82,6 @@ LPCLIB_Result _DFM_processMetrologyBlock (
                 break;
 
             case DFM_MODEL_DFM09_NEW:
-            case DFM_MODEL_DFM09_AFRICA:
                 switch (channel - (int)instance->maxConfigChannel) {
                     case DFM09_CHANNEL_CONFIG_BATTERY_VOLTAGE:
                         instance->metro.batteryVoltage = u16value / 1000.0f;
