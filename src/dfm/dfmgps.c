@@ -261,6 +261,33 @@ static void _DFM_processGps (DFM_InstanceData *instance, struct _DFM_GpsDetect *
 }
 
 
+/* Process XDATA information in GPS subframe */
+static void _DFM_processXdata (DFM_InstanceData *instance, struct _DFM_GpsDetect *pDetect)
+{
+    _Bool haveXdata = false;
+
+    /* XDATA is available in GPS mode 4 only */
+    if (instance->gps.mode == 4) {
+        /* Need a non-zero header */
+        instance->xdata.header = pDetect->fragment[3].i16;
+        if (instance->xdata.header != 0) {
+            instance->xdata.x0_32 = pDetect->fragment[4].i32;
+            instance->xdata.x0_16 = pDetect->fragment[4].i16;
+            instance->xdata.x1_32 = pDetect->fragment[5].i32;
+            instance->xdata.x1_16 = pDetect->fragment[5].i16;
+            instance->xdata.x2_32 = pDetect->fragment[6].i32;
+            instance->xdata.x2_16 = pDetect->fragment[6].i16;
+            instance->xdata.x3_32 = pDetect->fragment[7].i32;
+            instance->xdata.x3_16 = pDetect->fragment[7].i16;
+
+            haveXdata = true;
+        }
+    }
+
+    instance->haveXdata = haveXdata;
+}
+
+
 LPCLIB_Result _DFM_processGpsBlock (
         const DFM_SubFrameGps *rawGps,
         DFM_InstanceData **instancePointer,
@@ -321,6 +348,7 @@ LPCLIB_Result _DFM_processGpsBlock (
             }
 
             _DFM_processGps(instance, p);
+            _DFM_processXdata(instance, p);
         }
 
         /* This GPS frame has been processed */

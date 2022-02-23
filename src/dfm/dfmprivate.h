@@ -165,6 +165,19 @@ typedef struct _DFM_InstanceData {
     DFM_CookedConfig config;
     DFM_CookedMetrology metro;
     DFM_CookedGps gps;
+
+    _Bool haveXdata;
+    struct {
+        uint16_t header;
+        uint32_t x0_32;
+        uint16_t x0_16;
+        uint32_t x1_32;
+        uint16_t x1_16;
+        uint32_t x2_32;
+        uint16_t x2_16;
+        uint32_t x3_32;
+        uint16_t x3_16;
+    } xdata;
 } DFM_InstanceData;
 
 

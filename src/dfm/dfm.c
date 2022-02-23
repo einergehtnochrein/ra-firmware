@@ -369,6 +369,30 @@ LPCLIB_Result DFM_processBlock (
 
                 result = LPCLIB_SUCCESS;
             }
+
+            /* Send XDATA if available */
+            if (handle->instance->haveXdata) {
+                handle->instance->haveXdata = false;
+
+                char xdata[80];
+                snprintf(xdata, sizeof(xdata), "%s,2,2,%04"PRIX16
+                                               "%08"PRIX32"%04"PRIX16
+                                               "%08"PRIX32"%04"PRIX16
+                                               "%08"PRIX32"%04"PRIX16
+                                               "%08"PRIX32"%04"PRIX16,
+                            handle->instance->name,
+                            handle->instance->xdata.header,
+                            handle->instance->xdata.x0_32,
+                            handle->instance->xdata.x0_16,
+                            handle->instance->xdata.x1_32,
+                            handle->instance->xdata.x1_16,
+                            handle->instance->xdata.x2_32,
+                            handle->instance->xdata.x2_16,
+                            handle->instance->xdata.x3_32,
+                            handle->instance->xdata.x3_16
+                            );
+                SYS_send2Host(HOST_CHANNEL_INFO, xdata);
+            }
         }
 
         /* Remember RX frequency (difference to nominal sonde frequency will be reported as frequency offset) */
