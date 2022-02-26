@@ -9,6 +9,7 @@
 
 #include "lpclib.h"
 #include "app.h"
+#include "config.h"
 #include "dfm.h"
 #include "dfmprivate.h"
 
@@ -127,36 +128,69 @@ static DFM_InstanceData *_DFM_getInstanceDataStructure (float frequencyMHz, LLA_
 
 
 
-/* Process regular sonde */
-static void _DFM_processGpsNormal (DFM_InstanceData *instance, struct _DFM_GpsDetect *pDetect)
+/* Process GPS subframe */
+static void _DFM_processGps (DFM_InstanceData *instance, struct _DFM_GpsDetect *pDetect)
 {
-    uint8_t n;
     int i;
-    double d;
     int32_t i32;
     int16_t i16;
+    double latitude = NAN;
+    double longitude = NAN;
+    float altitude = NAN;
+    float direction = NAN;
+    float climbrate = NAN;
+    float velocity = NAN;
 
+    switch (instance->gps.mode) {
+        case 2:
+            latitude = (double)pDetect->fragment[2].i32;
+            longitude = (double)pDetect->fragment[3].i32;
+            altitude = (float)pDetect->fragment[4].i32;
+            direction = (float)pDetect->fragment[3].i16;
+            climbrate = (float)pDetect->fragment[4].i16;
+            velocity = (float)pDetect->fragment[2].i16;
+            break;
 
-    /* Regular message */
-    d = ((double)pDetect->fragment[2].i32 / 1e7) * (M_PI / 180.0);
-    if ((d >= -90.0) && (d <= 90.0)) {
-        instance->gps.observerLLA.lat = d;
-        i16 = pDetect->fragment[2].i16;
-        instance->gps.observerLLA.velocity = (float)i16 / 100.0f;
+        case 3: case 4:
+            latitude = (double)pDetect->fragment[1].i32;
+            longitude = (double)pDetect->fragment[2].i32;
+            altitude = (float)pDetect->fragment[3].i32;
+            direction = (float)pDetect->fragment[1].i16;
+            climbrate = (float)pDetect->fragment[2].i16;
+            velocity = (float)pDetect->fragment[0].i16;
+            break;
+    }
 
-        d = (double)pDetect->fragment[3].i32;
-        instance->gps.observerLLA.lon = (d / 1e7) * (M_PI / 180.0);
-        uint16_t dir = (uint16_t)pDetect->fragment[3].i16;
-        if (dir >= 360*100) {
-            dir = 360*100-1;
-        }
-        instance->gps.observerLLA.direction = (float)dir / 100.0f * (M_PI / 180.0f);
-        /* NOTE: Altitude over ellipsoid. Geoid height correction is sent in another fragment. */
-        instance->gps.observerLLA.alt = (double)pDetect->fragment[4].i32 / 100.0;
-        instance->gps.climbRate = (float)pDetect->fragment[4].i16 / 100.0f;
-        instance->gps.ehpe = (float)((uint32_t)pDetect->fragment[5].i32 & 0xFFFF) / 100.0f;
-        instance->gps.evpe = pDetect->fragment[5].i16 / 100.0f;
-        instance->gps.geoidCorrection = (float)(pDetect->fragment[5].i32 / 65536) / 100.0f;
+    latitude *= 1e-7;
+    latitude = fmin(latitude, 90.0);
+    latitude = fmax(latitude, -90.0);
+    latitude *= M_PI / 180.0;
+    longitude *= 1e-7;
+    longitude = fmin(longitude, 180.0);
+    longitude = fmax(longitude, -180.0);
+    longitude *= M_PI / 180.0;
+    altitude *= 1e-2f;
+    direction *= 1e-2f;
+    direction = fmodf(direction, 360.0f);
+    direction *= M_PI / 180.0f;
+    climbrate *= 1e-2f;
+    velocity *= 1e-2f;
+
+    instance->gps.observerLLA.lat = latitude;
+    instance->gps.observerLLA.lon = longitude;
+    instance->gps.observerLLA.alt = altitude;
+    instance->gps.observerLLA.direction = direction;
+    instance->gps.observerLLA.climbRate = climbrate;
+    instance->gps.observerLLA.velocity = velocity;
+
+    float ehpe = NAN;
+    float evpe = NAN;
+    float geoidCorrection = CONFIG_getGeoidHeight();
+
+    if (instance->gps.mode == 2) {
+        ehpe = (float)((uint32_t)pDetect->fragment[5].i32 & 0xFFFF) / 100.0f;
+        evpe = (float)pDetect->fragment[5].i16 / 100.0f;
+        geoidCorrection = (float)(pDetect->fragment[5].i32 / 65536) / 100.0f;
 
         i32 = pDetect->fragment[6].i32;
         i16 = pDetect->fragment[6].i16;
@@ -195,101 +229,62 @@ static void _DFM_processGpsNormal (DFM_InstanceData *instance, struct _DFM_GpsDe
             instance->gps.sats[10].snr  = ((uint16_t)i16 >>  8) & 0x3F;
             instance->gps.sats[11].snr  = ((uint16_t)i16 >>  0) & 0x3F;
         }
+    }
+    else {
+         for (i = 0; i < 12; i++) {
+             instance->gps.sats[i].PRN = 0;
+             instance->gps.sats[i].snr = 0;
+         }
+    }
 
-        i32 = pDetect->fragment[8].i32;
-        instance->gps.utc.year = ((uint32_t)i32 >> 20) & 0xFFF;
-        instance->gps.utc.month = ((uint32_t)i32 >> 16) & 0xF;
-        instance->gps.utc.day = ((uint32_t)i32 >> 11) & 0x1F;
-        instance->gps.utc.hour = ((uint32_t)i32 >> 6) & 0x1F;
-        instance->gps.utc.minute = ((uint32_t)i32 >> 0) & 0x3F;
+    instance->gps.ehpe = ehpe;
+    instance->gps.evpe = evpe;
+    instance->gps.geoidCorrection = geoidCorrection;
+    /* Geoid height correction */
+    instance->gps.observerLLA.alt += instance->gps.geoidCorrection;
 
-        i16 = pDetect->fragment[8].i16;
-        if (instance->model != DFM_MODEL_PS15) {
-//            instance->gps.usedSats = (uint32_t)i16 / 256;
-        }
+    /* Convert to ECEF coordinate system */
+    GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
+    instance->gps.newPosition = true;
 
-        // [1].i32 is a mask that indicates which PRN is used for this
-        // position solution. Bit0=PRN1, bit31=PRN32
-        i32 = pDetect->fragment[1].i32;
-        instance->gps.usedSatsMask = (uint32_t)i32;
-        // Count number of used satellites in bitmask
-        n = 0;
-        for (i = 0; i < 31; i++) {
-            if (instance->gps.usedSatsMask & (1u << i)) {
-                ++n;
-            }
-        }
-        // In case the number of satellites is not transmitted in field [8].i16,
-        // use counted satellites from bitmask instead.
-if(1){//        if (n > instance->gps.usedSats) {
-            instance->gps.usedSats = n;
-        }
+    /* YYMMDD HHMM is the same for all modes */
+    i32 = pDetect->fragment[8].i32;
+    instance->gps.utc.year = ((uint32_t)i32 >> 20) & 0xFFF;
+    instance->gps.utc.month = ((uint32_t)i32 >> 16) & 0xF;
+    instance->gps.utc.day = ((uint32_t)i32 >> 11) & 0x1F;
+    instance->gps.utc.hour = ((uint32_t)i32 >> 6) & 0x1F;
+    instance->gps.utc.minute = ((uint32_t)i32 >> 0) & 0x3F;
 
-        /* Geoid height correction */
-        instance->gps.observerLLA.alt += instance->gps.geoidCorrection;
-
-        if (instance->gps.usedSats == 0) {
-            instance->gps.observerLLA.lat = NAN;
-            instance->gps.observerLLA.lon = NAN;
-        }
-        else {
-            GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
-        }
-
-        instance->gps.newPosition = true;
+    if (pDetect->receivedFragmentsMask & 0x100) {
+        instance->gps.usedSatsMask = pDetect->fragment[8].i16 >> 8;
     }
 }
 
 
-/* Process Graw test sonde with "Africa bit" */
-static void _DFM_processGpsBurkinaFaso (DFM_InstanceData *instance, struct _DFM_GpsDetect *pDetect)
+/* Process XDATA information in GPS subframe */
+static void _DFM_processXdata (DFM_InstanceData *instance, struct _DFM_GpsDetect *pDetect)
 {
-    int i;
-    double d;
-    int32_t i32;
+    _Bool haveXdata = false;
 
+    /* XDATA is available in GPS mode 4 only */
+    if (instance->gps.mode == 4) {
+        /* Need a non-zero header */
+        instance->xdata.header = pDetect->fragment[3].i16;
+        if (instance->xdata.header != 0) {
+            instance->xdata.x0_32 = pDetect->fragment[4].i32;
+            instance->xdata.x0_16 = pDetect->fragment[4].i16;
+            instance->xdata.x1_32 = pDetect->fragment[5].i32;
+            instance->xdata.x1_16 = pDetect->fragment[5].i16;
+            instance->xdata.x2_32 = pDetect->fragment[6].i32;
+            instance->xdata.x2_16 = pDetect->fragment[6].i16;
+            instance->xdata.x3_32 = pDetect->fragment[7].i32;
+            instance->xdata.x3_16 = pDetect->fragment[7].i16;
 
-    d = ((double)pDetect->fragment[1].i32 / 1e7) * (M_PI / 180.0);
-    if ((d >= -90.0) && (d <= 90.0)) {
-        instance->gps.observerLLA.lat = d;
-        d = (double)pDetect->fragment[2].i32;
-        instance->gps.observerLLA.lon = (d / 1e7) * (M_PI / 180.0);
-        instance->gps.observerLLA.velocity = NAN;
-        instance->gps.observerLLA.direction = NAN;
-        d = (double)pDetect->fragment[3].i32;
-        instance->gps.observerLLA.alt = d / 100.0;      /* Geoid height in this version of DFM-09! */
-        instance->gps.climbRate = NAN;
-        instance->gps.ehpe = NAN;
-        instance->gps.evpe = NAN;
-
-        for (i = 0; i < 12; i++) {
-            instance->gps.sats[i].PRN = 0;
-            instance->gps.sats[i].snr = 0;
+            haveXdata = true;
         }
-
-        /* Get GPS time if that data field is available */
-        if (pDetect->receivedFragmentsMask & (1u << 8)) {
-            i32 = pDetect->fragment[8].i32;
-            instance->gps.utc.year = ((uint32_t)i32 >> 20) & 0xFFF;
-            instance->gps.utc.month = ((uint32_t)i32 >> 16) & 0xF;
-            instance->gps.utc.day = ((uint32_t)i32 >> 11) & 0x1F;
-            instance->gps.utc.hour = ((uint32_t)i32 >> 6) & 0x1F;
-            instance->gps.utc.minute = ((uint32_t)i32 >> 0) & 0x3F;
-        }
-
-        instance->gps.usedSats = pDetect->fragment[8].i16 / 256;
-        instance->gps.usedSatsMask = 0;
-
-        if ((instance->gps.observerLLA.lat == 0) && (instance->gps.observerLLA.lon == 0)) {
-            instance->gps.observerLLA.lat = NAN;
-            instance->gps.observerLLA.lon = NAN;
-        }
-        else {
-            GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
-        }
-
-        instance->gps.newPosition = true;
     }
+
+    instance->haveXdata = haveXdata;
 }
 
 
@@ -332,8 +327,8 @@ LPCLIB_Result _DFM_processGpsBlock (
     }
 
     if (processNow) {
-        /* Insist on seeing fragments 1...7 (fragments 0 and 8 are less important) */
-        if ((p->receivedFragmentsMask & 0x0FE) == 0x0FE) {
+        /* Insist on seeing fragments 0...7 (fragment 8 is less important) */
+        if ((p->receivedFragmentsMask & 0x0FF) == 0x0FF) {
             /* Allocate new instance if new sonde! */
             DFM_InstanceData *instance = _DFM_getInstanceDataStructure(rxFrequencyHz / 1e6f, NULL);
             *instancePointer = instance;
@@ -342,41 +337,18 @@ LPCLIB_Result _DFM_processGpsBlock (
                 return LPCLIB_ERROR;
             }
 
-            /* Check for the Burkina Faso syndrom... */
-            int africaEvidence = 0;
-            if ((p->fragment[4].i32 == 0) && (p->fragment[4].i16 == 0)) {
-                ++africaEvidence;
-            }
-            if (p->fragment[1].i32 == p->fragment[5].i32) {
-                ++africaEvidence;
-            }
-            if (p->fragment[2].i32 == p->fragment[6].i32) {
-                ++africaEvidence;
-            }
-            if (p->fragment[1].i16 == p->fragment[6].i16) {
-                ++africaEvidence;
-            }
-            if (p->fragment[3].i32 == p->fragment[7].i32) {
-                ++africaEvidence;
-            }
-
-            if (africaEvidence >= 3) {
-                instance->gps.inBurkinaFaso = true;
-            }
-            else {
-                instance->gps.inBurkinaFaso = false;
+            /* Interpretation of fields depends on DFM GPS mode */
+            instance->gps.mode = (p->fragment[0].i32 >> 8) & 0xFF;
+            if ((instance->gps.mode < 2) || (instance->gps.mode > 4)) {
+                instance->gps.mode = 2;
             }
 
             if (sondeType == SONDE_DFM_INVERTED) {
-                instance->model = instance->gps.inBurkinaFaso ? DFM_MODEL_DFM09_AFRICA : DFM_MODEL_DFM09_NEW;
+                instance->model = DFM_MODEL_DFM09_NEW;
             }
 
-            if (instance->gps.inBurkinaFaso) {
-                _DFM_processGpsBurkinaFaso(instance, p);
-            }
-            else {
-                _DFM_processGpsNormal(instance, p);
-            }
+            _DFM_processGps(instance, p);
+            _DFM_processXdata(instance, p);
         }
 
         /* This GPS frame has been processed */
