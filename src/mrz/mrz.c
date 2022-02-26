@@ -91,29 +91,38 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,%d,,%.1f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
+                    instance->gps.usedSats,
                     latitude,                               /* Latitude [degrees] */
                     longitude,                              /* Longitude [degrees] */
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
+                    instance->metro.temperature,            /* Temperature [°C] */
+                    instance->metro.pressure,               /* Pressure [hPa] */
+                    instance->metro.humidity,               /* Relative humidity [%] */
                     SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->frameCounter,
+                    instance->metro.batteryVoltage          /* Battery voltage [V] */
                     );
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",14,0,%s",
-                instance->id,
-                "MRZ"
-                );
+    if (_MRZ_checkValidCalibration(instance, CALIB_SERIALSONDE | CALIB_SERIALSENSOR)) {
+        length = snprintf(s, sizeof(s), "%"PRIu32",14,0,%s,%"PRIu32",%.1f",
+                    instance->id,
+                    instance->name,
+                    instance->calib.serialSensor,
+                    instance->gps.pAcc
+                    );
 
-    if (length > 0) {
-        SYS_send2Host(HOST_CHANNEL_INFO, s);
+        if (length > 0) {
+            SYS_send2Host(HOST_CHANNEL_INFO, s);
+        }
     }
 }
 
@@ -127,7 +136,7 @@ static void _MRZ_sendRaw (MRZ_Handle handle, MRZ_Packet *p1)
                      "%"PRIu32",14,1,"
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
-                     "%08"PRIX32"%02"PRIX8"%02"PRIX8"%02"PRIX8,
+                     "%08"PRIX32"%02"PRIX32"%02"PRIX32"%02"PRIX32,
                      handle->instance->id,
                      __REV(p1->rawData.dat32[0]),
                      __REV(p1->rawData.dat32[1]),
@@ -140,9 +149,9 @@ static void _MRZ_sendRaw (MRZ_Handle handle, MRZ_Packet *p1)
                      __REV(p1->rawData.dat32[8]),
                      __REV(p1->rawData.dat32[9]),
                      __REV(p1->rawData.dat32[10]),
-                     p1->rawData.dat8[44],
-                     p1->rawData.dat8[45],
-                     p1->rawData.dat8[46]
+                     (uint32_t)p1->rawData.dat8[44],
+                     (uint32_t)p1->rawData.dat8[45],
+                     (uint32_t)p1->rawData.dat8[46]
                     );
 
     SYS_send2Host(HOST_CHANNEL_INFO, s);
@@ -170,6 +179,7 @@ LPCLIB_Result MRZ_processBlock (
 
             result = _MRZ_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
             if (result == LPCLIB_SUCCESS) {
+                _MRZ_processMetrology(&handle->packet, handle->instance);
                 result = _MRZ_processGpsFrame(&handle->packet, handle->instance);
                 if (result == LPCLIB_SUCCESS) {
                     _MRZ_sendKiss(handle->instance);

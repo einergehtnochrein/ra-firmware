@@ -513,6 +513,8 @@ void USBUSER_worker (void)
                 break;
         }
     }
+
+    USBSERIAL_worker();
 }
 
 

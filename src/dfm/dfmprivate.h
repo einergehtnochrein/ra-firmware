@@ -26,7 +26,6 @@ typedef enum {
     DFM_MODEL_DFM06_NEW,
     DFM_MODEL_DFM09_OLD,
     DFM_MODEL_DFM09_NEW,
-    DFM_MODEL_DFM09_AFRICA,
     DFM_MODEL_PS15,
     DFM_MODEL_DFM17,
 } DFM_Model;
@@ -128,7 +127,7 @@ typedef struct {
     float evpe;                                 /* Estimated vertical position error [m] */
     float geoidCorrection;                      /* Difference geoid height to ellipsoid height [m] */
 
-    bool inBurkinaFaso;
+    uint8_t mode;                               /* DFM GPS mode (2, 3, 4) */
     bool newPosition;
 } DFM_CookedGps;
 
@@ -166,6 +165,19 @@ typedef struct _DFM_InstanceData {
     DFM_CookedConfig config;
     DFM_CookedMetrology metro;
     DFM_CookedGps gps;
+
+    _Bool haveXdata;
+    struct {
+        uint16_t header;
+        uint32_t x0_32;
+        uint16_t x0_16;
+        uint32_t x1_32;
+        uint16_t x1_16;
+        uint32_t x2_32;
+        uint16_t x2_16;
+        uint32_t x3_32;
+        uint16_t x3_16;
+    } xdata;
 } DFM_InstanceData;
 
 

@@ -37,6 +37,8 @@
 #define TX_BUFFER_SIZE1                     1024
 #define RX_BUFFER_SIZE1                     1024
 
+#define USB_SERIAL_TX_TIMEOUT               50
+
 struct _USBSerial_Context {
     USBD_HANDLE_T hUsb;
     USBD_HANDLE_T hCdc;
@@ -52,6 +54,7 @@ struct _USBSerial_Context {
     volatile int txReadIndex;
     int txPendingIndex;
     bool txBusy;
+    uint32_t timeout;
 
     uint8_t *pRxBuffer;
     int rxBufferSize;
@@ -264,6 +267,79 @@ int USBSerial_read (void *message, int maxLen)
 }
 
 
+/* Read a complete line (terminated by either CR or LF). */
+int USBSERIAL_readLine (void *buffer, int nbytes)
+{
+    struct _USBSerial_Context *handle = &usbSerialContext;
+    int nread = 0;
+    int ri = handle->rxReadIndex;
+    bool lineComplete = false;
+    bool overflow = false;
+
+    if (!USBUSER_isConfigured()) {
+        return 0;
+    }
+
+    /* Verify buffer has enough room */
+    if (nbytes < 1) {
+        return 0;
+    }
+
+    /* Loop over all characters in RX FIFO, until either all characters are consumed
+     * or an end-of-line marker is found.
+     */
+    while (ri != handle->rxWriteIndex) {
+        char c = handle->pRxBuffer[ri];
+
+        ++ri;
+        if (ri >= handle->rxBufferSize) {
+            ri = 0;
+        }
+
+        /* Store in buffer (if room left) */
+        if (nbytes > 1) {   /* We need room for terminating 0! */
+            ((uint8_t *)buffer)[nread] = c;
+            --nbytes;
+            ++nread;
+        }
+        else {
+            overflow = true;
+        }
+
+        /* Line end? */
+        if ((c == '\n') || (c == '\r')) {
+            lineComplete = true;
+
+            /* Terminate string */
+            ((uint8_t *)buffer)[nread] = 0;
+
+            /* Remove characters from RX buffer */
+            handle->rxReadIndex = ri;
+
+            if (overflow) {
+                nread = -1;
+            }
+            break;
+        }
+    }
+
+    /* RX FIFO full without EOL character? */
+    if (nread + 1 >= handle->rxBufferSize) {
+        /* Overflow error (line too long) */
+        nread = -1;
+
+        /* Remove characters from RX buffer */
+        handle->rxReadIndex = ri;
+        lineComplete = true;
+    }
+
+    if (!lineComplete) {
+        nread = 0;
+    }
+
+    return nread;
+}
+
 
 void USBSerial_write (const void *message, int len)
 {
@@ -284,16 +360,14 @@ void USBSerial_write (const void *message, int len)
     bytesFree = (ri > wi) ? ri - wi - 1 : (int)handle->txBufferSize - (wi - ri);
 
     /* Drop data if not enough space left */
-    if (bytesFree < len) {
-        return;
+    if (bytesFree >= len) {
+        /* Copy into TX buffer */
+        for (i = 0; i < len; i++) {
+            handle->pTxBuffer[wi] = ((const uint8_t *)message)[i];
+            wi = (wi + 1) % handle->txBufferSize;
+        }
+        handle->txWriteIndex = wi;
     }
-
-    /* Copy into TX buffer */
-    for (i = 0; i < len; i++) {
-        handle->pTxBuffer[wi] = ((const uint8_t *)message)[i];
-        wi = (wi + 1) % handle->txBufferSize;
-    }
-    handle->txWriteIndex = wi;
 
     /* If TX machine is no longer running, kick-start it now */
     if (!handle->txBusy) {
@@ -309,6 +383,8 @@ void USBSerial_write (const void *message, int len)
         if (count) {
             count = pRom->pUsbd->hw->WriteEP(handle->hUsb, handle->in_ep, &handle->pTxBuffer[handle->txReadIndex], count);
             handle->txPendingIndex = (handle->txReadIndex + count) % handle->txBufferSize;
+
+            handle->timeout = os_time;
         }
     }
 }
@@ -317,6 +393,13 @@ void USBSerial_write (const void *message, int len)
 void USBSERIAL_worker (void)
 {
     struct _USBSerial_Context *handle = &usbSerialContext;
+
+    /* Reset if timeout occurs */
+    if (os_time - handle->timeout > USB_SERIAL_TX_TIMEOUT) {
+        handle->txReadIndex = handle->txPendingIndex;
+        handle->txBusy = false;
+        return;
+    }
 
     if (handle->haveRxData) {
         /* Enough room in RX buffer for next fragment? */

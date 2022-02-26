@@ -30,6 +30,13 @@ LPCLIB_Result _MRZ_processGpsFrame (
     }
     instance->lastGpsTime = thisTime;
 
+    instance->gps.usedSats = rawGps->gps.usedSats;
+    float pAcc = rawGps->gps.pAcc_m_mod256;
+    if (pAcc < 25.0f) {
+        pAcc = (float)rawGps->gps.pAcc_dm_mod256 / 10.0f;
+    }
+    instance->gps.pAcc = pAcc;
+
     instance->gps.observerECEF.x = rawGps->gps.ecef_x / 100.0f;
     instance->gps.observerECEF.y = rawGps->gps.ecef_y / 100.0f;
     instance->gps.observerECEF.z = rawGps->gps.ecef_z / 100.0f;
@@ -39,6 +46,14 @@ LPCLIB_Result _MRZ_processGpsFrame (
     GPS_convertECEF2LLA(&instance->gps.observerECEF, &instance->gps.observerLLA);
 
     GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
+
+    /* Invalidate position if this is not a valid position solution */
+    if (instance->gps.usedSats == 0) {
+        instance->gps.observerLLA.lat = NAN;
+        instance->gps.observerLLA.lon = NAN;
+        instance->gps.observerLLA.alt = NAN;
+        instance->gps.pAcc = NAN;
+    }
 
     return LPCLIB_SUCCESS;
 }

@@ -39,16 +39,20 @@ typedef union {
             int16_t ecef_vx;
             int16_t ecef_vy;
             int16_t ecef_vz;
-            uint8_t unk17;
-            uint8_t unk18;
-            uint8_t unk19;
+            uint8_t usedSats;                   /* #sats in position solution. 0=position invalid */
+            uint8_t pAcc_m_mod256;              /* pAcc [m] mod256. Max range 255m.
+                                                 * Must have valid position.
+                                                 */
+            uint8_t pAcc_dm_mod256;             /* pAcc [dm] mod256. Max range 25m. Ignore if
+                                                 * pAcc_m_mod256 > 24.
+                                                 */
         }) gps;
-        int16_t unk1A;
-        int16_t unk1C;
-        int16_t unk1E;
-        uint32_t unk20;
-        uint32_t unk24;
-        uint8_t thisCalibIndex;
+        int16_t cookedTemperature;              /* Temperature [1/100 °C] */
+        int16_t cookedHumidity;                 /* Humidity [1/100 %] */
+        int16_t cookedPressure;                 /* [0.2 hPa], -1 if no sensor */
+        int32_t rawTemperature;
+        int32_t rawHumidity;
+        uint8_t thisCalibIndex;                 /* 1...16 */
         uint32_t calibFragment;
         uint16_t crc;
     });
@@ -57,12 +61,17 @@ typedef union {
 
 typedef struct {
     float temperature;                          /* Temperature [°C] */
+    float humidity;                             /* Relative humidity [%] */
+    float batteryVoltage;                       /* Battery voltage [V] */
+    float pressure;                             /* Pressure [hPa] */
 } MRZ_CookedMetrology;
 
 
 typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+    uint8_t usedSats;
+    float pAcc;                                 /* Position Accuracy [m] */
 } MRZ_CookedGps;
 
 
@@ -70,6 +79,7 @@ typedef struct {
 typedef struct _MRZ_InstanceData {
     struct _MRZ_InstanceData *next;
     uint32_t id;
+    char name[20];
     uint16_t frameCounter;
     float rxFrequencyMHz;
     uint32_t lastUpdated;
@@ -78,20 +88,16 @@ typedef struct _MRZ_InstanceData {
     __PACKED(union {
         uint32_t rawCalib[16];
         __PACKED(struct {
-            float calib1;
-            float calib2;
-            float calib3;
-            float calib4;
-            float calib5;
-            float calib6;
-            float calib7;
-            float calib8;
-            float calib9;
-            uint32_t calib10;
+            float calibNTC_A;
+            float calibNTC_B;
+            float calibNTC_C;
+            float calibADC_T[3];
+            float calibADC_U[3];
+            uint32_t rawVbat;
             uint32_t calib11;
             uint32_t calib12;
-            uint32_t calib13;
-            uint32_t calib14;
+            uint32_t serialSonde;
+            uint32_t serialSensor;
             uint32_t ddmmyy_production;
             uint32_t ddmmyy_current;
         });
@@ -109,6 +115,16 @@ LPCLIB_Result _MRZ_processConfigFrame (
         MRZ_InstanceData **instancePointer,
         float rxFrequencyHz);
 
+
+/* Check if the calibration block contains valid data for a given purpose */
+#define CALIB_TEMPERATURE           0x0000003Fl
+#define CALIB_HUMIDITY              0x000001FFl
+#define CALIB_VBAT                  0x00000200l
+#define CALIB_SERIALSONDE           0x00001000l
+#define CALIB_SERIALSENSOR          0x00002000l
+
+bool _MRZ_checkValidCalibration(MRZ_InstanceData *instance, uint32_t purpose);
+
 /* Iterate through instances */
 bool _MRZ_iterateInstance (MRZ_InstanceData **instance);
 
@@ -118,6 +134,11 @@ void _MRZ_deleteInstance (MRZ_InstanceData *instance);
 /* Process the GPS frame */
 LPCLIB_Result _MRZ_processGpsFrame (
         MRZ_Packet *rawGps,
+        MRZ_InstanceData *instance);
+
+/* Process the PTU measurements */
+LPCLIB_Result _MRZ_processMetrology (
+        MRZ_Packet *packet,
         MRZ_InstanceData *instance);
 
 #endif

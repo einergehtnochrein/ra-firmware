@@ -1,4 +1,6 @@
 
+#include <inttypes.h>
+
 #include "lpclib.h"
 #include "app.h"
 #include "mrz.h"
@@ -112,10 +114,26 @@ LPCLIB_Result _MRZ_processConfigFrame (
         instance->calib.rawCalib[fragmentIndex] = packet->calibFragment;
     }
 
+    /* Build name(s) if available */
+    if (_MRZ_checkValidCalibration(instance, CALIB_SERIALSONDE)) {
+        snprintf(instance->name, sizeof(instance->name), "%06"PRIu32, instance->calib.serialSonde);
+    }
+
     /* Set time marker to be able to identify old records */
     instance->lastUpdated = os_time;
 
     return result;
+}
+
+
+/* Check if the calibration block contains valid data for a given purpose */
+bool _MRZ_checkValidCalibration(MRZ_InstanceData *instance, uint32_t purpose)
+{
+    if (!instance) {
+        return false;
+    }
+
+    return (instance->fragmentValidFlags & purpose) == purpose;
 }
 
 
