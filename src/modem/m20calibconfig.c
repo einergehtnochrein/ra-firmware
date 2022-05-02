@@ -109,12 +109,24 @@ LPCLIB_Result _M20_processConfigBlock (
      *   1 % 12 = 1,    1 / 12 = 0  --> February 2020   "002"
      * 118 % 12 = 10, 118 / 12 = 9  --> November 2019   "911"
      *
-     * B0(7) is set in all cases, and very likely indicates the middle "2" of the serial number.
+     * B1[1:0]:B0[7] encodes the middle number: 1 --> "-2-", 2 --> "-3-"
+     *
+     * Other presentation:
+     *    [2]      [1]       [0]
+     * 00000000 111011|00 1|1110110    911-2-00059
+     * ---------------|----|-------
+     *        59         1    118
+     *
+     *    [2]      [1]       [0]
+     * 00001111 101001|01 0|0000101    006-3-01001
+     * ---------------|----|-------
+     *       1001        2     5
      */
     snprintf(s, sizeof(s), "%d%02d-%d-%05d",
             (payload->inner.serial[0] % 128) / 12,              /* year (0...9) */
             1 + (payload->inner.serial[0] % 128) % 12,          /* month (1...12) */
-            1 + payload->inner.serial[0] / 128,                 /* ? (1...2) */
+            1 + (payload->inner.serial[0] / 128                 /* fab location (1/2=?, 3=Ury) */
+                | (payload->inner.serial[1] & 3)),
             ((uint16_t)payload->inner.serial[2] << 6)           /* serial (0...16383) */
                 | ((uint16_t)payload->inner.serial[1] >> 2)
             );
