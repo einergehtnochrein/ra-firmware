@@ -145,8 +145,13 @@ LPCLIB_Result BL652_setMode (BL652_Handle handle, int mode)
     osDelay(5);
     GPIO_writeBit(handle->gpioNRESET, 1);
     osDelay(500);
-    GPIO_writeBit(handle->gpioNAUTORUN, 0);
     GPIO_writeBit(handle->gpioSIO02, 0);
+#if (BOARD_RA == 2)
+    /* NOTE:
+     * Setting AUTORUN=0 leads to problems on Ra1 where SIO02 is tied to VDD.
+     */
+    GPIO_writeBit(handle->gpioNAUTORUN, 0);
+#endif
 
     return LPCLIB_SUCCESS;
 }
