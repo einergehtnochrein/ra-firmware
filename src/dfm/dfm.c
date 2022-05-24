@@ -203,8 +203,8 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
     sClimbRate[0] = 0;
-    if (!isnan(instance->gps.climbRate)) {
-        sprintf(sClimbRate, "%.1f", instance->gps.climbRate);
+    if (!isnan(instance->gps.observerLLA.climbRate)) {
+        sprintf(sClimbRate, "%.1f", instance->gps.observerLLA.climbRate);
     }
     sVelocity[0] = 0;
     if (!isnan(instance->gps.observerLLA.velocity)) {

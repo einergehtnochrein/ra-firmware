@@ -256,7 +256,7 @@ static void _DFM_processGps (DFM_InstanceData *instance, struct _DFM_GpsDetect *
     instance->gps.utc.minute = ((uint32_t)i32 >> 0) & 0x3F;
 
     if (pDetect->receivedFragmentsMask & 0x100) {
-        instance->gps.usedSatsMask = pDetect->fragment[8].i16 >> 8;
+        instance->gps.usedSats = pDetect->fragment[8].i16 >> 8;
     }
 }
 
