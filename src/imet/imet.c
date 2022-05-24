@@ -150,9 +150,12 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%"PRIu32",6,0,%s",
+    length = sprintf(s, "%"PRIu32",6,0,%s,%.1f,%.1f,%.1f",
                 instance->id,
-                instance->name
+                instance->name,
+                instance->metro.temperatureInternal,
+                instance->metro.temperaturePSensor,
+                instance->metro.temperatureUSensor
                 );
 
     if (length > 0) {
