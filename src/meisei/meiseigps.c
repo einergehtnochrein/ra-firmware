@@ -75,7 +75,8 @@ LPCLIB_Result _MEISEI_processGpsFrame (
             f = _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 9);
             instance->gps.observerLLA.direction = (f / 100.0f) * (float)(M_PI / 180.0f);
 
-            instance->gps.observerLLA.climbRate = NAN;
+            f = (int16_t)_MEISEI_getPayloadHalfWord(instance->gpsPacketOdd.fields, 1);
+            instance->gps.observerLLA.climbRate = f * 0.051444f;    /* [1/10 kn] --> [m/s] */
 
             GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
         }
