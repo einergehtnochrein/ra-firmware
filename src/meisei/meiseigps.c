@@ -70,7 +70,7 @@ LPCLIB_Result _MEISEI_processGpsFrame (
             instance->gps.observerLLA.alt = ((i32 >> 8) / 1e2);     /* Altitude is a 24-bit field */
 
             f = _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 10);
-            instance->gps.observerLLA.velocity = (f / 200.0f);
+            instance->gps.observerLLA.velocity = (f * 5.1444444e-3f);
 
             f = _MEISEI_getPayloadHalfWord(instance->gpsPacketEven.fields, 9);
             instance->gps.observerLLA.direction = (f / 100.0f) * (float)(M_PI / 180.0f);
