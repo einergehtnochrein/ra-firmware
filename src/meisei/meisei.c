@@ -113,12 +113,13 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",11,0,%"PRIu32",%"PRIu32",%"PRIu32",%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",11,0,%"PRIu32",%"PRIu32",%"PRIu32",%s,%.0f",
                 instance->id,
                 instance->serialSonde,
                 instance->serialSensorBoom,
                 instance->serialPcb,
-                sModel
+                sModel,
+                instance->metro.txTemperature
                 );
 
     if (length > 0) {

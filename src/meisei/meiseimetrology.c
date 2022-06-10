@@ -46,6 +46,12 @@ LPCLIB_Result _MEISEI_processMetrology (
                 humidity = fminf(humidity, 100.0f);
             }
         }
+
+        /* Radio temperature */
+        if ((fragment / 2) % 2 == 0) {
+            instance->metro.txTemperature =
+                (_MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 9) % 256) * 0.5f - 64.0f;
+        }
     }
 
     instance->metro.temperature = temperature;

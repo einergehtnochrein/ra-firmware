@@ -35,6 +35,7 @@ typedef struct {
     float temperature;                          /* Temperature [°C] */
     float humidity;                             /* Relative humidity [%] */
     float cpuTemperature;                       /* CPU temperature [°C] */
+    float txTemperature;                        /* Radio (Si4032) temperature [°C] */
 } MEISEI_CookedMetrology;
 
 
