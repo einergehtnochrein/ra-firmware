@@ -104,6 +104,7 @@ uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index);
 #define CALIB_SERIAL_SENSOR_BOOM    0x0000000000000010ll
 #define CALIB_SERIAL_PCB            0x0000000000000004ll
 #define CALIB_HUMIDITY              0x001E000000000000ll
+#define CALIB_MAIN_TEMPERATURE      0x01E01FFE1FFE0000ll
 
 bool _MEISEI_checkValidCalibration(MEISEI_InstanceData *instance, uint64_t purpose);
 

@@ -31,9 +31,16 @@ LPCLIB_Result _MEISEI_processMetrology (
             instance->refFreq = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 1);
         }
 
+        /* Main temperature and humidity calculations are based in part on description found in
+         * the GRUAN document "Technical characteristics and GRUAN data processing for the Meisei
+         * RS-11G and iMS-100 radiosondes", Rev 1.0 (2018-02-21):
+         * https://www.gruan.org/gruan/editor/documents/gruan/GRUAN-TD-5_MeiseiRadiosondes_v1_20180221.pdf
+         */
+
         /* Relative humidity */
         if (_MEISEI_checkValidCalibration(instance, CALIB_HUMIDITY)) {
             if (!isnan(instance->refFreq)) {
+                /* See GRUAN document, part D */
                 f = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 6);
                 f = f / instance->refFreq * 4.0f;
                 humidity = 0.0f
@@ -46,6 +53,49 @@ LPCLIB_Result _MEISEI_processMetrology (
                 humidity = fminf(humidity, 100.0f);
             }
         }
+
+        /* Main temperature sensor */
+        if (_MEISEI_checkValidCalibration(instance, CALIB_MAIN_TEMPERATURE)) {
+            if (!isnan(instance->refFreq)) {
+                /* See GRUAN document, part B */
+                f = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 5);
+                f = f / instance->refFreq * 4.0f;
+                if (f > 1.0f) {     /* Sanity check */
+                    f = 1.0f / (f - 1.0f);
+                    /* Calculate sensor resistance (kOhms) */
+                    f = instance->config[53]
+                      + instance->config[54] * f
+                      + instance->config[55] * f*f
+                      + instance->config[56] * f*f*f
+                      ;
+
+                    /* Get temperature from resistance.
+                     * Sonde sends sampling points for cubic splines, but here we just use linear
+                     * interpolation with very little error.
+                     */
+                    if (f <= instance->config[33]) {
+                        temperature = instance->config[17];
+                    } else if (f >= instance->config[44]) {
+                        temperature = instance->config[28];
+                    } else {
+                        /* Table has the resistance values. For linear interpolation we take the logarithm. */
+                        for (int i = 0; i < 11; i++) {
+                            if (f < instance->config[34 + i]) {
+                                f = (logf(f) - logf(instance->config[33 + i]))
+                                  / (logf(instance->config[34 + i]) - logf(instance->config[33 + i]));
+                                temperature = instance->config[17 + i]
+                                    - f * (instance->config[17 + i] - instance->config[18 + i]);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        //TODO aux temperature sensor @ humidity sensor
+        //TODO temperature correction for humidity
+        //TODO radiation correction for main temperature sensor? (GRUAN, part C)
 
         /* Radio temperature */
         if ((fragment / 2) % 2 == 0) {
