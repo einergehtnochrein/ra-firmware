@@ -92,7 +92,7 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",11,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,,,%.1f,,,%d,,,%.1f",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",11,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,%.1f,,%.1f,,,%d,,,%.1f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -103,6 +103,7 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
                     velocity,                               /* [km/h] */
                     instance->metro.temperature,
                     sSpecial,
+                    instance->metro.humidity,               /* Relative humidity [%] */
                     SYS_getFrameRssi(sys),
                     instance->frameCounter / 2,
                     instance->metro.cpuTemperature
