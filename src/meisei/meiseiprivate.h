@@ -70,6 +70,8 @@ typedef struct _MEISEI_InstanceData {
     uint64_t configValidFlags;                  /* Indicates valid fields in "config" */
     float config[64];
 
+    float refFreq;                              /* Reference frequency for TU measurements */
+
     /* Raw data before processing */
     MEISEI_Packet configPacketEven;             /* Even frame number */
     MEISEI_Packet configPacketOdd;              /* Odd frame number */
@@ -100,6 +102,7 @@ uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index);
 #define CALIB_SERIAL_SONDE4         0x0001000000000000ll
 #define CALIB_SERIAL_SENSOR_BOOM    0x0000000000000010ll
 #define CALIB_SERIAL_PCB            0x0000000000000004ll
+#define CALIB_HUMIDITY              0x001E000000000000ll
 
 bool _MEISEI_checkValidCalibration(MEISEI_InstanceData *instance, uint64_t purpose);
 
