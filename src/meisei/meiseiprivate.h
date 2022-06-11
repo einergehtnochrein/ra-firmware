@@ -52,6 +52,7 @@ typedef struct {
         uint8_t xxx2;
     } sats[16];
     uint8_t usedSats;
+    uint8_t visibleSats;
 } MEISEI_CookedGps;
 
 
