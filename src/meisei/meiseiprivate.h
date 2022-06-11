@@ -33,7 +33,9 @@ typedef union {
 
 typedef struct {
     float temperature;                          /* Temperature [°C] */
+    float humidity;                             /* Relative humidity [%] */
     float cpuTemperature;                       /* CPU temperature [°C] */
+    float txTemperature;                        /* Radio (Si4032) temperature [°C] */
 } MEISEI_CookedMetrology;
 
 
@@ -50,6 +52,7 @@ typedef struct {
         uint8_t xxx2;
     } sats[16];
     uint8_t usedSats;
+    uint8_t visibleSats;
 } MEISEI_CookedGps;
 
 
@@ -68,6 +71,8 @@ typedef struct _MEISEI_InstanceData {
 
     uint64_t configValidFlags;                  /* Indicates valid fields in "config" */
     float config[64];
+
+    float refFreq;                              /* Reference frequency for TU measurements */
 
     /* Raw data before processing */
     MEISEI_Packet configPacketEven;             /* Even frame number */
@@ -99,6 +104,8 @@ uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index);
 #define CALIB_SERIAL_SONDE4         0x0001000000000000ll
 #define CALIB_SERIAL_SENSOR_BOOM    0x0000000000000010ll
 #define CALIB_SERIAL_PCB            0x0000000000000004ll
+#define CALIB_HUMIDITY              0x001E000000000000ll
+#define CALIB_MAIN_TEMPERATURE      0x01E01FFE1FFE0000ll
 
 bool _MEISEI_checkValidCalibration(MEISEI_InstanceData *instance, uint64_t purpose);
 

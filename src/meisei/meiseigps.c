@@ -107,10 +107,17 @@ LPCLIB_Result _MEISEI_processGpsFrame (
                     break;
                 case 3:
                     instance->gps.sats[i].xxx2 = satValue;
+                    if (satValue != 0) {
+                        ++numSats;
+                    }
                     break;
             }
         }
-        instance->gps.usedSats = numSats;
+        if (satIndex == 0) {
+            instance->gps.visibleSats = numSats;
+        } else if (satIndex == 3) {
+            instance->gps.usedSats = numSats;
+        }
 
         instance->gps.milliseconds = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 10);
         instance->gps.count1024 = _MEISEI_getPayloadHalfWord(instance->configPacketOdd.fields, 10);

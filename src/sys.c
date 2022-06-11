@@ -155,6 +155,7 @@ struct SYS_Context {
     int securityResponse;                               /* Response expected to security challenge */
     bool blePortSetBreak;                               /* Set/clear UART break on BLE port */
     int blePortBreakTime;                               /* Duration of break signalling on BLE port */
+    bool linkEstablished;                               /* Set when host has connected */
 } sysContext;
 
 
@@ -775,6 +776,8 @@ static void SYS_sleep (SYS_Handle handle)
     extern uint32_t M0IMAGE_start;
     LPC_SYSCON->CPUCTRL = (LPC_SYSCON->CPUCTRL | 0xC0C40000) | (1 << 3) | (1 << 5);
 
+    handle->linkEstablished = false;
+
     SCANNER_setMode(scanner, 1);
 
     /* Stop BLE UART transmission.
@@ -1274,6 +1277,8 @@ if (cl[0] != 0) {
                     BEACON_resendLastPositions(handle->beacon);
                     PILOT_resendLastPositions(handle->pilot);
                     MEISEI_resendLastPositions(handle->meisei);
+
+                    handle->linkEstablished = true;
                 }
             }
             break;
@@ -1874,13 +1879,16 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                     if (SCANNER_getMode(scanner) != 2) {
                         if (++rate1 >= 2) {
                             handle->currentRssi = _SYS_getFilteredRssi(handle);
-                            char s[30];
-                            sprintf(s, "3,%.1f", handle->currentRssi);
-                            SYS_send2Host(HOST_CHANNEL_GUI, s);
+
+                            /* Do not fill TX queue before link established */
+                            if (handle->linkEstablished) {
+                                char s[30];
+                                sprintf(s, "3,%.1f", handle->currentRssi);
+                                SYS_send2Host(HOST_CHANNEL_GUI, s);
+                            }
 
                             rate1 = 0;
-SYS_controlAutoAttenuator(handle, handle->currentRssi);
-
+                            SYS_controlAutoAttenuator(handle, handle->currentRssi);
                         }
                     }
                     else {
