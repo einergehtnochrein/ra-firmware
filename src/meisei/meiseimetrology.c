@@ -12,7 +12,6 @@ LPCLIB_Result _MEISEI_processMetrology (
     float f;
     float temperature = NAN;
     float humidity = NAN;
-    float cpuTemperature = NAN;
 
     if (!instance) {
         return LPCLIB_ILLEGAL_PARAMETER;
@@ -102,11 +101,18 @@ LPCLIB_Result _MEISEI_processMetrology (
             instance->metro.txTemperature =
                 (_MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 9) % 256) * 0.5f - 64.0f;
         }
+
+        /* CPU temperature */
+        if ((fragment / 2) % 2 == 0) {
+            /* ADC reading scaled to 16 bits, full scale = 3.3V. */
+            f = _MEISEI_getPayloadHalfWord(instance->configPacketOdd.fields, 8) / 65536.0f * 3.3f;
+            /* RL78/G13 data: 25°C = 1.05V, -3.6mV/°C */
+            instance->metro.cpuTemperature = 25.0f - (f - 1.05f) / 0.0036f;
+        }
     }
 
     instance->metro.temperature = temperature;
     instance->metro.humidity = humidity;
-    instance->metro.cpuTemperature = cpuTemperature;
 
     return result;
 }
