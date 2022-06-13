@@ -70,7 +70,7 @@ LPCLIB_Result _MEISEI_processMetrology (
 
                     /* Get temperature from resistance.
                      * Sonde sends sampling points for cubic splines, but here we just use linear
-                     * interpolation with very little error.
+                     * interpolation with very small error.
                      */
                     if (f <= instance->config[33]) {
                         temperature = instance->config[17];
@@ -103,6 +103,7 @@ LPCLIB_Result _MEISEI_processMetrology (
         }
 
         /* CPU temperature */
+        //TODO Broken! While the 1.05V bias seems to be fine, the gain (-3.6mV/°C) is definitely higher!
         if ((fragment / 2) % 2 == 0) {
             /* ADC reading scaled to 16 bits, full scale = 3.3V. */
             f = _MEISEI_getPayloadHalfWord(instance->configPacketOdd.fields, 8) / 65536.0f * 3.3f;
