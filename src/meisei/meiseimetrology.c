@@ -110,7 +110,8 @@ LPCLIB_Result _MEISEI_processMetrology (
             /* ADC reading scaled to 16 bits, full scale = 3.3V. */
             f = _MEISEI_getPayloadHalfWord(instance->configPacketOdd.fields, 8) / 65536.0f * 3.3f;
             /* RL78/G13 data: 25°C = 1.05V, -3.6mV/°C */
-            instance->metro.cpuTemperature = 25.0f - (f - 1.05f) / 0.0036f;
+//            instance->metro.cpuTemperature = 25.0f - (f - 1.05f) / 0.0036f;
+instance->metro.cpuTemperature = 25.0f - (f - 1.05f) / 0.036f;  // Arbitrary gain factor = 10
         }
     }
 
