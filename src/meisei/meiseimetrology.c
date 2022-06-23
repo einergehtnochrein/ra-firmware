@@ -100,6 +100,8 @@ LPCLIB_Result _MEISEI_processMetrology (
         if ((fragment / 2) % 2 == 0) {
             instance->metro.txTemperature =
                 (_MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 9) % 256) * 0.5f - 64.0f;
+        } else {
+            instance->metro.ana8_unknown = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 9) % 256;
         }
 
         /* CPU temperature */
