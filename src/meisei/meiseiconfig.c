@@ -126,7 +126,7 @@ LPCLIB_Result _MEISEI_processConfigFrame (
 
     /* Store calibration data */
     uint16_t fragment = instance->frameCounter % 64;
-    uint32_t u32configRaw = ((uint16_t)packet->w[3] << 16) | (uint16_t)packet->w[2];
+    uint32_t u32configRaw = (packet->w[3] << 16) | packet->w[2];
     instance->config[fragment] = *((float *)&u32configRaw);
     instance->configValidFlags |= (1ull << fragment);
 

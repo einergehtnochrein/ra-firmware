@@ -28,11 +28,11 @@ LPCLIB_Result _MEISEI_processGpsFrame (
     }
 
     if (instance->model == MEISEI_MODEL_RS11G) {
-        i32 = ((uint16_t)instance->gpsPacketEven.w[1] << 16) | (uint16_t)instance->gpsPacketEven.w[2];
+        i32 = (instance->gpsPacketEven.w[1] << 16) | instance->gpsPacketEven.w[2];
         instance->gps.observerLLA.lat = (i32 / 1e7) * (M_PI / 180.0);
-        i32 = ((uint16_t)instance->gpsPacketEven.w[3] << 16) | (uint16_t)instance->gpsPacketEven.w[4];
+        i32 = (instance->gpsPacketEven.w[3] << 16) | instance->gpsPacketEven.w[4];
         instance->gps.observerLLA.lon = (i32 / 1e7) * (M_PI / 180.0);
-        i32 = ((uint16_t)instance->gpsPacketEven.w[5] << 16) | (uint16_t)instance->gpsPacketEven.w[6];
+        i32 = (instance->gpsPacketEven.w[5] << 16) | instance->gpsPacketEven.w[6];
         instance->gps.observerLLA.alt = (i32 / 1e2);
         instance->gps.observerLLA.velocity = NAN;
         instance->gps.observerLLA.direction = NAN;
@@ -44,7 +44,7 @@ LPCLIB_Result _MEISEI_processGpsFrame (
         /* Check if GPS position solution is valid */
         i32 = instance->gpsPacketOdd.w[2];
         if ((i32 & (3u << 8)) == (3u << 8)) {
-            i32 = ((uint16_t)instance->gpsPacketEven.w[1] << 16) | (uint16_t)instance->gpsPacketEven.w[2];
+            i32 = (instance->gpsPacketEven.w[1] << 16) | instance->gpsPacketEven.w[2];
             pos32 = (i32 >= 0) ? i32 : -i32;
             f = pos32 / 1000000;
             pos32 %= 1000000;
@@ -52,7 +52,7 @@ LPCLIB_Result _MEISEI_processGpsFrame (
             f = (i32 >= 0) ? f : -f;
             instance->gps.observerLLA.lat = f * (M_PI / 180.0);
 
-            i32 = ((uint16_t)instance->gpsPacketEven.w[3] << 16) | (uint16_t)instance->gpsPacketEven.w[4];
+            i32 = (instance->gpsPacketEven.w[3] << 16) | instance->gpsPacketEven.w[4];
             pos32 = (i32 >= 0) ? i32 : -i32;
             f = pos32 / 1000000;
             pos32 %= 1000000;
@@ -60,7 +60,7 @@ LPCLIB_Result _MEISEI_processGpsFrame (
             f = (i32 >= 0) ? f : -f;
             instance->gps.observerLLA.lon = f * (M_PI / 180.0);
 
-            i32 = ((uint16_t)instance->gpsPacketEven.w[5] << 16) | (uint16_t)instance->gpsPacketEven.w[6];
+            i32 = (instance->gpsPacketEven.w[5] << 16) | instance->gpsPacketEven.w[6];
             instance->gps.observerLLA.alt = ((i32 >> 8) / 1e2);     /* Altitude is a 24-bit field */
 
             f = instance->gpsPacketEven.w[10];

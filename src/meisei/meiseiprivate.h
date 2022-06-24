@@ -30,7 +30,7 @@ typedef union {
 } MEISEI_RawPacket;
 
 typedef struct {
-    int16_t w[12];
+    uint16_t w[12];
 } MEISEI_Packet;
 
 

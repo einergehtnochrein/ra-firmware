@@ -27,7 +27,7 @@ LPCLIB_Result _MEISEI_processMetrology (
 
         /* Reference frequency value */
         if ((fragment / 2) % 2 == 0) {
-            instance->refFreq = (uint16_t)instance->configPacketEven.w[1];
+            instance->refFreq = instance->configPacketEven.w[1];
         }
 
         /* Main temperature and humidity calculations are based in part on description found in
@@ -40,7 +40,7 @@ LPCLIB_Result _MEISEI_processMetrology (
         if (_MEISEI_checkValidCalibration(instance, CALIB_HUMIDITY)) {
             if (!isnan(instance->refFreq)) {
                 /* See GRUAN document, part D */
-                f = (uint16_t)instance->configPacketEven.w[6];
+                f = instance->configPacketEven.w[6];
                 f = f / instance->refFreq * 4.0f;
                 humidity = 0.0f
                         + instance->config[49]
@@ -57,7 +57,7 @@ LPCLIB_Result _MEISEI_processMetrology (
         if (_MEISEI_checkValidCalibration(instance, CALIB_MAIN_TEMPERATURE)) {
             if (!isnan(instance->refFreq)) {
                 /* See GRUAN document, part B */
-                f = (uint16_t)instance->configPacketEven.w[5];
+                f = instance->configPacketEven.w[5];
                 f = f / instance->refFreq * 4.0f;
                 if (f > 1.0f) {     /* Sanity check */
                     f = 1.0f / (f - 1.0f);
