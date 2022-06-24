@@ -27,7 +27,7 @@ LPCLIB_Result _MEISEI_processMetrology (
 
         /* Reference frequency value */
         if ((fragment / 2) % 2 == 0) {
-            instance->refFreq = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 1);
+            instance->refFreq = (uint16_t)instance->configPacketEven.w[1];
         }
 
         /* Main temperature and humidity calculations are based in part on description found in
@@ -40,7 +40,7 @@ LPCLIB_Result _MEISEI_processMetrology (
         if (_MEISEI_checkValidCalibration(instance, CALIB_HUMIDITY)) {
             if (!isnan(instance->refFreq)) {
                 /* See GRUAN document, part D */
-                f = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 6);
+                f = (uint16_t)instance->configPacketEven.w[6];
                 f = f / instance->refFreq * 4.0f;
                 humidity = 0.0f
                         + instance->config[49]
@@ -57,7 +57,7 @@ LPCLIB_Result _MEISEI_processMetrology (
         if (_MEISEI_checkValidCalibration(instance, CALIB_MAIN_TEMPERATURE)) {
             if (!isnan(instance->refFreq)) {
                 /* See GRUAN document, part B */
-                f = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 5);
+                f = (uint16_t)instance->configPacketEven.w[5];
                 f = f / instance->refFreq * 4.0f;
                 if (f > 1.0f) {     /* Sanity check */
                     f = 1.0f / (f - 1.0f);
@@ -98,17 +98,16 @@ LPCLIB_Result _MEISEI_processMetrology (
 
         /* Radio temperature */
         if ((fragment / 2) % 2 == 0) {
-            instance->metro.txTemperature =
-                (_MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 9) % 256) * 0.5f - 64.0f;
+            instance->metro.txTemperature = (instance->configPacketEven.w[9] % 256) * 0.5f - 64.0f;
         } else {
-            instance->metro.ana8_unknown = _MEISEI_getPayloadHalfWord(instance->configPacketEven.fields, 9) % 256;
+            instance->metro.ana8_unknown = instance->configPacketEven.w[9] % 256;
         }
 
         /* CPU temperature */
         //TODO Broken! While the 1.05V bias seems to be fine, the gain (-3.6mV/°C) is definitely higher!
         if ((fragment / 2) % 2 == 0) {
             /* ADC reading scaled to 16 bits, full scale = 3.3V. */
-            f = _MEISEI_getPayloadHalfWord(instance->configPacketOdd.fields, 8) / 65536.0f * 3.3f;
+            f = instance->configPacketOdd.w[8] / 65536.0f * 3.3f;
             /* RL78/G13 data: 25°C = 1.05V, -3.6mV/°C */
 //            instance->metro.cpuTemperature = 25.0f - (f - 1.05f) / 0.0036f;
 instance->metro.cpuTemperature = 25.0f - (f - 1.05f) / 0.036f;  // Arbitrary gain factor = 10

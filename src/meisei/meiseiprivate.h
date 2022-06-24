@@ -24,10 +24,13 @@ typedef enum {
 
 typedef uint8_t MEISEI_RawData[48];
 
-
 typedef union {
     MEISEI_RawData rawData;
     uint64_t fields[6];
+} MEISEI_RawPacket;
+
+typedef struct {
+    int16_t w[12];
 } MEISEI_Packet;
 
 

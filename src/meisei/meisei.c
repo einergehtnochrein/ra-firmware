@@ -18,8 +18,10 @@
 
 /** Context */
 typedef struct MEISEI_Context {
-    MEISEI_Packet configPacket;
+    MEISEI_RawPacket rawConfigPacket;
     float configPacketTimestamp;
+    MEISEI_RawPacket rawGpsPacket;
+    MEISEI_Packet configPacket;
     MEISEI_Packet gpsPacket;
 
     MEISEI_InstanceData *instance;
@@ -143,30 +145,10 @@ static void _MEISEI_sendRaw (MEISEI_Handle handle, MEISEI_Packet *p1, MEISEI_Pac
                      "%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16
                      "%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16"%04"PRIX16,
                      handle->instance->id,
-                     _MEISEI_getPayloadHalfWord(p1->fields, 0),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 1),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 2),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 3),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 4),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 5),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 6),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 7),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 8),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 9),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 10),
-                     _MEISEI_getPayloadHalfWord(p1->fields, 11),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 0),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 1),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 2),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 3),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 4),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 5),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 6),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 7),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 8),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 9),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 10),
-                     _MEISEI_getPayloadHalfWord(p2->fields, 11)
+                     p1->w[0],p1->w[1],p1->w[2],p1->w[3],p1->w[4],p1->w[5],
+                     p1->w[6],p1->w[7],p1->w[8],p1->w[9],p1->w[10],p1->w[11],
+                     p2->w[0],p2->w[1],p2->w[2],p2->w[3],p2->w[4],p2->w[5],
+                     p2->w[6],p2->w[7],p2->w[8],p2->w[9],p2->w[10],p2->w[11]
                     );
 
     SYS_send2Host(HOST_CHANNEL_INFO, s);
@@ -223,17 +205,17 @@ LPCLIB_Result MEISEI_processBlock (
     int nErrors;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
-    if (numBits == 8*sizeof(MEISEI_Packet)) {
+    if (numBits == 8*sizeof(MEISEI_RawPacket)) {
         if (sondeType == SONDE_MEISEI_CONFIG) {
             handle->configPacketTimestamp = 10.0f * os_time;
-            memcpy(&handle->configPacket, buffer, sizeof(handle->configPacket));
+            memcpy(&handle->rawConfigPacket, buffer, sizeof(handle->rawConfigPacket));
             return LPCLIB_PENDING;
         }
         else if (sondeType != SONDE_MEISEI_GPS) {
             return LPCLIB_ILLEGAL_PARAMETER;
         }
 
-        memcpy(&handle->gpsPacket, buffer, sizeof(handle->gpsPacket));
+        memcpy(&handle->rawGpsPacket, buffer, sizeof(handle->rawGpsPacket));
 
         /* Check if we have a matching config frame */
         float diff = fabs(10.0f * os_time - handle->configPacketTimestamp - 250.0f);
@@ -249,7 +231,7 @@ LPCLIB_Result MEISEI_processBlock (
         result = LPCLIB_SUCCESS;
         int i;
         for (i = 0; i < 6; i++) {
-            handle->pBCH = &handle->gpsPacket.fields[i];
+            handle->pBCH = &handle->rawGpsPacket.fields[i];
             result = BCH_63_51_t2_process(_MEISEI_getDataBCH, _MEISEI_toggleDataBCH, &nErrors);
             if (result != LPCLIB_SUCCESS) {
                 break;
@@ -257,7 +239,7 @@ LPCLIB_Result MEISEI_processBlock (
         }
         if (result == LPCLIB_SUCCESS) {
             for (i = 0; i < 6; i++) {
-                handle->pBCH = &handle->configPacket.fields[i];
+                handle->pBCH = &handle->rawConfigPacket.fields[i];
                 result = BCH_63_51_t2_process(_MEISEI_getDataBCH, _MEISEI_toggleDataBCH, &nErrors);
                 if (result != LPCLIB_SUCCESS) {
                     break;
@@ -265,6 +247,11 @@ LPCLIB_Result MEISEI_processBlock (
             }
 
             if (result == LPCLIB_SUCCESS) {
+                for (i = 0; i < 12; i++) {
+                    handle->configPacket.w[i] = _MEISEI_getPayloadHalfWord(handle->rawConfigPacket.fields, i);
+                    handle->gpsPacket.w[i] = _MEISEI_getPayloadHalfWord(handle->rawGpsPacket.fields, i);
+                }
+
                 _MEISEI_processConfigFrame(&handle->configPacket, &handle->instance, rxFrequencyHz);
 
                 /* Store GPS data depending on frame number even/odd */
