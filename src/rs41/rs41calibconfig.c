@@ -142,6 +142,13 @@ LPCLIB_Result _RS41_processConfigBlock (
         instance->onDescent = (rawConfig->flags & (1u << 1)) ? true : false;
         instance->temperatureRef = rawConfig->temperatureRef;
         instance->txPower_dBm = (rawConfig->txPower == 0) ? 1 : (-1 + 3 * rawConfig->txPower);
+        if ((1 <= rawConfig->cryptoMode) && (rawConfig->cryptoMode <= 4)) {
+            instance->is_SGM = true;
+            if ((3 <= rawConfig->cryptoMode) && (rawConfig->cryptoMode <= 4)) {
+                instance->encrypted = true;
+            }
+        }
+
         if (_RS41_checkValidCalibration(instance, CALIB_FREQUENCY)) {
             instance->rxFrequencyMHz = 400.0f + (instance->params.frequency * 10) / 64000.0f;
         }

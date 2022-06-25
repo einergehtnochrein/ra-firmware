@@ -220,7 +220,8 @@ typedef struct _RS41_InstanceData {
     float temperatureRef;                       /* Temperature of reference point on PCB (cutout) [°C] */
     uint16_t frameCounter;
     int8_t txPower_dBm;
-    bool encrypted;                             /* Set for RS41-SGM military version */
+    bool encrypted;                             /* Set for RS41-SGM military version (encrypted mode) */
+    bool is_SGM;                                /* Set for RS41-SGM military version (encrypted or unencrypted) */
     bool onDescent;                             /* Descent phase detected */
     int16_t killCounterRefFrame;                /* Last reference frame for kill counter */
     int16_t killCounterRefCount;                /* Kill counter in last reference frame */

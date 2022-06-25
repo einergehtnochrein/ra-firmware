@@ -136,7 +136,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     if (instance->logMode != RS41_LOGMODE_NONE) {
         special += (1u << 2);
     }
-    if (instance->encrypted) {
+    if (instance->is_SGM) {
         special += (1u << 1);
         special += (1u << 7);               /* Inexact location information... */
     }
@@ -402,7 +402,6 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numB
                         /* RS41-SGM */
                         handle->instance->gps.observerLLA.lat = NAN;
                         handle->instance->gps.observerLLA.lon = NAN;
-                        handle->instance->encrypted = true;
                         snprintf(handle->instance->params.names.variant,
                                 sizeof(handle->instance->params.names.variant), "%s", "RS41-SGM");
                         handle->instance->logMode = RS41_LOGMODE_RAW;

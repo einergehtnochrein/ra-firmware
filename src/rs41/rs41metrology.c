@@ -67,7 +67,7 @@ LPCLIB_Result _RS41_processMetrologyBlock (
     float current = (_RS41_read24(rawMetro->adc[3].current) - refmin)
                   / (_RS41_read24(rawMetro->adc[3].refmax) - refmin);
 
-    /* If there's no pressure sensor, don't try any caclulation */
+    /* If there's no pressure sensor, don't try any calculation */
     if (current == 0) {
         instance->metro.pressure = NAN;
         instance->metro.pressureAltitude = NAN;
@@ -150,6 +150,12 @@ LPCLIB_Result _RS41_processMetrologyShortBlock (
     float current[3];
     int i,j;
     float sum;
+
+    if (instance->is_SGM) {
+        /* There is no pressure sensor in the military version */
+        instance->metro.pressure = NAN;
+        instance->metro.temperaturePSensor = NAN;
+    }
 
     for (i = 0; i < 3; i++) {
         refmin = _RS41_read24(rawMetro->adc[i].refmin);
