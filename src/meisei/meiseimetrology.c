@@ -36,23 +36,6 @@ LPCLIB_Result _MEISEI_processMetrology (
          * https://www.gruan.org/gruan/editor/documents/gruan/GRUAN-TD-5_MeiseiRadiosondes_v1_20180221.pdf
          */
 
-        /* Relative humidity */
-        if (_MEISEI_checkValidCalibration(instance, CALIB_HUMIDITY)) {
-            if (!isnan(instance->refFreq)) {
-                /* See GRUAN document, part D */
-                f = instance->configPacketEven.w[6];
-                f = f / instance->refFreq * 4.0f;
-                humidity = 0.0f
-                        + instance->config[49]
-                        + instance->config[50] * f
-                        + instance->config[51] * f*f
-                        + instance->config[52] * f*f*f
-                        ;
-                humidity = fmaxf(humidity, 0.0f);
-                humidity = fminf(humidity, 100.0f);
-            }
-        }
-
         /* Main temperature sensor */
         if (_MEISEI_checkValidCalibration(instance, CALIB_MAIN_TEMPERATURE)) {
             if (!isnan(instance->refFreq)) {
@@ -92,6 +75,23 @@ LPCLIB_Result _MEISEI_processMetrology (
                         }
                     }
                 }
+            }
+        }
+
+        /* Relative humidity */
+        if (_MEISEI_checkValidCalibration(instance, CALIB_HUMIDITY)) {
+            if (!isnan(instance->refFreq)) {
+                /* See GRUAN document, part D */
+                f = instance->configPacketEven.w[6];
+                f = f / instance->refFreq * 4.0f;
+                humidity = 0.0f
+                        + instance->config[49]
+                        + instance->config[50] * f
+                        + instance->config[51] * f*f
+                        + instance->config[52] * f*f*f
+                        ;
+                humidity = fmaxf(humidity, 0.0f);
+                humidity = fminf(humidity, 100.0f);
             }
         }
 
