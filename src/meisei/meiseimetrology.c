@@ -61,11 +61,14 @@ LPCLIB_Result _MEISEI_processMetrology (
                 f = f / instance->refFreq * 4.0f;
                 if (f > 1.0f) {     /* Sanity check */
                     f = 1.0f / (f - 1.0f);
-                    /* Calculate sensor resistance (kOhms) */
+                    /* Calculate sensor resistance (kOhms).
+                     * GRUAN TD-5 uses four coefficients A[3:0] for this. However, only a reduced version
+                     * with A[2:0] produces satisfying results.
+                     * TODO: What is the orphaned coefficient used for?
+                     */
                     f = instance->config[53]
                       + instance->config[54] * f
                       + instance->config[55] * f*f
-                      + instance->config[56] * f*f*f
                       ;
 
                     /* Get temperature from resistance.
