@@ -55,23 +55,30 @@ LPCLIB_Result _MEISEI_processMetrology (
                       + instance->config[55] * f*f
                       ;
 
-                    /* Get temperature from resistance.
-                     * Sonde sends sampling points for cubic splines, but here we just use linear
-                     * interpolation with very small error.
+                    /* Detect a broken sensor. Set an arbitrary limit of 2.5 MOhm.
+                     * On a typical sonde this would correspond to a temperature far below -100°C.
                      */
-                    if (f <= instance->config[33]) {
-                        temperature = instance->config[17];
-                    } else if (f >= instance->config[44]) {
-                        temperature = instance->config[28];
-                    } else {
-                        /* Table has the resistance values. For linear interpolation we take the logarithm. */
-                        for (int i = 0; i < 11; i++) {
-                            if (f < instance->config[34 + i]) {
-                                f = (logf(f) - logf(instance->config[33 + i]))
-                                  / (logf(instance->config[34 + i]) - logf(instance->config[33 + i]));
-                                temperature = instance->config[17 + i]
-                                    - f * (instance->config[17 + i] - instance->config[18 + i]);
-                                break;
+                    instance->metro.temperatureSensorBroken = (f >= 2500.0f);
+
+                    if (!instance->metro.temperatureSensorBroken) {
+                        /* Get temperature from resistance.
+                        * Sonde sends sampling points for cubic splines, but here we just use linear
+                        * interpolation with very small error.
+                        */
+                        if (f <= instance->config[33]) {
+                            temperature = instance->config[17];
+                        } else if (f >= instance->config[44]) {
+                            temperature = instance->config[28];
+                        } else {
+                            /* Table has the resistance values. For linear interpolation we take the logarithm. */
+                            for (int i = 0; i < 11; i++) {
+                                if (f < instance->config[34 + i]) {
+                                    f = (logf(f) - logf(instance->config[33 + i]))
+                                    / (logf(instance->config[34 + i]) - logf(instance->config[33 + i]));
+                                    temperature = instance->config[17 + i]
+                                        - f * (instance->config[17 + i] - instance->config[18 + i]);
+                                    break;
+                                }
                             }
                         }
                     }

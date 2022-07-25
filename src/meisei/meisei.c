@@ -78,6 +78,9 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
 
     /* Meisei type indicator */
     special = 0;
+    if (instance->metro.temperatureSensorBroken) {
+        special |= (1u << 4);
+    }
     sModel[0] = 0;
     switch (instance->model) {
         case MEISEI_MODEL_IMS100:

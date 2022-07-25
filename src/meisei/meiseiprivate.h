@@ -36,6 +36,7 @@ typedef struct {
 
 typedef struct {
     float temperature;                          /* Temperature [°C] */
+    uint8_t temperatureSensorBroken;
     float rh_temperature;                       /* Temperature of humidity sensor [°C] */
     float humidity;                             /* Relative humidity [%] */
     float cpuTemperature;                       /* CPU temperature [°C] */
