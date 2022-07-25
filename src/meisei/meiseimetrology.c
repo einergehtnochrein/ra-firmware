@@ -12,6 +12,7 @@ LPCLIB_Result _MEISEI_processMetrology (
     float f;
     float temperature = NAN;
     float humidity = NAN;
+    float rh_temperature = instance->metro.rh_temperature;
 
     if (!instance) {
         return LPCLIB_ILLEGAL_PARAMETER;
@@ -78,6 +79,34 @@ LPCLIB_Result _MEISEI_processMetrology (
             }
         }
 
+        /* Humidity sensor temperature */
+        if (_MEISEI_checkValidCalibration(instance, CALIB_RH_TEMPERATURE)) {
+            if (fragment % 4 == 3) {
+                if (!isnan(instance->refFreq)) {
+                    /* See GRUAN TD-5, p.129 G.11 */
+                    f = instance->configPacketOdd.w[1];
+                    f = f / instance->refFreq * 4.0f;
+                    if (f > 1.0f) {     /* Sanity check */
+                        f = 1.0f / (f - 1.0f);
+                        /* Calculate sensor resistance (kOhms).
+                         * GRUAN TD-5 (see main temperature sensor above)
+                         */
+                        f = instance->config[53] - instance->config[56]
+                          + instance->config[54] * f
+                          + instance->config[55] * f*f
+                          ;
+
+                        /* GRUAN TD-5 p.129 G.13 */
+                        f = logf(f);
+                        f = instance->config[57]*f*f*f + instance->config[58]*f + instance->config[59];
+                        rh_temperature = 1.0f / f - 273.15f;
+                    }
+                }
+            }
+        }
+
+        //TODO effective humidity sensor temperature (requires pressure)
+
         /* Relative humidity */
         if (_MEISEI_checkValidCalibration(instance, CALIB_HUMIDITY)) {
             if (!isnan(instance->refFreq)) {
@@ -119,6 +148,7 @@ instance->metro.cpuTemperature = 25.0f - (f - 1.05f) / 0.036f;  // Arbitrary gai
 
     instance->metro.temperature = temperature;
     instance->metro.humidity = humidity;
+    instance->metro.rh_temperature = rh_temperature;
 
     return result;
 }

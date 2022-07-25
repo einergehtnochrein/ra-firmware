@@ -62,6 +62,7 @@ static MEISEI_InstanceData *_MEISEI_getInstanceDataStructure (float frequencyMHz
 instance->model = MEISEI_MODEL_IMS100; //TODO
         instance->refFreq = NAN;
         instance->metro.temperature = NAN;
+        instance->metro.rh_temperature = NAN;
         instance->metro.humidity = NAN;
         instance->metro.cpuTemperature = NAN;
         instance->gps.observerLLA.lat = NAN;
