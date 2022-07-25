@@ -49,7 +49,7 @@ LPCLIB_Result _MEISEI_processMetrology (
                      * with A[2:0] produces satisfying results.
                      * TODO: What is the orphaned coefficient used for?
                      */
-                    f = instance->config[53]
+                    f = instance->config[53] - instance->config[56]
                       + instance->config[54] * f
                       + instance->config[55] * f*f
                       ;
