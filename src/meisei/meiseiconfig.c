@@ -62,6 +62,7 @@ static MEISEI_InstanceData *_MEISEI_getInstanceDataStructure (float frequencyMHz
 instance->model = MEISEI_MODEL_IMS100; //TODO
         instance->refFreq = NAN;
         instance->metro.temperature = NAN;
+        instance->metro.rh_temperature = NAN;
         instance->metro.humidity = NAN;
         instance->metro.cpuTemperature = NAN;
         instance->gps.observerLLA.lat = NAN;
@@ -116,7 +117,7 @@ LPCLIB_Result _MEISEI_processConfigFrame (
     instance->lastUpdated = os_time;
 
     /* Read frame number to determine where to store the packet */
-    instance->frameCounter = _MEISEI_getPayloadHalfWord(packet->fields, 0);
+    instance->frameCounter = packet->w[0];
     if ((instance->frameCounter % 2) == 0) {
         instance->configPacketEven = *packet;
     }
@@ -126,9 +127,7 @@ LPCLIB_Result _MEISEI_processConfigFrame (
 
     /* Store calibration data */
     uint16_t fragment = instance->frameCounter % 64;
-    uint32_t u32configRaw = 
-        (_MEISEI_getPayloadHalfWord(packet->fields, 3) << 16)
-        | _MEISEI_getPayloadHalfWord(packet->fields, 2);
+    uint32_t u32configRaw = (packet->w[3] << 16) | packet->w[2];
     instance->config[fragment] = *((float *)&u32configRaw);
     instance->configValidFlags |= (1ull << fragment);
 

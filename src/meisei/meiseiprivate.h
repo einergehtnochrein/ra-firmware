@@ -24,18 +24,24 @@ typedef enum {
 
 typedef uint8_t MEISEI_RawData[48];
 
-
 typedef union {
     MEISEI_RawData rawData;
     uint64_t fields[6];
+} MEISEI_RawPacket;
+
+typedef struct {
+    uint16_t w[12];
 } MEISEI_Packet;
 
 
 typedef struct {
     float temperature;                          /* Temperature [°C] */
+    uint8_t temperatureSensorBroken;
+    float rh_temperature;                       /* Temperature of humidity sensor [°C] */
     float humidity;                             /* Relative humidity [%] */
     float cpuTemperature;                       /* CPU temperature [°C] */
     float txTemperature;                        /* Radio (Si4032) temperature [°C] */
+    float ana8_unknown;
 } MEISEI_CookedMetrology;
 
 
@@ -106,6 +112,7 @@ uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index);
 #define CALIB_SERIAL_PCB            0x0000000000000004ll
 #define CALIB_HUMIDITY              0x001E000000000000ll
 #define CALIB_MAIN_TEMPERATURE      0x01E01FFE1FFE0000ll
+#define CALIB_RH_TEMPERATURE        0x0FE0000000000000ll
 
 bool _MEISEI_checkValidCalibration(MEISEI_InstanceData *instance, uint64_t purpose);
 
