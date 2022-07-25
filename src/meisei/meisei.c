@@ -207,6 +207,7 @@ LPCLIB_Result MEISEI_processBlock (
 {
     (void)rxFrequencyHz;
     int nErrors;
+    int nTotalErrors;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (numBits == 8*sizeof(MEISEI_RawPacket)) {
@@ -228,6 +229,7 @@ LPCLIB_Result MEISEI_processBlock (
         }
 
         nErrors = 0;
+        nTotalErrors = 0;
 
         /* First frame */
         /* Do BCH check for all six codewords */
@@ -237,6 +239,7 @@ LPCLIB_Result MEISEI_processBlock (
         for (i = 0; i < 6; i++) {
             handle->pBCH = &handle->rawGpsPacket.fields[i];
             result = BCH_63_51_t2_process(_MEISEI_getDataBCH, _MEISEI_toggleDataBCH, &nErrors);
+            nTotalErrors += nErrors;
             if (result != LPCLIB_SUCCESS) {
                 break;
             }
@@ -245,12 +248,17 @@ LPCLIB_Result MEISEI_processBlock (
             for (i = 0; i < 6; i++) {
                 handle->pBCH = &handle->rawConfigPacket.fields[i];
                 result = BCH_63_51_t2_process(_MEISEI_getDataBCH, _MEISEI_toggleDataBCH, &nErrors);
+                nTotalErrors += nErrors;
                 if (result != LPCLIB_SUCCESS) {
                     break;
                 }
             }
 
-            if (result == LPCLIB_SUCCESS) {
+            /* There is no CRC to help with undetectable frame errors.
+             * Set an arbitrary upper limit for the number of corrected errors. Packets with a
+             * larger number of errors are rejected, although all BCH codewords appear error-free.
+             */
+            if ((result == LPCLIB_SUCCESS) && (nTotalErrors < 5)) {
                 for (i = 0; i < 12; i++) {
                     handle->configPacket.w[i] = _MEISEI_getPayloadHalfWord(handle->rawConfigPacket.fields, i);
                     handle->gpsPacket.w[i] = _MEISEI_getPayloadHalfWord(handle->rawGpsPacket.fields, i);
