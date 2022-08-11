@@ -90,7 +90,7 @@ static void _M20_processXdata (char *p, int length, M20_InstanceData *instance)
     /* XDATA of minimum two bytes is accepted. */
     if (length >= 2) {
         /* Send raw data to app */
-        static char s[400];
+        static char s[240];
         if (snprintf(s, sizeof(s), "%"PRIu32",13,2,%.*s", instance->id, length, p) > 0) {
             SYS_send2Host(HOST_CHANNEL_INFO, s);
         }
