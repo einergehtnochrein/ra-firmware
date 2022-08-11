@@ -163,9 +163,8 @@ static void _M10_sendRaw (M10_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 LPCLIB_Result M10_processBlock (M10_Handle handle, uint8_t *buffer, uint32_t numBits, float rxFrequencyHz)
 {
-    if (numBits == sizeof(M10_Packet) * 8) {
-        handle->packetLength = numBits / 8;
-
+    handle->packetLength = numBits / 8 - 1; /* -1: ignore the length byte */
+    if (handle->packetLength == sizeof(M10_Packet)) {
         memcpy(&handle->packet, &buffer[1], handle->packetLength); /* Skip length byte in buffer[0] */
 
         if (_M10_checkCRC(handle)) {
