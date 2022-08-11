@@ -84,6 +84,21 @@ static void _M20_fromBigEndian (M20_Packet *data)
 }
 
 
+
+static void _M20_processXdata (char *p, int length, M20_InstanceData *instance)
+{
+    /* XDATA of minimum two bytes is accepted. */
+    if (length >= 2) {
+        /* Send raw data to app */
+        static char s[400];
+        if (snprintf(s, sizeof(s), "%"PRIu32",13,2,%.*s", instance->id, length, p) > 0) {
+            SYS_send2Host(HOST_CHANNEL_INFO, s);
+        }
+    }
+}
+
+
+
 //TODO
 LPCLIB_Result M20_open (M20_Handle *pHandle)
 {
@@ -226,6 +241,9 @@ if(1){//            if (handle->instance->logMode == M20_LOGMODE_RAW) {
                                         outercrc,
                                         &handle->instance->gps,
                                         &handle->instance->metro);
+
+                    /* XDATA */
+                    _M20_processXdata(&handle->packet.xdata, handle->packet.xdataLength, handle->instance);
                 }
 
                 _M20_sendKiss(handle->instance);
