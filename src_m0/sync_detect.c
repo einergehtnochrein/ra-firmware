@@ -22,7 +22,8 @@ struct _SyncDetectorContext {
     int uartBitCounter;
     bool inverted;
     int lastBit;
-    PostProcessFunc postProcess;
+    ProcessFunc postProcess;
+    ProcessFunc byteProcess;
     int symbolPhase;
     int nSubBlockBits;
     int nSubBlockBytes;
@@ -84,6 +85,7 @@ void PIN_INT3_IRQHandler (void)
                             handle->uartBitCounter = 0;
                             handle->writeIndex = handle->config->conf[i].startOffset;
                             handle->postProcess = handle->config->conf[i].postProcess;
+                            handle->byteProcess = handle->config->conf[i].byteProcess;
                             handle->symbolPhase = 0;
                             handle->nSubBlockBits = handle->config->conf[i].nSubBlockBits;
                             handle->nSubBlockBytes = handle->config->conf[i].nSubBlockBytes;
@@ -107,14 +109,17 @@ void PIN_INT3_IRQHandler (void)
                 if (++handle->bitCounter >= 8) {
                     handle->bitCounter = 0;
                     ++handle->writeIndex;
+                    if (handle->byteProcess) {
+                        handle->byteProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
+                    }
                 }
 
                 if (--handle->rxCounterBits <= 0) {
                     handle->state = SYNC_STATE_HUNT;
-                    handle->writeIndex = 0;
                     if (handle->postProcess) {
-                        handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                        handle->postProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
                     }
+                    handle->writeIndex = 0;
                     ipc_s2m[handle->activeBuffer].valid = 1;
 
                     LPC_MAILBOX->IRQ1SET = (1u << 0);
@@ -153,14 +158,17 @@ void PIN_INT3_IRQHandler (void)
                     if (++handle->bitCounter >= 8) {
                         handle->bitCounter = 0;
                         ++handle->writeIndex;
+                        if (handle->byteProcess) {
+                            handle->byteProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
+                        }
                     }
 
                     if (--handle->rxCounterBits <= 0) {
                         handle->state = SYNC_STATE_HUNT;
-                        handle->writeIndex = 0;
                         if (handle->postProcess) {
-                            handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                            handle->postProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
                         }
+                        handle->writeIndex = 0;
                         ipc_s2m[handle->activeBuffer].valid = 1;
 
                         LPC_MAILBOX->IRQ1SET = (1u << 0);
@@ -193,6 +201,9 @@ void PIN_INT3_IRQHandler (void)
                     ++handle->bitCounter;
                     if ((handle->bitCounter % 8) == 0) {
                         ++handle->writeIndex;
+                        if (handle->byteProcess) {
+                            handle->byteProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
+                        }
                     }
                     if (handle->nSubBlockBits != 0) {
                         if (handle->bitCounter >= handle->nSubBlockBits) {
@@ -208,10 +219,10 @@ void PIN_INT3_IRQHandler (void)
                         ipc_s2m[handle->activeBuffer].numBits = 8*handle->writeIndex; //TODO
 
                         handle->state = SYNC_STATE_HUNT;
-                        handle->writeIndex = 0;
                         if (handle->postProcess) {
-                            handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                            handle->postProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
                         }
+                        handle->writeIndex = 0;
                         ipc_s2m[handle->activeBuffer].valid = 1;
 
                         LPC_MAILBOX->IRQ1SET = (1u << 0);
@@ -244,6 +255,9 @@ void PIN_INT3_IRQHandler (void)
                     ++handle->bitCounter;
                     if ((handle->bitCounter % 8) == 0) {
                         ++handle->writeIndex;
+                        if (handle->byteProcess) {
+                            handle->byteProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
+                        }
                     }
                     if (handle->nSubBlockBits != 0) {
                         if (handle->bitCounter >= handle->nSubBlockBits) {
@@ -259,10 +273,10 @@ void PIN_INT3_IRQHandler (void)
                         ipc_s2m[handle->activeBuffer].numBits = 8*handle->writeIndex; //TODO
 
                         handle->state = SYNC_STATE_HUNT;
-                        handle->writeIndex = 0;
                         if (handle->postProcess) {
-                            handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                            handle->postProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
                         }
+                        handle->writeIndex = 0;
                         ipc_s2m[handle->activeBuffer].valid = 1;
 
                         LPC_MAILBOX->IRQ1SET = (1u << 0);
@@ -299,13 +313,16 @@ void PIN_INT3_IRQHandler (void)
                     ++handle->bitCounter;
                     if ((handle->bitCounter % 8) == 0) {
                         ++handle->writeIndex;
+                        if (handle->byteProcess) {
+                            handle->byteProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
+                        }
                     }
                     if (--handle->rxCounterBits <= 0) {
                         handle->state = SYNC_STATE_HUNT;
-                        handle->writeIndex = 0;
                         if (handle->postProcess) {
-                            handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                            handle->postProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
                         }
+                        handle->writeIndex = 0;
                         ipc_s2m[handle->activeBuffer].valid = 1;
 
                         LPC_MAILBOX->IRQ1SET = (1u << 0);
@@ -358,14 +375,17 @@ void PIN_INT3_IRQHandler (void)
                         if (++handle->bitCounter >= 8) {
                             handle->bitCounter = 0;
                             ++handle->writeIndex;
+                            if (handle->byteProcess) {
+                                handle->byteProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
+                            }
                         }
 
                         if (--handle->rxCounterBits <= 0) {
                             handle->state = SYNC_STATE_HUNT;
-                            handle->writeIndex = 0;
                             if (handle->postProcess) {
-                                handle->postProcess(&ipc_s2m[handle->activeBuffer]);
+                                handle->postProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
                             }
+                            handle->writeIndex = 0;
                             ipc_s2m[handle->activeBuffer].valid = 1;
 
                             LPC_MAILBOX->IRQ1SET = (1u << 0);
