@@ -42,4 +42,6 @@ typedef struct {
 void SYNC_open (SYNC_Handle *pHandle);
 void SYNC_configure(SYNC_Handle handle, const SYNC_Config *pConfig);
 
+void _SYNC_modemByteProcess (SYNC_Handle handle, volatile IPC_S2M *buffer, int writeIndex);
+
 #endif

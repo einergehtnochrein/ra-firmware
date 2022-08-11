@@ -434,3 +434,38 @@ void SYNC_configure (SYNC_Handle handle, const SYNC_Config *pConfig)
     }
 }
 
+
+/* Meteomodem M10 and M20 use the same 32-bit frame sync word.
+ * The byte following the sync pattern indicates the payload length. This length can vary
+ * if external (XDATA) instruments are connected. This hook function updates the frame receiver
+ * with the correct length once the first byte is received.
+ *
+ * The second byte (first byte of the payload) indicates the sonde model.
+ * We process this in the hook function as well, although it should better be done in a general
+ * Meteomodem sonde payload parser (on the M4 core).
+ */
+void _SYNC_modemByteProcess (SYNC_Handle handle, volatile IPC_S2M *buffer, int writeIndex)
+{
+    int nBits;
+    uint8_t typeCode;
+
+    /* Update frame length */
+    if (writeIndex == 1) {
+        nBits = (1 + buffer->data8[0]) * 8; /* 1 length byte + n bytes */
+
+        handle->rxCounterBits = nBits;
+        handle->frameLengthBits = nBits;
+    }
+
+    /* Update sonde type */ //TODO: move this functionality to M4
+    if (writeIndex == 2) {
+        typeCode = buffer->data8[1];
+        if (typeCode == 0x9F) {
+            ipc_s2m[handle->activeBuffer].param = IPC_PACKET_TYPE_MODEM_M10;
+        }
+        if (typeCode == 0x20) {
+            ipc_s2m[handle->activeBuffer].param = IPC_PACKET_TYPE_MODEM_M20;
+        }
+    }
+}
+

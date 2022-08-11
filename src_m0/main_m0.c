@@ -76,29 +76,18 @@ static const SYNC_Config configGraw = {
 
 
 static const SYNC_Config configModem = {
-    .nPatterns = 2,
+    .nPatterns = 1,
     .conf = {
         {
-            .id = IPC_PACKET_TYPE_MODEM_M10,
-            .pattern     = {0x0000CCCCA64CD4D3LL, 0},
-            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
-            .nMaxDifference = 1,
-            .frameLengthBits = 100 * 8,
-            .startOffset = 0,
-            .dataState = SYNC_STATE_DATA_BIPHASE_M,
-            .inverted = false,
-            .postProcess = NULL,
-        },
-        {
-            .id = IPC_PACKET_TYPE_MODEM_M20,
-            .pattern     = {0x0000CCCCA64CD32DLL, 0},
-            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
+            .id = IPC_PACKET_TYPE_MODEM,
+            .pattern     = {0x00000000CCCCA64CLL, 0},
+            .patternMask = {0x00000000FFFFFFFFLL, 0},
             .nMaxDifference = 0,
-            .frameLengthBits = 69 * 8,
+            .frameLengthBits = 70 * 8,
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_BIPHASE_M,
             .inverted = false,
-            .postProcess = NULL,
+            .byteProcess = _SYNC_modemByteProcess,
         },
     },
 };
@@ -116,7 +105,6 @@ static const SYNC_Config configModemPilot = {
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_UART_8N1,
             .inverted = true,
-            .postProcess = NULL,
         },
         {
             .id = IPC_PACKET_TYPE_MODEM_PILOT,
@@ -127,7 +115,6 @@ static const SYNC_Config configModemPilot = {
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_UART_8N1,
             .inverted = false,
-            .postProcess = NULL,
         },
     },
 };

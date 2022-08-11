@@ -17,8 +17,11 @@
 
 /** Context */
 typedef struct M20_Context {
-    int packetLength;
-    M20_Packet packet;
+    uint32_t packetLength;
+    union {
+        M20_Packet packet;
+        uint8_t rawPacket[256];     /* Room for maximum length of XDATA packet */
+    };
 
     float rxFrequencyHz;
 
@@ -174,11 +177,11 @@ static void _M20_sendRaw (M20_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 
 
-LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result M20_processBlock (M20_Handle handle, uint8_t *buffer, uint32_t numBits, float rxFrequencyHz)
 {
-    if (numBits == sizeof(M20_Packet) * 8) {
-        handle->packetLength = numBits / 8;
-        memcpy(&handle->packet, buffer, handle->packetLength);
+    handle->packetLength = numBits / 8 - 1; /* -1: ignore the length byte */
+    if (handle->packetLength >= sizeof(M20_Packet)) { /* Must have at least minimum packet length */
+        memcpy(&handle->packet, &buffer[1], handle->packetLength); /* Skip length byte in buffer[0] */
 
         /* There are two CRC's: One for the whole packet, one for an inner block only. */
         volatile _Bool innercrc;
@@ -187,10 +190,12 @@ LPCLIB_Result M20_processBlock (M20_Handle handle, void *buffer, uint32_t numBit
                     sizeof(handle->packet.inner),
                     __REV16(handle->packet.inner.crc));
         volatile _Bool outercrc;
+        uint16_t receivedOuterCrc =
+                256 * buffer[1 + handle->packetLength - 2] + buffer[1 + handle->packetLength - 1];
         outercrc = _M20_checkCRC(
                     (uint8_t *)&handle->packet,
                     sizeof(handle->packet),
-                    __REV16(handle->packet.crc));
+                    receivedOuterCrc);
         if (outercrc) {
             innercrc = true;    // Firmware 6 transmits an invalid inner CRC (always 0)!
         }
