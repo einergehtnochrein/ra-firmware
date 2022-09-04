@@ -143,10 +143,10 @@ LPCLIB_Result _RS41_checkReedSolomon (uint8_t rawFrame[], int *pNumErrors, _Bool
 
 
     /* Reed-Solomon error correction for even bytes */
-    result = REEDSOLOMON_process(_RS41_getDataAddressShort1, &numErrors1);
+    result = REEDSOLOMON_process(24, 0, _RS41_getDataAddressShort1, &numErrors1);
     if (result != LPCLIB_SUCCESS) {
         /* Failed to decode as short frame. Try long frame format. */
-        result = REEDSOLOMON_process(_RS41_getDataAddressLong1, &numErrors1);
+        result = REEDSOLOMON_process(24, 0, _RS41_getDataAddressLong1, &numErrors1);
         if (result == LPCLIB_SUCCESS) {
             longFrame = true;
         }
@@ -154,7 +154,7 @@ LPCLIB_Result _RS41_checkReedSolomon (uint8_t rawFrame[], int *pNumErrors, _Bool
 
     if (result == LPCLIB_SUCCESS) {
         /* Reed-Solomon error correction for odd bytes */
-        result = REEDSOLOMON_process(longFrame ? _RS41_getDataAddressLong2 : _RS41_getDataAddressShort2, &numErrors2);
+        result = REEDSOLOMON_process(24, 0, longFrame ? _RS41_getDataAddressLong2 : _RS41_getDataAddressShort2, &numErrors2);
     }
 
     if (pNumErrors) {
