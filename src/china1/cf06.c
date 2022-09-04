@@ -12,6 +12,42 @@
 #include "cf06private.h"
 #include "bch.h"
 
+/*
+ * CF-06-AH frame parameters
+ *
+ * 2FSK, 2400 bit/s, 2.4 kHz deviation
+ * Preamble: 36x  01
+ * Sync word: 10110100 00101011 11000110 11111110 (B4 2B C6 FE)
+ *            (it is possible that the sync word is shorter and the last bits belong to the payload)
+ * Payload length: 98 bytes
+ * Payload structure:
+ *
+ * +----------+ +---------+------+------------+ +---------+ +---------+------+------------+
+ * |          | | Block 1 |      | RS Parity  | | Gap     | | Block 2 |      | RS Parity  |
+ * | FF AA AA | | 40 bytes| CRC1 | 6 bytes    | | 10x  AA | | 29 bytes| CRC2 | 6 bytes    |
+ * |          | |         |      | Codeword 1 | |         | |         |      | Codeword 2 |
+ * +----------+ +---------+------+------------+ +---------+ +---------+------+------------+
+ *              \-------- Codeword 1 ---------/
+ *              \---------------------------- Codeword 2 ---------------------------------/
+ *
+ * Reed-Solomon code:  shortened RS(255,249), symbols from GF(256) with primitive polynomial 0x11D
+ *                     and generator element 2. RS generator polynomial g = (x - a^1)*...*(x - a^6)
+ *                     NOTE: This is different from RS41 Reed Solomon code, where the generator
+ *                           polynomial starts at alpha^0: g_rs41 = (x - a^0)*...*(x - a^23)
+ *
+ *                     Codeword 1 is constructed as follows:
+ *                     c_0...c_254 (c_0...c_248 = k data symbols, c_249...c_254 = m parity symbols)
+ *                     Codeword 1 is transmitted in reverse symbol order: c_41...c_0+c_254...c_249
+ *                     (first byte of block 1 is c_41, last byte of CRC1 is c_0).
+ *                     Codeword 2 is formed accordingly.
+ *
+ * Regular CRC, except for weird output XOR of block 2 CRC:
+ * CRC1 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0
+ * CRC1 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0x39BB
+ * Both CRC1 and CRC2 are sent in big-endian format
+ */
+
+
 
 /** Context */
 typedef struct CF06_Context {
