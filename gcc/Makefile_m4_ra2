@@ -36,6 +36,7 @@ C_SRCS = \
     modem/pilot.c modem/pilotconfig.c modem/pilotgps.c \
     meisei/meisei.c meisei/meiseiconfig.c meisei/meiseigps.c meisei/meiseimetrology.c \
     mrz/mrz.c mrz/mrzconfig.c mrz/mrzgps.c mrz/mrzmetrology.c \
+    china1/china1.c china1/cf06.c china1/cf06config.c china1/cf06utils.c china1/cf06payload.c \
     \
     semihosting/syscalls.c semihosting/t32term.c semihosting/t32term_memory.c
 
@@ -56,6 +57,7 @@ EXE_DEPENDENCIES += \
 INCLUDES += \
     -I../src/bch \
     -I../src/beacon \
+    -I../src/china1 \
     -I../src/dfm \
     -I../src/gps \
     -I../src/imet \

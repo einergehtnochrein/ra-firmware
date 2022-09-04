@@ -85,9 +85,9 @@ TEST(fec, reedsolomon_rs41)
     /* Begin with a correct codeword. Should be accepted, and no errors detected.
      * Actually a RS41 frame consists of two interleaved codewords, so do two tests!
      */
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(_rs41_getDataAddressShort1, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort1, &numErrors));
     LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW1");
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(_rs41_getDataAddressShort2, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort2, &numErrors));
     LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW2");
 
     /* Add some errors, max. 12 in both codewords. This is still correctable. */
@@ -103,9 +103,9 @@ TEST(fec, reedsolomon_rs41)
     }
 
     /* Codewords must corrected, and correct number of errors detected */
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(_rs41_getDataAddressShort1, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort1, &numErrors));
     LONGS_EQUAL_TEXT(nErrors1, numErrors, "Number of errors injected in CW1");
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(_rs41_getDataAddressShort2, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort2, &numErrors));
     LONGS_EQUAL_TEXT(nErrors2, numErrors, "Number of errors injected in CW2");
 
     /* TODO validate corrected frames! */

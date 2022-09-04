@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, DF9DQ
+/* Copyright (c) 2019, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -24,20 +24,18 @@
  */
 
 
-#ifndef __REEDSOLOMON_H
-#define __REEDSOLOMON_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef __CHINA1_H
+#define __CHINA1_H
 
 #include "lpclib.h"
+#include "sonde.h"
 
-typedef uint8_t * (*_REEDSOLOMON_GetDataAddressFunc)(int index);
 
-LPCLIB_Result REEDSOLOMON_process (int m, int firstZero, _REEDSOLOMON_GetDataAddressFunc access, int *pnErrors);
+LPCLIB_Result CHINA1_processBlock (
+        void *handle,
+        SONDE_Type sondeType,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz);
 
-#ifdef __cplusplus
-}
-#endif
 #endif

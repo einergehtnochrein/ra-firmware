@@ -7,12 +7,12 @@
 #include "reedsolo.inc"
 
 #define CODE_n                              255
-#define CODE_m                              24
+#define CODE_m_MAX                          24
 
 
 /* Polynomial of (max) degree m */
 typedef struct {
-    uint8_t c[CODE_m + 1];
+    uint8_t c[CODE_m_MAX + 1];
     uint8_t degree;
 } GFPoly;
 
@@ -45,7 +45,7 @@ static uint8_t _gfadd (uint8_t a, uint8_t b)
 /* Calculate the syndroms of the received code word.
  * Return LPCLIB_SUCCESS if a valid code word is detected (all syndroms are zero).
  */
-static LPCLIB_Result _REEDSOLOMON_getSyndroms (_REEDSOLOMON_GetDataAddressFunc access, GFPoly *syndroms)
+static LPCLIB_Result _REEDSOLOMON_getSyndroms (int m, int firstZero, _REEDSOLOMON_GetDataAddressFunc access, GFPoly *syndroms)
 {
     int i, j;
     uint8_t alpha, zeta;
@@ -54,9 +54,9 @@ static LPCLIB_Result _REEDSOLOMON_getSyndroms (_REEDSOLOMON_GetDataAddressFunc a
 
 
     /* Calculate the syndroms */
-    syndroms->degree = CODE_m - 1;
-    for (i = 0; i < CODE_m; i++) {
-        alpha = _i2n[i];
+    syndroms->degree = m - 1;
+    for (i = 0; i < m; i++) {
+        alpha = _i2n[firstZero + i];
         zeta = alpha;
         temp = *access(0);
         for (j = 1; j < CODE_n; j++) {
@@ -79,10 +79,10 @@ static LPCLIB_Result _REEDSOLOMON_getSyndroms (_REEDSOLOMON_GetDataAddressFunc a
  * Delivers the error locator polynomial and the error magnitude polynomial.
  * Returns LPCLIB_SUCCESS if the result is consistent (polynomial degrees match)
  */
-static LPCLIB_Result _REEDSOLOMON_runBerlekampMassey (GFPoly *syndroms, GFPoly *errorLocatorPoly, GFPoly *errorMagnitudePoly)
+static LPCLIB_Result _REEDSOLOMON_runBerlekampMassey (int m, GFPoly *syndroms, GFPoly *errorLocatorPoly, GFPoly *errorMagnitudePoly)
 {
     int K, L;
-    uint8_t C[CODE_m/2 + 1];
+    uint8_t C[m/2 + 1];
     uint8_t e, inve;
     int i, j;
     uint8_t temp;
@@ -96,7 +96,7 @@ static LPCLIB_Result _REEDSOLOMON_runBerlekampMassey (GFPoly *syndroms, GFPoly *
     errorLocatorPoly->c[0] = 1;             /* Lambda(x) = 1 */
     memset(errorMagnitudePoly, 0, sizeof(GFPoly));
 
-    while (K <= CODE_m) {
+    while (K <= m) {
         /* Calculate e and its inverse */
         e = syndroms->c[K - 1];
         for (i = 1; i <= L; i++) {
@@ -111,7 +111,7 @@ static LPCLIB_Result _REEDSOLOMON_runBerlekampMassey (GFPoly *syndroms, GFPoly *
              * if 2L<K:  C(x) = Lambda(x) / e
              * Lambda(x) = Lambda'(x)
              */
-            for (i = 0; i < CODE_m/2+1; i++) {
+            for (i = 0; i < m/2+1; i++) {
                 temp = errorLocatorPoly->c[i];
 
                 errorLocatorPoly->c[i] = _gfadd(temp, _gfmul(C[i], e));
@@ -129,7 +129,7 @@ static LPCLIB_Result _REEDSOLOMON_runBerlekampMassey (GFPoly *syndroms, GFPoly *
         }
 
         /* C(x) = C(x) * x */
-        for (i = CODE_m/2+1 - 1; i > 0; i--) {
+        for (i = m/2+1 - 1; i > 0; i--) {
             C[i] = C[i - 1];
         }
         C[0] = 0;
@@ -142,12 +142,12 @@ static LPCLIB_Result _REEDSOLOMON_runBerlekampMassey (GFPoly *syndroms, GFPoly *
      */
     for (i = 0; i <= syndroms->degree; i++) {
         for (j = 0; j <= errorLocatorPoly->degree; j++) {
-            if (i + j < CODE_m) {
+            if (i + j < m) {
                 errorMagnitudePoly->c[i + j] = _gfadd(errorMagnitudePoly->c[i + j], _gfmul(syndroms->c[i], errorLocatorPoly->c[j]));
             }
         }
     }
-    for (i = 0; i <= CODE_m; i++) {
+    for (i = 0; i <= m; i++) {
         if (errorMagnitudePoly->c[i] != 0) {
             errorMagnitudePoly->degree = i;
         }
@@ -165,14 +165,14 @@ static LPCLIB_Result _REEDSOLOMON_runBerlekampMassey (GFPoly *syndroms, GFPoly *
  * The array errorPositions is filled with the error positions in the code word.
  * Return LPCLIB_SUCCESS if the expected number of errors is found (degree of error locator polynomial)
  */
-static LPCLIB_Result _REEDSOLOMON_findErrorLocators (GFPoly *errorLocatorPoly, uint8_t *errorLocatorsInv, uint8_t *errorPositions, int *nErrors)
+static LPCLIB_Result _REEDSOLOMON_findErrorLocators (int m, GFPoly *errorLocatorPoly, uint8_t *errorLocatorsInv, uint8_t *errorPositions, int *nErrors)
 {
     int i, j;
     uint8_t alpha, zeta;
     uint8_t e;
 
     /* Sanity check: error locator polynomial must be of degree m/2 or less */
-    if (errorLocatorPoly->degree > CODE_m / 2) {
+    if (errorLocatorPoly->degree > m / 2) {
         return 0;
     }
 
@@ -243,13 +243,13 @@ GFPoly syndroms;
 GFPoly errorLocatorPoly;
 GFPoly errorLocatorPolyDerived;
 GFPoly errorMagnitudePoly;
-uint8_t errorLocatorsInv[CODE_m / 2];
-uint8_t errorPositions[CODE_m / 2];
+uint8_t errorLocatorsInv[CODE_m_MAX / 2];
+uint8_t errorPositions[CODE_m_MAX / 2];
 #endif
 
 
 
-LPCLIB_Result REEDSOLOMON_process (_REEDSOLOMON_GetDataAddressFunc access, int *pnErrors)
+LPCLIB_Result REEDSOLOMON_process (int m, int firstZero, _REEDSOLOMON_GetDataAddressFunc access, int *pnErrors)
 {
     LPCLIB_Result result;
     int i;
@@ -263,13 +263,13 @@ LPCLIB_Result REEDSOLOMON_process (_REEDSOLOMON_GetDataAddressFunc access, int *
     nErrors = 0;
 
     /* Calculate the syndroms */
-    result = _REEDSOLOMON_getSyndroms(access, &syndroms);
+    result = _REEDSOLOMON_getSyndroms(m, firstZero, access, &syndroms);
     if (result != LPCLIB_SUCCESS) {
         /* Find error locator and error magnitude polynomials */
-        result = _REEDSOLOMON_runBerlekampMassey(&syndroms, &errorLocatorPoly, &errorMagnitudePoly);
+        result = _REEDSOLOMON_runBerlekampMassey(m, &syndroms, &errorLocatorPoly, &errorMagnitudePoly);
         if (result == LPCLIB_SUCCESS) {
             /* Determine error locators (and positions, which is the log of their inverse) */
-            result = _REEDSOLOMON_findErrorLocators(&errorLocatorPoly, errorLocatorsInv, errorPositions, &nErrors);
+            result = _REEDSOLOMON_findErrorLocators(m, &errorLocatorPoly, errorLocatorsInv, errorPositions, &nErrors);
             if (result == LPCLIB_SUCCESS) {
                 _REEDSOLOMON_derivePoly(&errorLocatorPoly, &errorLocatorPolyDerived);
                 for (i = 0; i < nErrors; i++) {
@@ -285,7 +285,7 @@ LPCLIB_Result REEDSOLOMON_process (_REEDSOLOMON_GetDataAddressFunc access, int *
 
                 /* Calculate the syndroms again after correction */
                 //TODO: Necessary?
-                result = _REEDSOLOMON_getSyndroms(access, &syndroms);
+                result = _REEDSOLOMON_getSyndroms(m, firstZero, access, &syndroms);
             }
         }
     }

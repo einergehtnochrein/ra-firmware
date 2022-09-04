@@ -12,6 +12,7 @@ typedef enum {
     MODE_MEISEI = 6,
     MODE_JINYANG = 7,
     MODE_MRZ = 9,
+    MODE_ASIA1 = 10,    /* Various sondes (mostly Asia) with 2FSK 2400 sym/s */
 } SYNC_Mode;
 
 
@@ -219,6 +220,57 @@ static const SYNC_Config configMrz = {
 };
 
 
+static const SYNC_Config configAsia1 = {
+    .nPatterns = 4,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_JINYANG_RSG20,
+            .pattern     = {0x00AAAAAA88888888LL, 0},
+            .patternMask = {0x00FFFFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 320,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+        },
+        {
+            .id = IPC_PACKET_TYPE_MEISEI_CONFIG,
+            .pattern     = {0x0000AAB52B34CACDLL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 6 * 46,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_S,
+            .inverted = false,
+            .nSubBlockBits = 46,
+            .nSubBlockBytes = 8,
+        },
+        {
+            .id = IPC_PACKET_TYPE_MEISEI_GPS,
+            .pattern     = {0x0000CCD34D52ACAALL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 2,
+            .frameLengthBits = 6 * 46,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_BIPHASE_S,
+            .inverted = false,
+            .nSubBlockBits = 46,
+            .nSubBlockBytes = 8,
+        },
+        {
+            .id = IPC_PACKET_TYPE_HGT03G_CF06AH,
+            .pattern     = {0x00000055B42BC6FELL, 0},
+            .patternMask = {0x000000FFFFFFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 101 * 8,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+        },
+    },
+};
+
+
 
 void MAILBOX_IRQHandler (void)
 {
@@ -256,6 +308,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 8)) {
         newMode = MODE_MRZ;
         LPC_MAILBOX->IRQ0CLR = (1u << 8);
+    }
+    else if (requests & (1u << 9)) {
+        newMode = MODE_ASIA1;
+        LPC_MAILBOX->IRQ0CLR = (1u << 9);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -313,6 +369,9 @@ int main (void)
                     break;
                 case MODE_MRZ:
                     syncConfig = &configMrz;
+                    break;
+                case MODE_ASIA1:
+                    syncConfig = &configAsia1;
                     break;
                 case MODE_AFSK:
                 default:

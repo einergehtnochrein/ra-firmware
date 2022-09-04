@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, DF9DQ
+/* Copyright (c) 2019, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -24,20 +24,24 @@
  */
 
 
-#ifndef __REEDSOLOMON_H
-#define __REEDSOLOMON_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifndef __CF06_H
+#define __CF06_H
 
 #include "lpclib.h"
+#include "sonde.h"
 
-typedef uint8_t * (*_REEDSOLOMON_GetDataAddressFunc)(int index);
 
-LPCLIB_Result REEDSOLOMON_process (int m, int firstZero, _REEDSOLOMON_GetDataAddressFunc access, int *pnErrors);
+typedef struct CF06_Context *CF06_Handle;
 
-#ifdef __cplusplus
-}
-#endif
+
+LPCLIB_Result CF06_open (CF06_Handle *pHandle);
+LPCLIB_Result CF06_processBlock (
+        CF06_Handle handle,
+        SONDE_Type sondeType,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz);
+LPCLIB_Result CF06_resendLastPositions (CF06_Handle handle);
+LPCLIB_Result CF06_removeFromList (CF06_Handle handle, uint32_t id, float *frequency);
+
 #endif

@@ -35,6 +35,8 @@
 #include "app.h"
 #include "beacon.h"
 #include "bl652.h"
+#include "cf06.h"
+#include "china1.h"
 #include "dfm.h"
 #include "imet.h"
 #include "jinyang.h"
@@ -125,6 +127,7 @@ struct SYS_Context {
     RS41_Handle rs41;
     RS92_Handle rs92;
     BEACON_Handle beacon;
+    CF06_Handle cf06;
     DFM_Handle dfm;
     IMET_Handle imet;
     JINYANG_Handle jinyang;
@@ -268,6 +271,31 @@ static const ADF7021_Config radioModeJinyang[] = {
 };
 
 static const ADF7021_Config radioModeMrz[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 1875, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeAsia1[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
@@ -699,6 +727,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
             LPC_MAILBOX->IRQ0SET = (1u << 4); //TODO
+            break;
+
+        case SONDE_DETECTOR_ASIA1: /* 2FSK 2.4k deviation, 2400 sym/s */
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setBitRate(radio, 2400);
+            ADF7021_ioctl(radio, radioModeAsia1);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+            LPC_MAILBOX->IRQ0SET = (1u << 9); //TODO
             break;
 
         default:
@@ -1277,6 +1316,7 @@ if (cl[0] != 0) {
                     BEACON_resendLastPositions(handle->beacon);
                     PILOT_resendLastPositions(handle->pilot);
                     MEISEI_resendLastPositions(handle->meisei);
+                    CF06_resendLastPositions(handle->cf06);
 
                     handle->linkEstablished = true;
                 }
@@ -1313,6 +1353,7 @@ if (cl[0] != 0) {
                         case 7:     detector = SONDE_DETECTOR_PILOT; break;
                         case 8:     detector = SONDE_DETECTOR_JINYANG; break;
                         case 10:    detector = SONDE_DETECTOR_MRZ; break;
+                        case 11:    detector = SONDE_DETECTOR_ASIA1; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -1386,6 +1427,10 @@ if (cl[0] != 0) {
                                     case SONDE_DECODER_MRZ:
                                         MRZ_removeFromList(handle->mrz, id, &frequency);
                                         detector = SONDE_DETECTOR_MRZ;
+                                        break;
+                                    case SONDE_DECODER_ASIA1:
+                                        CF06_removeFromList(handle->cf06, id, &frequency);
+                                        detector = SONDE_DETECTOR_ASIA1;
                                         break;
                                     default:
                                         /* ignore */
@@ -1651,6 +1696,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     MEISEI_open(&handle->meisei);
     MRZ_open(&handle->mrz);
     PILOT_open(&handle->pilot);
+    CF06_open(&handle->cf06);
     PDM_open(0, &handle->pdm);
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
@@ -1752,6 +1798,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 9:  sondeType = SONDE_MEISEI_GPS; break;
                                 case 10: sondeType = SONDE_RSG20; break;
                                 case 12: sondeType = SONDE_MRZ; break;
+                                case 13: sondeType = SONDE_HGT03G_CF06AH; break;
                             }
 
                             /* Process buffer */
@@ -1854,6 +1901,17 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_MRZ) {
                                 if (MRZ_processBlock(
                                         handle->mrz,
+                                        sondeType,
+                                        ipc[bufferIndex].data8,
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_HGT03G_CF06AH) {
+                                if (CHINA1_processBlock(
+                                        handle->cf06,
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
