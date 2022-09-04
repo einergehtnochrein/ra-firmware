@@ -279,7 +279,10 @@ LPCLIB_Result REEDSOLOMON_process (int m, int firstZero, _REEDSOLOMON_GetDataAdd
                     w = _REEDSOLOMON_polyVal(&errorMagnitudePoly, xjinv);
                     ld = _REEDSOLOMON_polyVal(&errorLocatorPolyDerived, xjinv);
                     y = _gfmul(w, _i2n[CODE_n - _n2i[ld]]);
-                    y = _gfmul(y, _i2n[CODE_n - _n2i[xjinv]]);
+                    if (firstZero == 0) {  //TODO nasty quick hack... :-(
+                                           // must multiply by X_j ^ (1-b)
+                        y = _gfmul(y, _i2n[CODE_n - _n2i[xjinv]]);
+                    }
                     *access(pos) ^= y;
                 }
 
