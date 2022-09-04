@@ -43,7 +43,7 @@
  *
  * Regular CRC, except for weird output XOR of block 2 CRC:
  * CRC1 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0
- * CRC1 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0x39BB
+ * CRC2 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0x39BB
  * Both CRC1 and CRC2 are sent in big-endian format
  */
 
