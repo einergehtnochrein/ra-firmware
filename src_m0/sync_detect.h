@@ -14,8 +14,9 @@ typedef enum {
     SYNC_STATE_DATA_MANCHESTER_UART_8N1,
 } SYNC_State;
 
+typedef struct _SyncDetectorContext *SYNC_Handle;
 
-typedef void (*PostProcessFunc)(volatile IPC_S2M *buffer);
+typedef void (*ProcessFunc)(SYNC_Handle handle, volatile IPC_S2M *buffer, int writeIndex);
 
 typedef struct {
     int nPatterns;
@@ -29,7 +30,8 @@ typedef struct {
         int startOffset;                    /* Start offset in buffer for storing first payload byte */
         SYNC_State dataState;               /* State to jump to when receiving data */
         bool inverted;                      /* Invert bits if set */
-        PostProcessFunc postProcess;        /* Called after frame has been received */
+        ProcessFunc postProcess;            /* Called after frame has been received */
+        ProcessFunc byteProcess;            /* Called after each byte received */
 
         int nSubBlockBits;                  /* Limit sub-blocks to n bits */
         int nSubBlockBytes;                 /* Sub-block size (bytes) in data buffer */
@@ -37,10 +39,9 @@ typedef struct {
 } SYNC_Config;
 
 
-typedef struct _SyncDetectorContext *SYNC_Handle;
-
-
 void SYNC_open (SYNC_Handle *pHandle);
 void SYNC_configure(SYNC_Handle handle, const SYNC_Config *pConfig);
+
+void _SYNC_modemByteProcess (SYNC_Handle handle, volatile IPC_S2M *buffer, int writeIndex);
 
 #endif

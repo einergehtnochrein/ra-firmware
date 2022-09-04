@@ -5,9 +5,6 @@
 
 #include <math.h>
 #include <stdlib.h>
-#if !defined(M_PI)
-#  define M_PI 3.14159265358979323846
-#endif
 #include <string.h>
 #include <stdio.h>
 
@@ -41,7 +38,7 @@ typedef __PACKED(struct {
     uint8_t vbat;                   // 25 Battery voltage, upper 8 bits of 12-bit ADC result (ADC_IN8, PB0)
     int8_t cpuTemperature;          // 26 CPU temperature sensor [0.4 °C]
     uint8_t adc_pb1_pc3[3];         // 27 LE, ADC inputs from heater current sensor
-    uint8_t reserved2A;             // 2A
+    uint8_t xdataLength;            // 2A Length of XDATA block at end of frame
     uint16_t reserved2B;            // 2B from EEPROM 024 [15:0]
     uint8_t reserved2D;             // 2D from EEPROM 000 [23:16]
     uint16_t humidityCalibration;   // 2E from EEPROM 01C [15:0]
@@ -53,7 +50,11 @@ typedef __PACKED(struct {
     uint8_t flags;                  // 3C Status flags
     uint8_t heaterPower;            // 3D Power in heater is: P=((heaterPower+145)/10.0) mW
     uint16_t boardTemperature;      // 3E LE, NTC sensor for board temperature (ADC_IN12, PC2)
-    int16_t reserved40;             // 40 from EEPROM 024 [31:16]
+    uint8_t reserved40;             // 40 from EEPROM 024 [23:16]
+    __PACKED(union {
+        uint8_t reserved41;         // 41 from EEPROM 024 [31:24]
+        char xdata;                 // 41 Placeholder for the begin of the XDATA block
+    });
     uint8_t version;                // 42 program/packet version number?
     uint16_t crc;                   // 43
 }) M20_Packet;

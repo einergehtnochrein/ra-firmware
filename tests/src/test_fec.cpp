@@ -6,7 +6,7 @@
 #include "reedsolomon/reedsolomon.h"
 
 
-/* Raw frame after dewhitening and with correct bit order */
+/* RS41 raw frame after dewhitening and with correct bit order */
 static uint8_t _rs41_raw_dewhitened[312] = {
     0x24, 0xd5, 0x54, 0xaf, 0xf3, 0xdd, 0xff, 0xa8, 0x54, 0x53, 0x00, 0x18, 0x1a, 0xc4, 0x09, 0xf1,
     0xc8, 0xb4, 0xfe, 0x5c, 0xe2, 0x37, 0xaa, 0xe5, 0x44, 0xec, 0xbe, 0x8f, 0x82, 0x45, 0xa7, 0x0d,
@@ -29,6 +29,18 @@ static uint8_t _rs41_raw_dewhitened[312] = {
     0x0e, 0x11, 0x41, 0x76, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xec, 0xc7
 };
+
+/* CF-06-AH raw frame with correct bit order */
+static uint8_t _cf06_raw[99] = {
+    0xff, 0xaa, 0xaa, 0x15, 0x2f, 0x03, 0x09, 0x00, 0xed, 0x3a, 0x0f, 0x8d, 0xf9, 0xbc, 0x08, 0x90,
+    0x2d, 0x15, 0x1f, 0xfc, 0x49, 0x00, 0x01, 0x3a, 0x04, 0xeb, 0xff, 0x4a, 0xfe, 0x0f, 0x0c, 0x03,
+    0xeb, 0xe0, 0xfd, 0x00, 0x00, 0xff, 0x3a, 0xeb, 0x35, 0x15, 0x78, 0xa6, 0xb8, 0x48, 0xf5, 0x26,
+    0xa4, 0x0a, 0x56, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0x03, 0xeb, 0xe0,
+    0xfd, 0x00, 0x00, 0x3a, 0xeb, 0xa7, 0xff, 0x3b, 0x05, 0x29, 0xfe, 0x03, 0xeb, 0xd6, 0xfd, 0x00,
+    0x00, 0x36, 0xeb, 0xa0, 0xff, 0xba, 0x05, 0x50, 0xfe, 0xab, 0xed, 0x40, 0xe5, 0x8d, 0x64, 0x01,
+    0xb0, 0x30, 0x00
+};
+
 
 
 static uint8_t _rs41_null;
@@ -61,6 +73,35 @@ uint8_t * _rs41_getDataAddressShort2 (int index)
     }
 }
 
+static uint8_t _cf06_null;
+
+static uint8_t * _cf06_getData1 (int index)
+{
+    if (index < 42) {
+        return &_cf06_raw[44 - index];
+    }
+    else if (index >= 249) {
+        return &_cf06_raw[299 - index];
+    }
+    else {
+        _cf06_null = 0;
+        return &_cf06_null;
+    }
+}
+
+uint8_t * _cf06_getData2 (int index)
+{
+    if (index < 89) {
+        return &_cf06_raw[91 - index];
+    }
+    else if (index >= 249) {
+        return &_cf06_raw[346 - index];
+    }
+    else {
+        _cf06_null = 0;
+        return &_cf06_null;
+    }
+}
 
 
 
@@ -85,9 +126,9 @@ TEST(fec, reedsolomon_rs41)
     /* Begin with a correct codeword. Should be accepted, and no errors detected.
      * Actually a RS41 frame consists of two interleaved codewords, so do two tests!
      */
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(_rs41_getDataAddressShort1, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort1, &numErrors));
     LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW1");
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(_rs41_getDataAddressShort2, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort2, &numErrors));
     LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW2");
 
     /* Add some errors, max. 12 in both codewords. This is still correctable. */
@@ -103,11 +144,50 @@ TEST(fec, reedsolomon_rs41)
     }
 
     /* Codewords must corrected, and correct number of errors detected */
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(_rs41_getDataAddressShort1, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort1, &numErrors));
     LONGS_EQUAL_TEXT(nErrors1, numErrors, "Number of errors injected in CW1");
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(_rs41_getDataAddressShort2, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort2, &numErrors));
     LONGS_EQUAL_TEXT(nErrors2, numErrors, "Number of errors injected in CW2");
 
     /* TODO validate corrected frames! */
 }
 
+
+/* Test of the "general" Reed Solomon decoder, but uses CF-06-AH frame as an example */
+TEST(fec, reedsolomon_cf06)
+{
+    int numErrors;
+    int i;
+
+    /* Begin with a correct codeword. Should be accepted, and no errors detected.
+     * Actually a CF06 frame consists of two codewords, so do two tests!
+     */
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, _cf06_getData1, &numErrors));
+    LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW1");
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, _cf06_getData2, &numErrors));
+    LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW2");
+
+    /* Add some errors, max. 3 in both codewords. This is still correctable.
+     * Note that codeword 1 is a subset of codeword 2! We add three errors to CW1 and three errors
+     * to the codeword 2 only part, so at the beginning there are three errors in CW1 and six errors
+     * in CW2. We correct CW1 first, so CW2 becomes correctable.
+     */
+    int errorLocations1[] = {4, 39, 45}; /* 45 in parity block */
+    int nErrors1 = sizeof(errorLocations1) / sizeof(errorLocations1[0]);
+    for (i = 0; i < nErrors1; i++) {
+        _cf06_raw[errorLocations1[i]] ^= 0x42;
+    }
+    int errorLocations2[] = {58, 69, 97};   /* 97 in parity block */
+    int nErrors2 = sizeof(errorLocations2) / sizeof(errorLocations2[0]);
+    for (i = 0; i < nErrors2; i++) {
+        _cf06_raw[errorLocations2[i]] ^= 0xFF;
+    }
+
+    /* Codewords must corrected, and correct number of errors detected */
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, _cf06_getData1, &numErrors));
+    LONGS_EQUAL_TEXT(nErrors1, numErrors, "Number of errors injected in CW1");
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, _cf06_getData2, &numErrors));
+    LONGS_EQUAL_TEXT(nErrors2, numErrors, "Number of errors injected in CW2");
+
+    /* TODO validate corrected frames! */
+}

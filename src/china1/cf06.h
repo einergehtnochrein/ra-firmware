@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, DF9DQ
+/* Copyright (c) 2019, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -24,21 +24,24 @@
  */
 
 
-#ifndef __M20_H
-#define __M20_H
+#ifndef __CF06_H
+#define __CF06_H
 
 #include "lpclib.h"
-#include "pt.h"
+#include "sonde.h"
 
 
+typedef struct CF06_Context *CF06_Handle;
 
-typedef struct M20_Context *M20_Handle;
 
-
-LPCLIB_Result M20_open (M20_Handle *pHandle);
-LPCLIB_Result M20_processBlock (M20_Handle handle, uint8_t *buffer, uint32_t numBits, float rxFrequencyHz);
-LPCLIB_Result M20_resendLastPositions (M20_Handle handle);
-LPCLIB_Result M20_removeFromList (M20_Handle handle, uint32_t id, float *frequency);
-
+LPCLIB_Result CF06_open (CF06_Handle *pHandle);
+LPCLIB_Result CF06_processBlock (
+        CF06_Handle handle,
+        SONDE_Type sondeType,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz);
+LPCLIB_Result CF06_resendLastPositions (CF06_Handle handle);
+LPCLIB_Result CF06_removeFromList (CF06_Handle handle, uint32_t id, float *frequency);
 
 #endif

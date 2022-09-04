@@ -2,9 +2,6 @@
 #include <inttypes.h>
 #include <math.h>
 #include <stdlib.h>
-#if !defined(M_PI)
-#  define M_PI 3.14159265358979323846
-#endif
 #include <string.h>
 #include <stdio.h>
 
@@ -275,7 +272,7 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t numB
         memcpy(handle->packet.rawData, buffer, sizeof(handle->packet.rawData));
 
         /* Reed-Solomon decoder */
-        LPCLIB_Result result = REEDSOLOMON_process(_RS92_getDataAddress, &handle->nSymbolErrors);
+        LPCLIB_Result result = REEDSOLOMON_process(24, 0, _RS92_getDataAddress, &handle->nSymbolErrors);
         if (result != LPCLIB_SUCCESS) {
             /* Try harder. Guess some elements of the code word and try again. */
             handle->packet.config.frameType = RS92_SUBFRAME_CALIB_CONFIG;
@@ -298,7 +295,7 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t numB
             handle->packet.unknown.length = 2;
             handle->packet.unknown.nn[0] = 2;
             handle->packet.unknown.nn[1] = 2;
-            result = REEDSOLOMON_process(_RS92_getDataAddress, &handle->nSymbolErrors);
+            result = REEDSOLOMON_process(24, 0, _RS92_getDataAddress, &handle->nSymbolErrors);
         }
 
         if (result == LPCLIB_SUCCESS) {

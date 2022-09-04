@@ -31,10 +31,6 @@
 #include "config.h"
 #include "gps.h"
 
-#ifndef M_PI
-#    define M_PI 3.14159265358979323846
-#endif
-
 #define WGS84_a         6378137.0
 #define WGS84_b         6356752.3142
 #define WGS84_e         0.0818191909316
