@@ -48,10 +48,10 @@ typedef union {
     CF06_RawData rawData;
     __PACKED(struct {
         uint8_t reserved00[3];
-        CF06_PayloadBlock1 inner;
+        CF06_PayloadBlock1 block1;
         uint8_t fec_inner[6];
         uint8_t reserved33[10];
-        CF06_PayloadBlock2 outer;
+        CF06_PayloadBlock2 block2;
         uint8_t fec_outer[6];
     });
 } CF06_Packet;

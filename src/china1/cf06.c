@@ -177,12 +177,12 @@ LPCLIB_Result CF06_processBlock (
     _Bool frameOk = false;
     if (_CF06_checkReedSolomonOuter (handle->pRawData->rawData.dat8, &errorsOuter) == LPCLIB_SUCCESS) {
         /* CRC of outer block ok? */
-        handle->pRawData->outer.crc = __REV16(handle->pRawData->outer.crc); /* Big endian */
-        if (_CF06_checkCRCOuter((uint8_t *)&handle->pRawData->outer, sizeof(CF06_PayloadBlock2)-2, handle->pRawData->outer.crc ^ 0x39BB)) {
+        handle->pRawData->block2.crc = __REV16(handle->pRawData->block2.crc); /* Big endian */
+        if (_CF06_checkCRCOuter((uint8_t *)&handle->pRawData->block2, sizeof(CF06_PayloadBlock2)-2, handle->pRawData->block2.crc ^ 0x39BB)) {
             frameOk = true;
             _CF06_prepare(handle->pRawData, &handle->instance, rxFrequencyHz);
             if (handle->instance) {
-                _CF06_processPayloadBlock1(&handle->pRawData->inner, &handle->instance->gps, &handle->instance->metro);
+                _CF06_processPayloadBlock2(&handle->pRawData->block2, &handle->instance->gps, &handle->instance->metro);
             }
         }
     }
@@ -191,10 +191,10 @@ LPCLIB_Result CF06_processBlock (
     int errorsInner = 0;
     if (_CF06_checkReedSolomonInner (handle->pRawData->rawData.dat8, &errorsInner) == LPCLIB_SUCCESS) {
         /* CRC of inner block ok? */
-        handle->pRawData->inner.crc = __REV16(handle->pRawData->inner.crc); /* Big endian */
-        if (_CF06_checkCRCInner((uint8_t *)&handle->pRawData->inner, sizeof(CF06_PayloadBlock1)-2, handle->pRawData->inner.crc)) {
+        handle->pRawData->block1.crc = __REV16(handle->pRawData->block1.crc); /* Big endian */
+        if (_CF06_checkCRCInner((uint8_t *)&handle->pRawData->block1, sizeof(CF06_PayloadBlock1)-2, handle->pRawData->block1.crc)) {
             if (handle->instance) {
-                _CF06_processPayloadBlock1(&handle->pRawData->inner, &handle->instance->gps, &handle->instance->metro);
+                _CF06_processPayloadBlock1(&handle->pRawData->block1, &handle->instance->gps, &handle->instance->metro);
             }
         }
     }
