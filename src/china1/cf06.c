@@ -115,7 +115,7 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
 
     length = snprintf(s, sizeof(s), "%"PRIu32",16,0,%s",
                 instance->id,
-                "CF-06AH"
+                instance->name
                 );
 
     if (length > 0) {
@@ -161,7 +161,6 @@ LPCLIB_Result CF06_processBlock (
 {
     (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
-    uint16_t receivedCRC;
 
     if (numBits < 8*sizeof(CF06_Packet)) {
         return LPCLIB_ILLEGAL_PARAMETER;
@@ -180,7 +179,7 @@ LPCLIB_Result CF06_processBlock (
         handle->pRawData->block2.crc = __REV16(handle->pRawData->block2.crc); /* Big endian */
         if (_CF06_checkCRCOuter((uint8_t *)&handle->pRawData->block2, sizeof(CF06_PayloadBlock2)-2, handle->pRawData->block2.crc ^ 0x39BB)) {
             frameOk = true;
-            _CF06_prepare(handle->pRawData, &handle->instance, rxFrequencyHz);
+            _CF06_prepare(&handle->pRawData->block1, &handle->instance, rxFrequencyHz);
             if (handle->instance) {
                 _CF06_processPayloadBlock2(&handle->pRawData->block2, &handle->instance->gps, &handle->instance->metro);
             }
