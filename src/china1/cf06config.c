@@ -13,18 +13,16 @@ static CF06_InstanceData *instanceList;
 
 
 /* Get a new instance data structure for a new sonde */
-static CF06_InstanceData *_CF06_getInstanceDataStructure (float frequencyMHz)
+static CF06_InstanceData *_CF06_getInstanceDataStructure (const char *name)
 {
     CF06_InstanceData *p;
     CF06_InstanceData *instance;
 
-    /* Check if we already have the calibration data. Count the number of sondes
-     * while traversing the list.
-     */
+    /* Count the number of sondes while traversing the list. */
     int numSondes = 0;
     p = instanceList;
     while (p) {
-        if (p->rxFrequencyMHz == frequencyMHz) {
+        if (!strcmp(p->name, name)) {
             /* Found it! */
             return p;
         }
@@ -58,7 +56,7 @@ static CF06_InstanceData *_CF06_getInstanceDataStructure (float frequencyMHz)
     if (instance) {
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
-        instance->rxFrequencyMHz = frequencyMHz;
+        strncpy(instance->name, name, sizeof(instance->name) - 1);
 
         /* Insert into list */
         p = instanceList;
@@ -84,7 +82,7 @@ static CF06_InstanceData *_CF06_getInstanceDataStructure (float frequencyMHz)
 
 /* Process the config/calib block. */
 LPCLIB_Result _CF06_prepare (
-        CF06_Packet *packet,
+        CF06_PayloadBlock1 *block1,
         CF06_InstanceData **instancePointer,
         float rxFrequencyHz)
 {
@@ -95,14 +93,23 @@ LPCLIB_Result _CF06_prepare (
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
+    /* Format serial number */
+    char s[20];
+    snprintf(s, sizeof(s), "%lu%02lu%02lu%02lu",
+             (block1->serial >>  0) & 0xFF,
+             (block1->serial >>  8) & 0xFF,
+             (block1->serial >> 16) & 0xFF,
+             (block1->serial >> 24) & 0xFF);
+
     /* Allocate new calib space if new sonde! */
-    CF06_InstanceData *instance = _CF06_getInstanceDataStructure(rxFrequencyHz / 1e6f);
+    CF06_InstanceData *instance = _CF06_getInstanceDataStructure(s);
     *instancePointer = instance;
 
     if (!instance) {
         return LPCLIB_ERROR;
     }
 
+    instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
     //instance->frameCounter = packet->frameCounter;
 
     /* Set time marker to be able to identify old records */

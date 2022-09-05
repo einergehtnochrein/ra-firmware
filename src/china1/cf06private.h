@@ -20,7 +20,7 @@ typedef __PACKED(union {
 
 
 typedef __PACKED(struct {
-    uint32_t reserved00;
+    uint32_t serial;
     uint32_t tow;
     uint32_t longitude;
     uint32_t latitude;
@@ -28,7 +28,8 @@ typedef __PACKED(struct {
     int16_t speed_east;
     int16_t speed_north;
     int16_t reserved18;
-    uint16_t reserved1A;
+    uint8_t reserved1A;
+    uint8_t reserved1B;
     uint16_t reserved1C;
     uint16_t reserved1E;
     uint16_t reserved20;
@@ -39,7 +40,20 @@ typedef __PACKED(struct {
 
 typedef __PACKED(struct {
     uint16_t reserved00;
-    uint8_t reserved0[27];
+    uint16_t reserved02;
+    uint16_t reserved04;
+    uint16_t reserved06;
+    uint16_t reserved08;
+    uint16_t reserved0A;
+    uint16_t reserved0C;
+    uint16_t reserved0E;
+    uint16_t reserved10;
+    uint16_t reserved12;
+    uint16_t reserved14;
+    uint16_t reserved16;
+    uint16_t reserved18;
+    uint16_t reserved1A;
+    uint8_t reserved1C;
     uint16_t crc;
 }) CF06_PayloadBlock2;
 
@@ -48,10 +62,10 @@ typedef union {
     CF06_RawData rawData;
     __PACKED(struct {
         uint8_t reserved00[3];
-        CF06_PayloadBlock1 inner;
+        CF06_PayloadBlock1 block1;
         uint8_t fec_inner[6];
         uint8_t reserved33[10];
-        CF06_PayloadBlock2 outer;
+        CF06_PayloadBlock2 block2;
         uint8_t fec_outer[6];
     });
 } CF06_Packet;
@@ -70,7 +84,9 @@ typedef struct {
 /* Data that needs to be stored for every instance. */
 typedef struct _CF06_InstanceData {
     struct _CF06_InstanceData *next;
+
     uint32_t id;
+    char name[20];                              /* Sonde name */
     uint16_t frameCounter;
     float rxFrequencyMHz;
     uint32_t lastUpdated;
@@ -83,7 +99,7 @@ typedef struct _CF06_InstanceData {
 
 
 LPCLIB_Result _CF06_prepare (
-        CF06_Packet *packet,
+        CF06_PayloadBlock1 *block1,
         CF06_InstanceData **instancePointer,
         float rxFrequencyHz);
 
