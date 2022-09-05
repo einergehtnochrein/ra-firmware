@@ -46,13 +46,13 @@ LPCLIB_Result CHINA1_processBlock (
 
     /* Determine sonde type */
     uint32_t payloadStart;
-    payloadStart = ((uint8_t *)buffer)[0]
-                 + (((uint8_t *)buffer)[1] << 8)
-                 + (((uint8_t *)buffer)[2] << 16)
+    payloadStart = (((uint8_t *)buffer)[2] << 0)
+                 + (((uint8_t *)buffer)[3] << 8)
+                 + (((uint8_t *)buffer)[4] << 16)
                  ;
 
     if (payloadStart == 0x00EEFFFF) {
-        //TODO HGT03
+        //TODO HT03
     }
 
     if (payloadStart == 0x00AAAAFF) {

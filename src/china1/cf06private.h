@@ -14,8 +14,8 @@
 
 
 typedef __PACKED(union {
-    uint8_t dat8[100];
-    uint32_t dat32[25];
+    uint8_t dat8[102];
+    uint32_t dat32[102/4];
 }) CF06_RawData;
 
 
@@ -61,10 +61,10 @@ typedef __PACKED(struct {
 typedef union {
     CF06_RawData rawData;
     __PACKED(struct {
-        uint8_t reserved00[3];
+        uint8_t reserved00[5];
         CF06_PayloadBlock1 block1;
         uint8_t fec_inner[6];
-        uint8_t reserved33[10];
+        uint8_t reserved35[10];
         CF06_PayloadBlock2 block2;
         uint8_t fec_outer[6];
     });
