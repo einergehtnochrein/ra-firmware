@@ -28,7 +28,8 @@ typedef __PACKED(struct {
     int16_t speed_east;
     int16_t speed_north;
     int16_t reserved18;
-    uint16_t reserved1A;
+    uint8_t reserved1A;
+    uint8_t reserved1B;
     uint16_t reserved1C;
     uint16_t reserved1E;
     uint16_t reserved20;
