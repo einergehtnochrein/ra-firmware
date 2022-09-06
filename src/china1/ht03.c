@@ -87,7 +87,7 @@ static void _HT03_sendKiss (HT03_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",17,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -103,7 +103,7 @@ static void _HT03_sendKiss (HT03_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",16,0,%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",17,0,%s",
                 instance->id,
                 instance->name
                 );
@@ -122,7 +122,7 @@ static void _HT03_sendRaw (HT03_Handle handle, HT03_Payload *payload)
     char s[200];
 
     snprintf(s, sizeof(s),
-                     "%"PRIu32",16,1,"
+                     "%"PRIu32",17,1,"
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32
                      "%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32"%08"PRIX32,
                      handle->instance->id,

@@ -38,6 +38,7 @@
 #include "cf06.h"
 #include "china1.h"
 #include "dfm.h"
+#include "ht03.h"
 #include "imet.h"
 #include "jinyang.h"
 #include "m10.h"
@@ -129,6 +130,7 @@ struct SYS_Context {
     BEACON_Handle beacon;
     CF06_Handle cf06;
     DFM_Handle dfm;
+    HT03_Handle ht03;
     IMET_Handle imet;
     JINYANG_Handle jinyang;
     M10_Handle m10;
@@ -1317,6 +1319,7 @@ if (cl[0] != 0) {
                     PILOT_resendLastPositions(handle->pilot);
                     MEISEI_resendLastPositions(handle->meisei);
                     CF06_resendLastPositions(handle->cf06);
+                    HT03_resendLastPositions(handle->ht03);
 
                     handle->linkEstablished = true;
                 }
@@ -1429,6 +1432,7 @@ if (cl[0] != 0) {
                                         detector = SONDE_DETECTOR_MRZ;
                                         break;
                                     case SONDE_DECODER_ASIA1:
+//TODO HT03?
                                         CF06_removeFromList(handle->cf06, id, &frequency);
                                         detector = SONDE_DETECTOR_ASIA1;
                                         break;
@@ -1697,6 +1701,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     MRZ_open(&handle->mrz);
     PILOT_open(&handle->pilot);
     CF06_open(&handle->cf06);
+    HT03_open(&handle->ht03);
     PDM_open(0, &handle->pdm);
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);

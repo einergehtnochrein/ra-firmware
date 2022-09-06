@@ -10,6 +10,7 @@
 #include "sys.h"
 #include "china1.h"
 #include "cf06.h"
+#include "ht03.h"
 
 
 static const uint8_t bitreversal[256] = {
@@ -52,7 +53,8 @@ LPCLIB_Result CHINA1_processBlock (
                  ;
 
     if (payloadStart == 0x00EEFFFF) {
-        //TODO HT03
+        // HT03
+        return HT03_processBlock(handle, sondeType, buffer, numBits, rxFrequencyHz);
     }
 
     if (payloadStart == 0x00AAAAFF) {

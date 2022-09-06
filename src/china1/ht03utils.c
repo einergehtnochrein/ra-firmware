@@ -19,7 +19,7 @@ _Bool _HT03_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC)
     crcMode = CRC_makeMode(
             CRC_POLY_CRCCCITT,
             CRC_DATAORDER_REVERSE,
-            CRC_SUMORDER_NORMAL,
+            CRC_SUMORDER_REVERSE,
             CRC_DATAPOLARITY_NORMAL,
             CRC_SUMPOLARITY_NORMAL
             );
