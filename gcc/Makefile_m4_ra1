@@ -31,7 +31,7 @@ C_SRCS = \
     meisei/meisei.c meisei/meiseiconfig.c meisei/meiseigps.c meisei/meiseimetrology.c \
     mrz/mrz.c mrz/mrzconfig.c mrz/mrzgps.c mrz/mrzmetrology.c \
     china1/china1.c china1/cf06.c china1/cf06config.c china1/cf06utils.c china1/cf06payload.c \
-    china1/ht03.c china1/ht03config.c china1/ht03utils.c china1/ht03payload.c \
+    china1/gth3.c china1/gth3config.c china1/gth3utils.c china1/gth3payload.c \
     \
     semihosting/syscalls.c semihosting/t32term.c semihosting/t32term_memory.c
 

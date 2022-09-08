@@ -8,12 +8,12 @@
 #include "lpclib.h"
 #include "bsp.h"
 #include "sys.h"
-#include "ht03.h"
-#include "ht03private.h"
+#include "gth3.h"
+#include "gth3private.h"
 #include "bch.h"
 
 /*
- * HT03G-1U frame parameters
+ * GTH3 frame parameters
  *
  * 2FSK, 2400 bit/s, 2.4 kHz deviation
  * Preamble: 80x  01
@@ -40,20 +40,20 @@
 
 
 /** Context */
-typedef struct HT03_Context {
-    HT03_Packet *packet;
-    HT03_InstanceData *instance;
+typedef struct GTH3_Context {
+    GTH3_Packet *packet;
+    GTH3_InstanceData *instance;
     float rxFrequencyHz;
     int nCorrectedErrors;
-} HT03_Context;
+} GTH3_Context;
 
-static HT03_Context _ht03;
+static GTH3_Context _gth3;
 
 
 //TODO
-LPCLIB_Result HT03_open (HT03_Handle *pHandle)
+LPCLIB_Result GTH3_open (GTH3_Handle *pHandle)
 {
-    HT03_Handle handle = &_ht03;
+    GTH3_Handle handle = &_gth3;
 
     *pHandle = handle;
 
@@ -63,7 +63,7 @@ LPCLIB_Result HT03_open (HT03_Handle *pHandle)
 
 
 /* Send report */
-static void _HT03_sendKiss (HT03_InstanceData *instance)
+static void _GTH3_sendKiss (GTH3_InstanceData *instance)
 {
     static char s[160];
     int length = 0;
@@ -114,7 +114,7 @@ static void _HT03_sendKiss (HT03_InstanceData *instance)
 }
 
 
-static void _HT03_sendRaw (HT03_Handle handle, HT03_Payload *payload)
+static void _GTH3_sendRaw (GTH3_Handle handle, GTH3_Payload *payload)
 {
 (void)handle;
 (void)payload;
@@ -144,8 +144,8 @@ static void _HT03_sendRaw (HT03_Handle handle, HT03_Payload *payload)
 
 
 
-LPCLIB_Result HT03_processBlock (
-        HT03_Handle handle,
+LPCLIB_Result GTH3_processBlock (
+        GTH3_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
@@ -154,7 +154,7 @@ LPCLIB_Result HT03_processBlock (
     (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
-    if (numBits < 8*sizeof(HT03_Packet)) {
+    if (numBits < 8*sizeof(GTH3_Packet)) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
@@ -164,12 +164,12 @@ LPCLIB_Result HT03_processBlock (
     handle->rxFrequencyHz = rxFrequencyHz;
 
     /* CRC ok? */
-    if (_HT03_checkCRC((uint8_t *)&handle->packet->payload, sizeof(HT03_Payload), handle->packet->crc_magic)) {
-        _HT03_prepare(&handle->packet->payload, &handle->instance, rxFrequencyHz);
+    if (_GTH3_checkCRC((uint8_t *)&handle->packet->payload, sizeof(GTH3_Payload), handle->packet->crc_magic)) {
+        _GTH3_prepare(&handle->packet->payload, &handle->instance, rxFrequencyHz);
         if (handle->instance) {
-            _HT03_processPayload(&handle->packet->payload, &handle->instance->gps, &handle->instance->metro);
-            _HT03_sendRaw(handle, &handle->packet->payload);
-            _HT03_sendKiss(handle->instance);
+            _GTH3_processPayload(&handle->packet->payload, &handle->instance->gps, &handle->instance->metro);
+            _GTH3_sendRaw(handle, &handle->packet->payload);
+            _GTH3_sendKiss(handle->instance);
         }
     }
 
@@ -178,15 +178,15 @@ LPCLIB_Result HT03_processBlock (
 
 
 /* Send KISS position messages for all known sondes */
-LPCLIB_Result HT03_resendLastPositions (HT03_Handle handle)
+LPCLIB_Result GTH3_resendLastPositions (GTH3_Handle handle)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    HT03_InstanceData *instance = NULL;
-    while (_HT03_iterateInstance(&instance)) {
-        _HT03_sendKiss(instance);
+    GTH3_InstanceData *instance = NULL;
+    while (_GTH3_iterateInstance(&instance)) {
+        _GTH3_sendKiss(instance);
     }
 
     return LPCLIB_SUCCESS;
@@ -194,12 +194,12 @@ LPCLIB_Result HT03_resendLastPositions (HT03_Handle handle)
 
 
 /* Remove entries from heard list */
-LPCLIB_Result HT03_removeFromList (HT03_Handle handle, uint32_t id, float *frequency)
+LPCLIB_Result GTH3_removeFromList (GTH3_Handle handle, uint32_t id, float *frequency)
 {
     (void)handle;
 
-    HT03_InstanceData *instance = NULL;
-    while (_HT03_iterateInstance(&instance)) {
+    GTH3_InstanceData *instance = NULL;
+    while (_GTH3_iterateInstance(&instance)) {
         if (instance->id == id) {
             /* Remove reference from context if this is the current sonde */
             if (instance == handle->instance) {
@@ -210,7 +210,7 @@ LPCLIB_Result HT03_removeFromList (HT03_Handle handle, uint32_t id, float *frequ
             *frequency = instance->rxFrequencyMHz * 1e6f;
 
             /* Remove sonde */
-            _HT03_deleteInstance(instance);
+            _GTH3_deleteInstance(instance);
             break;
         }
     }

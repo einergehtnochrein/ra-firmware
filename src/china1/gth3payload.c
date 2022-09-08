@@ -5,17 +5,17 @@
 #include <stdio.h>
 
 #include "lpclib.h"
-#include "ht03.h"
-#include "ht03private.h"
+#include "gth3.h"
+#include "gth3private.h"
 #include "observer.h"
 #include "rinex.h"
 
 
 
-LPCLIB_Result _HT03_processPayload (
-        const HT03_Payload *payload,
-        HT03_CookedGps *cookedGps,
-        HT03_CookedMetrology *cookedMetro)
+LPCLIB_Result _GTH3_processPayload (
+        const GTH3_Payload *payload,
+        GTH3_CookedGps *cookedGps,
+        GTH3_CookedMetrology *cookedMetro)
 {
 (void)cookedMetro;
     LLA_Coordinate lla;

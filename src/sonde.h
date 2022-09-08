@@ -48,7 +48,7 @@ typedef enum {
     SONDE_MEISEI_GPS,
     SONDE_RSG20,
     SONDE_MRZ,
-    SONDE_HGT03G_CF06AH
+    SONDE_GTH3_CF06AH
 } SONDE_Type;
 
 

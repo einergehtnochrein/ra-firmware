@@ -4,13 +4,13 @@
 #include <stdlib.h>
 
 #include "lpclib.h"
-#include "ht03.h"
-#include "ht03private.h"
+#include "gth3.h"
+#include "gth3private.h"
 
 
 
 /* Check CRC */
-_Bool _HT03_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC)
+_Bool _GTH3_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC)
 {
     CRC_Handle crc = LPCLIB_INVALID_HANDLE;
     CRC_Mode crcMode;

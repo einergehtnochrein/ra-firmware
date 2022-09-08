@@ -24,24 +24,24 @@
  */
 
 
-#ifndef __HT03_H
-#define __HT03_H
+#ifndef __GTH3_H
+#define __GTH3_H
 
 #include "lpclib.h"
 #include "sonde.h"
 
 
-typedef struct HT03_Context *HT03_Handle;
+typedef struct GTH3_Context *GTH3_Handle;
 
 
-LPCLIB_Result HT03_open (HT03_Handle *pHandle);
-LPCLIB_Result HT03_processBlock (
-        HT03_Handle handle,
+LPCLIB_Result GTH3_open (GTH3_Handle *pHandle);
+LPCLIB_Result GTH3_processBlock (
+        GTH3_Handle handle,
         SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz);
-LPCLIB_Result HT03_resendLastPositions (HT03_Handle handle);
-LPCLIB_Result HT03_removeFromList (HT03_Handle handle, uint32_t id, float *frequency);
+LPCLIB_Result GTH3_resendLastPositions (GTH3_Handle handle);
+LPCLIB_Result GTH3_removeFromList (GTH3_Handle handle, uint32_t id, float *frequency);
 
 #endif

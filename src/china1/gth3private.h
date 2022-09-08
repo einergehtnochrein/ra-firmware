@@ -1,6 +1,6 @@
 
-#ifndef __HT03PRIVATE_H
-#define __HT03PRIVATE_H
+#ifndef __GTH3PRIVATE_H
+#define __GTH3PRIVATE_H
 
 
 #include <math.h>
@@ -9,14 +9,14 @@
 #include <stdio.h>
 
 #include "lpclib.h"
-#include "ht03.h"
+#include "gth3.h"
 #include "gps.h"
 
 
 typedef __PACKED(union {
     uint8_t dat8[100];
     uint32_t dat32[25];
-}) HT03_RawData;
+}) GTH3_RawData;
 
 
 typedef __PACKED(struct {
@@ -35,31 +35,31 @@ typedef __PACKED(struct {
     int16_t speedV;
     uint8_t reserved20[66];
     uint16_t crc;
-}) HT03_Payload;
+}) GTH3_Payload;
 
 
 typedef union {
-    HT03_RawData rawData;
+    GTH3_RawData rawData;
     __PACKED(struct {
-        HT03_Payload payload;
+        GTH3_Payload payload;
         uint16_t crc_magic;
     });
-} HT03_Packet;
+} GTH3_Packet;
 
 
 typedef struct {
     float temperature;                          /* Temperature [°C] */
-} HT03_CookedMetrology;
+} GTH3_CookedMetrology;
 
 
 typedef struct {
     LLA_Coordinate observerLLA;
-} HT03_CookedGps;
+} GTH3_CookedGps;
 
 
 /* Data that needs to be stored for every instance. */
-typedef struct _HT03_InstanceData {
-    struct _HT03_InstanceData *next;
+typedef struct _GTH3_InstanceData {
+    struct _GTH3_InstanceData *next;
 
     uint32_t id;
     char name[20];                              /* Sonde name */
@@ -68,29 +68,29 @@ typedef struct _HT03_InstanceData {
     uint32_t lastUpdated;
 
     uint32_t lastGpsTime;
-    HT03_CookedGps gps;
-    HT03_CookedMetrology metro;
-} HT03_InstanceData;
+    GTH3_CookedGps gps;
+    GTH3_CookedMetrology metro;
+} GTH3_InstanceData;
 
 
 
-LPCLIB_Result _HT03_prepare (
-        HT03_Payload *payload,
-        HT03_InstanceData **instancePointer,
+LPCLIB_Result _GTH3_prepare (
+        GTH3_Payload *payload,
+        GTH3_InstanceData **instancePointer,
         float rxFrequencyHz);
 
 /* Iterate through instances */
-bool _HT03_iterateInstance (HT03_InstanceData **instance);
+bool _GTH3_iterateInstance (GTH3_InstanceData **instance);
 
 /* Remove an instance from the chain */
-void _HT03_deleteInstance (HT03_InstanceData *instance);
+void _GTH3_deleteInstance (GTH3_InstanceData *instance);
 
 /* Check CRC */
-_Bool _HT03_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
+_Bool _GTH3_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
 
-LPCLIB_Result _HT03_processPayload (
-        const HT03_Payload *payload,
-        HT03_CookedGps *cookedGps,
-        HT03_CookedMetrology *cookedMetro);
+LPCLIB_Result _GTH3_processPayload (
+        const GTH3_Payload *payload,
+        GTH3_CookedGps *cookedGps,
+        GTH3_CookedMetrology *cookedMetro);
 
 #endif

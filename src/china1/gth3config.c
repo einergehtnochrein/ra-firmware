@@ -1,22 +1,22 @@
 
 #include "lpclib.h"
 #include "app.h"
-#include "ht03.h"
-#include "ht03private.h"
+#include "gth3.h"
+#include "gth3private.h"
 
 
-#define HT03_MAX_SONDES          2
+#define GTH3_MAX_SONDES          2
 
 
 /* Points to list of instance structures */
-static HT03_InstanceData *instanceList;
+static GTH3_InstanceData *instanceList;
 
 
 /* Get a new instance data structure for a new sonde */
-static HT03_InstanceData *_HT03_getInstanceDataStructure (const char *name)
+static GTH3_InstanceData *_GTH3_getInstanceDataStructure (const char *name)
 {
-    HT03_InstanceData *p;
-    HT03_InstanceData *instance;
+    GTH3_InstanceData *p;
+    GTH3_InstanceData *instance;
 
     /* Count the number of sondes while traversing the list. */
     int numSondes = 0;
@@ -34,7 +34,7 @@ static HT03_InstanceData *_HT03_getInstanceDataStructure (const char *name)
     /* If we have reached the maximum number of sondes that we want to track in parallel,
      * do a garbage collection now: Identify the least recently used entry and reuse it.
      */
-    if (numSondes >= HT03_MAX_SONDES) {
+    if (numSondes >= GTH3_MAX_SONDES) {
         uint32_t oldest = (uint32_t)-1;
 
         p = instanceList;
@@ -50,7 +50,7 @@ static HT03_InstanceData *_HT03_getInstanceDataStructure (const char *name)
     }
     else {
         /* We need a new calibration structure */
-        instance = (HT03_InstanceData *)calloc(1, sizeof(HT03_InstanceData));
+        instance = (GTH3_InstanceData *)calloc(1, sizeof(GTH3_InstanceData));
     }
 
     if (instance) {
@@ -80,7 +80,7 @@ static HT03_InstanceData *_HT03_getInstanceDataStructure (const char *name)
 
 
 
-static uint8_t _HT03_bcd2bin (uint8_t bcd)
+static uint8_t _GTH3_bcd2bin (uint8_t bcd)
 {
     return 10 * (bcd / 16) + bcd % 16;
 }
@@ -88,9 +88,9 @@ static uint8_t _HT03_bcd2bin (uint8_t bcd)
 
 
 /* Process the config/calib block. */
-LPCLIB_Result _HT03_prepare (
-        HT03_Payload *payload,
-        HT03_InstanceData **instancePointer,
+LPCLIB_Result _GTH3_prepare (
+        GTH3_Payload *payload,
+        GTH3_InstanceData **instancePointer,
         float rxFrequencyHz)
 {
     LPCLIB_Result result = LPCLIB_SUCCESS;
@@ -103,13 +103,13 @@ LPCLIB_Result _HT03_prepare (
     /* Format serial number */
     char s[20];
     snprintf(s, sizeof(s), "%02u%02u%02u%02u",
-        _HT03_bcd2bin(payload->serial[0]),
-        _HT03_bcd2bin(payload->serial[1]),
-        _HT03_bcd2bin(payload->serial[2]),
-        _HT03_bcd2bin(payload->serial[3]));
+        _GTH3_bcd2bin(payload->serial[0]),
+        _GTH3_bcd2bin(payload->serial[1]),
+        _GTH3_bcd2bin(payload->serial[2]),
+        _GTH3_bcd2bin(payload->serial[3]));
 
     /* Allocate new calib space if new sonde! */
-    HT03_InstanceData *instance = _HT03_getInstanceDataStructure(s);
+    GTH3_InstanceData *instance = _GTH3_getInstanceDataStructure(s);
     *instancePointer = instance;
 
     if (!instance) {
@@ -127,7 +127,7 @@ LPCLIB_Result _HT03_prepare (
 
 
 /* Iterate through instances */
-bool _HT03_iterateInstance (HT03_InstanceData **instance)
+bool _GTH3_iterateInstance (GTH3_InstanceData **instance)
 {
     bool result = false;
 
@@ -152,16 +152,16 @@ bool _HT03_iterateInstance (HT03_InstanceData **instance)
 
 
 /* Remove an instance from the chain */
-void _HT03_deleteInstance (HT03_InstanceData *instance)
+void _GTH3_deleteInstance (GTH3_InstanceData *instance)
 {
     if ((instance == NULL) || (instanceList == NULL)) {
         /* Nothing to do */
         return;
     }
 
-    HT03_InstanceData **parent = &instanceList;
-    HT03_InstanceData *p = NULL;
-    while (_HT03_iterateInstance(&p)) {
+    GTH3_InstanceData **parent = &instanceList;
+    GTH3_InstanceData *p = NULL;
+    while (_GTH3_iterateInstance(&p)) {
         if (p == instance) {                /* Found */
             *parent = p->next;              /* Remove from chain */
             free(instance);                 /* Free allocated memory */

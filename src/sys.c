@@ -38,7 +38,7 @@
 #include "cf06.h"
 #include "china1.h"
 #include "dfm.h"
-#include "ht03.h"
+#include "gth3.h"
 #include "imet.h"
 #include "jinyang.h"
 #include "m10.h"
@@ -130,7 +130,7 @@ struct SYS_Context {
     BEACON_Handle beacon;
     CF06_Handle cf06;
     DFM_Handle dfm;
-    HT03_Handle ht03;
+    GTH3_Handle gth3;
     IMET_Handle imet;
     JINYANG_Handle jinyang;
     M10_Handle m10;
@@ -1319,7 +1319,7 @@ if (cl[0] != 0) {
                     PILOT_resendLastPositions(handle->pilot);
                     MEISEI_resendLastPositions(handle->meisei);
                     CF06_resendLastPositions(handle->cf06);
-                    HT03_resendLastPositions(handle->ht03);
+                    GTH3_resendLastPositions(handle->gth3);
 
                     handle->linkEstablished = true;
                 }
@@ -1701,7 +1701,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     MRZ_open(&handle->mrz);
     PILOT_open(&handle->pilot);
     CF06_open(&handle->cf06);
-    HT03_open(&handle->ht03);
+    GTH3_open(&handle->gth3);
     PDM_open(0, &handle->pdm);
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
@@ -1803,7 +1803,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 9:  sondeType = SONDE_MEISEI_GPS; break;
                                 case 10: sondeType = SONDE_RSG20; break;
                                 case 12: sondeType = SONDE_MRZ; break;
-                                case 13: sondeType = SONDE_HGT03G_CF06AH; break;
+                                case 13: sondeType = SONDE_GTH3_CF06AH; break;
                             }
 
                             /* Process buffer */
@@ -1914,7 +1914,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     SCANNER_notifyValidFrame(scanner);
                                 }
                             }
-                            else if (sondeType == SONDE_HGT03G_CF06AH) {
+                            else if (sondeType == SONDE_GTH3_CF06AH) {
                                 if (CHINA1_processBlock(
                                         handle->cf06,
                                         sondeType,
