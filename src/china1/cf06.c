@@ -17,18 +17,18 @@
  *
  * 2FSK, 2400 bit/s, 2.4 kHz deviation
  * Preamble: 36x  01
- * Sync word: 10110100 00101011 11000110 11111110 (B4 2B C6 FE)
- *            (it is possible that the sync word is shorter and the last bits belong to the payload)
- * Payload length: 98 bytes
- * Payload structure:
+ * Sync word: 10110100 00101011 (B4 2B)
  *
- * +----------+ +---------+------+------------+ +---------+ +---------+------+------------+
- * |          | | Block 1 |      | RS Parity  | | Gap     | | Block 2 |      | RS Parity  |
- * | FF AA AA | | 40 bytes| CRC1 | 6 bytes    | | 10x  AA | | 29 bytes| CRC2 | 6 bytes    |
- * |          | |         |      | Codeword 1 | |         | |         |      | Codeword 2 |
- * +----------+ +---------+------+------------+ +---------+ +---------+------+------------+
- *              \-------- Codeword 1 ---------/
- *              \---------------------------- Codeword 2 ---------------------------------/
+ * Packet length: 100 bytes (we receive 102 bytes for compatibility with HT03 sonde)
+ * Packet structure:
+ *
+ * +----------------+ +---------+------+------------+ +---------+ +---------+------+------------+
+ * |                | | Block 1 |      | RS Parity  | | Gap     | | Block 2 |      | RS Parity  |
+ * | 63 7F FF AA AA | | 40 bytes| CRC1 | 6 bytes    | | 10x  AA | | 29 bytes| CRC2 | 6 bytes    |
+ * |                | |         |      | Codeword 1 | |         | |         |      | Codeword 2 |
+ * +----------------+ +---------+------+------------+ +---------+ +---------+------+------------+
+ *                    \-------- Codeword 1 ---------/
+ *                    \---------------------------- Codeword 2 ---------------------------------/
  *
  * Reed-Solomon code:  shortened RS(255,249), symbols from GF(256) with primitive polynomial 0x11D
  *                     and generator element 2. RS generator polynomial g = (x - a^1)*...*(x - a^6)
