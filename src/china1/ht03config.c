@@ -80,6 +80,13 @@ static HT03_InstanceData *_HT03_getInstanceDataStructure (const char *name)
 
 
 
+static uint8_t _HT03_bcd2bin (uint8_t bcd)
+{
+    return 10 * (bcd / 16) + bcd % 16;
+}
+
+
+
 /* Process the config/calib block. */
 LPCLIB_Result _HT03_prepare (
         HT03_Payload *payload,
@@ -95,15 +102,12 @@ LPCLIB_Result _HT03_prepare (
 
     /* Format serial number */
     char s[20];
-s[0]='H';
-s[1]=0;
-#if 0
-    snprintf(s, sizeof(s), "%lu%02lu%02lu%02lu",
-             (block1->serial >>  0) & 0xFF,
-             (block1->serial >>  8) & 0xFF,
-             (block1->serial >> 16) & 0xFF,
-             (block1->serial >> 24) & 0xFF);
-#endif
+    snprintf(s, sizeof(s), "%02u%02u%02u%02u",
+        _HT03_bcd2bin(payload->serial[0]),
+        _HT03_bcd2bin(payload->serial[1]),
+        _HT03_bcd2bin(payload->serial[2]),
+        _HT03_bcd2bin(payload->serial[3]));
+
     /* Allocate new calib space if new sonde! */
     HT03_InstanceData *instance = _HT03_getInstanceDataStructure(s);
     *instancePointer = instance;

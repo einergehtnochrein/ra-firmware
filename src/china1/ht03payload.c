@@ -20,12 +20,18 @@ LPCLIB_Result _HT03_processPayload (
 (void)cookedMetro;
     LLA_Coordinate lla;
 
-    lla.lat = NAN;
-    lla.lon = NAN;
-    lla.alt = NAN;
-    lla.climbRate = NAN;
-    lla.velocity = NAN;
-    lla.direction = NAN;
+    lla.lat = payload->latitude;
+    lla.lon = payload->longitude;
+    lla.alt = payload->altitude / 10.0f;
+    lla.climbRate = payload->speedV / 100.0f;
+    float ve = payload->speedE / 100.0f;
+    float vn = payload->speedN / 100.0f;
+    lla.velocity = sqrtf(ve * ve + vn * vn);
+    float direction = atan2f(ve, vn);
+    if (direction < 0) {
+        direction += 2 * M_PI;
+    }
+    lla.direction = direction;
 
     cookedGps->observerLLA = lla;
 

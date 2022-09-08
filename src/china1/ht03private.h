@@ -21,7 +21,19 @@ typedef __PACKED(union {
 
 typedef __PACKED(struct {
     uint8_t reserved00[5];
-    uint8_t reserved05[93];
+    uint8_t serial[4];
+    uint8_t reserved05;
+    uint8_t hour;
+    uint8_t sec_minute;
+    uint8_t tenth_seconds;
+    uint8_t reserved0D;
+    float longitude;
+    float latitude;
+    uint32_t altitude;
+    int16_t speedN;
+    int16_t speedE;
+    int16_t speedV;
+    uint8_t reserved20[66];
     uint16_t crc;
 }) HT03_Payload;
 
