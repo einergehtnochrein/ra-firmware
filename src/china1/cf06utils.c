@@ -75,10 +75,10 @@ LPCLIB_Result _CF06_checkReedSolomonOuter (uint8_t rawFrame[], int *pNumErrors)
     uint8_t * _CF06_getDataAddressOuter (int index)
     {
         if (index < 89) {
-            return &rawFrame[91 - index];
+            return &rawFrame[93 - index];
         }
         else if (index >= 249) {
-            return &rawFrame[346 - index];
+            return &rawFrame[348 - index];
         }
         else {
             _CF06_null = 0;
@@ -108,10 +108,10 @@ LPCLIB_Result _CF06_checkReedSolomonInner (uint8_t rawFrame[], int *pNumErrors)
     uint8_t * _CF06_getDataAddressInner (int index)
     {
         if (index < 42) {
-            return &rawFrame[44 - index];
+            return &rawFrame[46 - index];
         }
         else if (index >= 249) {
-            return &rawFrame[299 - index];
+            return &rawFrame[301 - index];
         }
         else {
             _CF06_null = 0;
