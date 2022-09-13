@@ -36,7 +36,12 @@ typedef __PACKED(struct {
     uint8_t reserved1F;
     uint8_t reserved20;
     uint8_t reserved21;
-    uint8_t reserved0[6];
+    uint8_t reserved22;
+    uint8_t reserved23;
+    uint8_t reserved24;
+    uint8_t reserved25;
+    uint8_t upCounter;
+    uint8_t flags;
     uint16_t crc;
 }) CF06_PayloadBlock1;
 
@@ -57,7 +62,7 @@ typedef __PACKED(struct {
     uint16_t reserved20;
     uint16_t reserved22;
     uint16_t reserved24;
-    uint8_t reserved25;
+    uint8_t flags;
     uint16_t crc;
 }) CF06_PayloadBlock2;
 
