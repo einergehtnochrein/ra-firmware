@@ -39,11 +39,7 @@ typedef __PACKED(struct {
 
 
 typedef __PACKED(struct {
-    uint16_t reserved00;
-    uint16_t reserved02;
-    uint16_t reserved04;
-    uint16_t reserved06;
-    uint16_t reserved08;
+    uint8_t reserved00[10];
     uint16_t reserved0A;
     uint16_t reserved0C;
     uint16_t reserved0E;
@@ -53,7 +49,12 @@ typedef __PACKED(struct {
     uint16_t reserved16;
     uint16_t reserved18;
     uint16_t reserved1A;
-    uint8_t reserved1C;
+    uint16_t reserved1C;
+    uint16_t reserved1E;
+    uint16_t reserved20;
+    uint16_t reserved22;
+    uint16_t reserved24;
+    uint8_t reserved25;
     uint16_t crc;
 }) CF06_PayloadBlock2;
 
@@ -64,7 +65,6 @@ typedef union {
         uint8_t reserved00[5];
         CF06_PayloadBlock1 block1;
         uint8_t fec_inner[6];
-        uint8_t reserved35[10];
         CF06_PayloadBlock2 block2;
         uint8_t fec_outer[6];
     });
