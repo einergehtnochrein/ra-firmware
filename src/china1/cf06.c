@@ -20,15 +20,15 @@
  * Sync word: 10110100 00101011 (B4 2B)
  *
  * Packet length: 100 bytes (we receive 102 bytes for compatibility with HT03 sonde)
- * Packet structure:
+ * Packet structure (all bytes received LSB first):
  *
- * +----------------+ +---------+------+------------+ +---------+ +---------+------+------------+
- * |                | | Block 1 |      | RS Parity  | | Gap     | | Block 2 |      | RS Parity  |
- * | 63 7F FF AA AA | | 40 bytes| CRC1 | 6 bytes    | | 10x  AA | | 29 bytes| CRC2 | 6 bytes    |
- * |                | |         |      | Codeword 1 | |         | |         |      | Codeword 2 |
- * +----------------+ +---------+------+------------+ +---------+ +---------+------+------------+
+ * +----------------+ +---------+------+------------+ +---------+------+------------+
+ * |                | | Block 1 |      | RS Parity  | | Block 2 |      | RS Parity  |
+ * | 63 7F FF AA AA | | 40 bytes| CRC1 | 6 bytes    | | 39 bytes| CRC2 | 6 bytes    |
+ * |                | |         |      | Codeword 1 | |         |      | Codeword 2 |
+ * +----------------+ +---------+------+------------+ +---------+------+------------+
  *                    \-------- Codeword 1 ---------/
- *                    \---------------------------- Codeword 2 ---------------------------------/
+ *                    \---------------------- Codeword 2 ---------------------------/
  *
  * Reed-Solomon code:  shortened RS(255,249), symbols from GF(256) with primitive polynomial 0x11D
  *                     and generator element 2. RS generator polynomial g = (x - a^1)*...*(x - a^6)
@@ -41,9 +41,9 @@
  *                     (first byte of block 1 is c_41, last byte of CRC1 is c_0).
  *                     Codeword 2 is formed accordingly.
  *
- * Regular CRC, except for weird output XOR of block 2 CRC:
+ * Regular CRC:
  * CRC1 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0
- * CRC2 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0x39BB
+ * CRC2 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0
  * Both CRC1 and CRC2 are sent in big-endian format
  */
 
@@ -177,7 +177,7 @@ LPCLIB_Result CF06_processBlock (
     if (_CF06_checkReedSolomonOuter (handle->pRawData->rawData.dat8, &errorsOuter) == LPCLIB_SUCCESS) {
         /* CRC of outer block ok? */
         handle->pRawData->block2.crc = __REV16(handle->pRawData->block2.crc); /* Big endian */
-        if (_CF06_checkCRCOuter((uint8_t *)&handle->pRawData->block2, sizeof(CF06_PayloadBlock2)-2, handle->pRawData->block2.crc ^ 0x39BB)) {
+        if (_CF06_checkCRCOuter((uint8_t *)&handle->pRawData->block2, sizeof(CF06_PayloadBlock2)-2, handle->pRawData->block2.crc)) {
             frameOk = true;
             _CF06_prepare(&handle->pRawData->block1, &handle->instance, rxFrequencyHz);
             if (handle->instance) {
