@@ -19,7 +19,7 @@
  * Preamble: 36x  01
  * Sync word: 10110100 00101011 (B4 2B)
  *
- * Packet length: 100 bytes (we receive 102 bytes for compatibility with HT03 sonde)
+ * Packet length: 100 bytes (we receive 102 bytes for compatibility with GTH3 sonde)
  * Packet structure (all bytes received LSB first):
  *
  * +----------------+ +---------+------+------------+ +---------+------+------------+
