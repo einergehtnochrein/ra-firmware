@@ -97,12 +97,14 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,,%.1f,,,%d,",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
+                    instance->gps.usedSats,                 /* #sats in position solution */
                     latitude,                               /* Latitude [degrees] */
                     longitude,                              /* Longitude [degrees] */
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
+                    instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
                     SYS_getFrameRssi(sys),
@@ -113,9 +115,10 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",16,0,%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",16,0,%s,%.2f",
                 instance->id,
-                instance->name
+                instance->name,
+                instance->gps.pdop
                 );
 
     if (length > 0) {

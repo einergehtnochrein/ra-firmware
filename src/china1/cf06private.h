@@ -27,12 +27,15 @@ typedef __PACKED(struct {
     uint32_t altitude;
     int16_t speed_east;
     int16_t speed_north;
-    int16_t reserved18;
-    uint8_t reserved1A;
-    uint8_t reserved1B;
-    uint16_t reserved1C;
-    uint16_t reserved1E;
-    uint16_t reserved20;
+    int16_t speed_down;
+    uint8_t usedSats;
+    uint8_t pdop;
+    uint8_t reserved1C;
+    uint8_t reserved1D;
+    uint8_t reserved1E;
+    uint8_t reserved1F;
+    uint8_t reserved20;
+    uint8_t reserved21;
     uint8_t reserved0[6];
     uint16_t crc;
 }) CF06_PayloadBlock1;
@@ -78,6 +81,8 @@ typedef struct {
 
 typedef struct {
     LLA_Coordinate observerLLA;
+    float pdop;
+    uint8_t usedSats;
 } CF06_CookedGps;
 
 
