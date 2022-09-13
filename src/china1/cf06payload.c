@@ -17,6 +17,7 @@ LPCLIB_Result _CF06_processPayloadBlock1 (
         CF06_CookedGps *cookedGps,
         CF06_CookedMetrology *cookedMetro)
 {
+(void)cookedMetro;
     LLA_Coordinate lla;
 
     lla.lat = NAN;
@@ -55,6 +56,9 @@ LPCLIB_Result _CF06_processPayloadBlock2 (
         CF06_CookedGps *cookedGps,
         CF06_CookedMetrology *cookedMetro)
 {
+(void)payload;
+(void)cookedGps;
+(void)cookedMetro;
     return LPCLIB_SUCCESS;
 }
 
