@@ -30,15 +30,11 @@ typedef __PACKED(struct {
     int16_t speed_down;
     uint8_t usedSats;
     uint8_t pdop;
-    uint8_t reserved1C;
-    uint8_t reserved1D;
-    uint8_t reserved1E;
-    uint8_t reserved1F;
-    uint8_t reserved20;
-    uint8_t reserved21;
+    int16_t temperature;
+    uint16_t humidity;
+    int16_t reserved20;
     uint8_t reserved22;
-    uint8_t reserved23;
-    uint8_t reserved24;
+    int16_t temperature_Usensor;
     uint8_t reserved25;
     uint8_t upCounter;
     uint8_t flags;
@@ -81,6 +77,8 @@ typedef union {
 
 typedef struct {
     float temperature;                          /* Temperature [°C] */
+    float humidity;                             /* Relative humidity [%] */
+    float temperature_Usensor;                  /* Temperature of humidity sensor [°C] */
 } CF06_CookedMetrology;
 
 

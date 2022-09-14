@@ -17,7 +17,6 @@ LPCLIB_Result _CF06_processPayloadBlock1 (
         CF06_CookedGps *cookedGps,
         CF06_CookedMetrology *cookedMetro)
 {
-(void)cookedMetro;
     LLA_Coordinate lla;
 
     lla.lat = NAN;
@@ -45,6 +44,11 @@ LPCLIB_Result _CF06_processPayloadBlock1 (
 
     cookedGps->usedSats = payload->usedSats;
     cookedGps->pdop = payload->pdop / 100.0f;
+
+    /* PTU */
+    cookedMetro->temperature = payload->temperature / 100.0f;
+    cookedMetro->humidity = payload->humidity / 100.0f;
+    cookedMetro->temperature_Usensor = payload->temperature_Usensor / 100.0f;
 
     return LPCLIB_SUCCESS;
 }
