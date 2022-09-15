@@ -97,25 +97,32 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,%.1f,%.0f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
+                    instance->gps.usedSats,                 /* #sats in position solution */
                     latitude,                               /* Latitude [degrees] */
                     longitude,                              /* Longitude [degrees] */
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
+                    instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
+                    instance->metro.temperature,            /* Temperature main sensor [°C] */
+                    instance->metro.humidity,               /* Relative humidity [%] */
                     SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->frameCounter,
+                    instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
+                    instance->metro.temperature_CPU         /* (Main board) CPU temperature [°C] */
                     );
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",16,0,%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",16,0,%s,%.2f",
                 instance->id,
-                instance->name
+                instance->name,
+                instance->gps.pdop
                 );
 
     if (length > 0) {
@@ -126,6 +133,8 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
 
 static void _CF06_sendRaw (CF06_Handle handle, CF06_Packet *p1)
 {
+(void)handle;
+(void)p1;
 #if 0
     char s[200];
 
