@@ -33,9 +33,9 @@ typedef __PACKED(struct {
     int16_t temperature;
     uint16_t humidity;
     int16_t reserved20;
-    uint8_t reserved22;
+    int8_t temperature_CPU;
     int16_t temperature_Usensor;
-    uint8_t reserved25;
+    uint8_t vbat;
     uint8_t upCounter;
     uint8_t flags;
     uint16_t crc;
@@ -79,6 +79,8 @@ typedef struct {
     float temperature;                          /* Temperature [°C] */
     float humidity;                             /* Relative humidity [%] */
     float temperature_Usensor;                  /* Temperature of humidity sensor [°C] */
+    float temperature_CPU;                      /* CPU temperature (main board) [°C] */
+    float batteryVoltage;                       /* Battery voltage [V] */
 } CF06_CookedMetrology;
 
 
