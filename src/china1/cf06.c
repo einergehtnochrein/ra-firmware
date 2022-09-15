@@ -19,16 +19,16 @@
  * Preamble: 36x  01
  * Sync word: 10110100 00101011 (B4 2B)
  *
- * Packet length: 100 bytes (we receive 102 bytes for compatibility with HT03 sonde)
- * Packet structure:
+ * Packet length: 100 bytes (we receive 102 bytes for compatibility with GTH3 sonde)
+ * Packet structure (all bytes received LSB first):
  *
- * +----------------+ +---------+------+------------+ +---------+ +---------+------+------------+
- * |                | | Block 1 |      | RS Parity  | | Gap     | | Block 2 |      | RS Parity  |
- * | 63 7F FF AA AA | | 40 bytes| CRC1 | 6 bytes    | | 10x  AA | | 29 bytes| CRC2 | 6 bytes    |
- * |                | |         |      | Codeword 1 | |         | |         |      | Codeword 2 |
- * +----------------+ +---------+------+------------+ +---------+ +---------+------+------------+
+ * +----------------+ +---------+------+------------+ +---------+------+------------+
+ * |                | | Block 1 |      | RS Parity  | | Block 2 |      | RS Parity  |
+ * | 63 7F FF AA AA | | 40 bytes| CRC1 | 6 bytes    | | 39 bytes| CRC2 | 6 bytes    |
+ * |                | |         |      | Codeword 1 | |         |      | Codeword 2 |
+ * +----------------+ +---------+------+------------+ +---------+------+------------+
  *                    \-------- Codeword 1 ---------/
- *                    \---------------------------- Codeword 2 ---------------------------------/
+ *                    \---------------------- Codeword 2 ---------------------------/
  *
  * Reed-Solomon code:  shortened RS(255,249), symbols from GF(256) with primitive polynomial 0x11D
  *                     and generator element 2. RS generator polynomial g = (x - a^1)*...*(x - a^6)
@@ -41,9 +41,9 @@
  *                     (first byte of block 1 is c_41, last byte of CRC1 is c_0).
  *                     Codeword 2 is formed accordingly.
  *
- * Regular CRC, except for weird output XOR of block 2 CRC:
+ * Regular CRC:
  * CRC1 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0
- * CRC2 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0x39BB
+ * CRC2 parameters: polynomial=0x1021, seed=0, LSB first, output-XOR=0
  * Both CRC1 and CRC2 are sent in big-endian format
  */
 
@@ -97,25 +97,32 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,%.1f,%.0f",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
+                    instance->gps.usedSats,                 /* #sats in position solution */
                     latitude,                               /* Latitude [degrees] */
                     longitude,                              /* Longitude [degrees] */
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
+                    instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
+                    instance->metro.temperature,            /* Temperature main sensor [°C] */
+                    instance->metro.humidity,               /* Relative humidity [%] */
                     SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->frameCounter,
+                    instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
+                    instance->metro.temperature_CPU         /* (Main board) CPU temperature [°C] */
                     );
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",16,0,%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",16,0,%s,%.2f",
                 instance->id,
-                instance->name
+                instance->name,
+                instance->gps.pdop
                 );
 
     if (length > 0) {
@@ -126,6 +133,8 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
 
 static void _CF06_sendRaw (CF06_Handle handle, CF06_Packet *p1)
 {
+(void)handle;
+(void)p1;
 #if 0
     char s[200];
 
@@ -177,7 +186,7 @@ LPCLIB_Result CF06_processBlock (
     if (_CF06_checkReedSolomonOuter (handle->pRawData->rawData.dat8, &errorsOuter) == LPCLIB_SUCCESS) {
         /* CRC of outer block ok? */
         handle->pRawData->block2.crc = __REV16(handle->pRawData->block2.crc); /* Big endian */
-        if (_CF06_checkCRCOuter((uint8_t *)&handle->pRawData->block2, sizeof(CF06_PayloadBlock2)-2, handle->pRawData->block2.crc ^ 0x39BB)) {
+        if (_CF06_checkCRCOuter((uint8_t *)&handle->pRawData->block2, sizeof(CF06_PayloadBlock2)-2, handle->pRawData->block2.crc)) {
             frameOk = true;
             _CF06_prepare(&handle->pRawData->block1, &handle->instance, rxFrequencyHz);
             if (handle->instance) {

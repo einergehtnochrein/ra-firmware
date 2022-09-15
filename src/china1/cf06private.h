@@ -27,23 +27,23 @@ typedef __PACKED(struct {
     uint32_t altitude;
     int16_t speed_east;
     int16_t speed_north;
-    int16_t reserved18;
-    uint8_t reserved1A;
-    uint8_t reserved1B;
-    uint16_t reserved1C;
-    uint16_t reserved1E;
-    uint16_t reserved20;
-    uint8_t reserved0[6];
+    int16_t speed_down;
+    uint8_t usedSats;
+    uint8_t pdop;
+    int16_t temperature;
+    uint16_t humidity;
+    int16_t reserved20;
+    int8_t temperature_CPU;
+    int16_t temperature_Usensor;
+    uint8_t vbat;
+    uint8_t upCounter;
+    uint8_t flags;
     uint16_t crc;
 }) CF06_PayloadBlock1;
 
 
 typedef __PACKED(struct {
-    uint16_t reserved00;
-    uint16_t reserved02;
-    uint16_t reserved04;
-    uint16_t reserved06;
-    uint16_t reserved08;
+    uint8_t reserved00[10];
     uint16_t reserved0A;
     uint16_t reserved0C;
     uint16_t reserved0E;
@@ -53,7 +53,12 @@ typedef __PACKED(struct {
     uint16_t reserved16;
     uint16_t reserved18;
     uint16_t reserved1A;
-    uint8_t reserved1C;
+    uint16_t reserved1C;
+    uint16_t reserved1E;
+    uint16_t reserved20;
+    uint16_t reserved22;
+    uint16_t reserved24;
+    uint8_t flags;
     uint16_t crc;
 }) CF06_PayloadBlock2;
 
@@ -64,7 +69,6 @@ typedef union {
         uint8_t reserved00[5];
         CF06_PayloadBlock1 block1;
         uint8_t fec_inner[6];
-        uint8_t reserved35[10];
         CF06_PayloadBlock2 block2;
         uint8_t fec_outer[6];
     });
@@ -73,11 +77,17 @@ typedef union {
 
 typedef struct {
     float temperature;                          /* Temperature [°C] */
+    float humidity;                             /* Relative humidity [%] */
+    float temperature_Usensor;                  /* Temperature of humidity sensor [°C] */
+    float temperature_CPU;                      /* CPU temperature (main board) [°C] */
+    float batteryVoltage;                       /* Battery voltage [V] */
 } CF06_CookedMetrology;
 
 
 typedef struct {
     LLA_Coordinate observerLLA;
+    float pdop;
+    uint8_t usedSats;
 } CF06_CookedGps;
 
 
