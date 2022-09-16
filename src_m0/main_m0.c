@@ -266,6 +266,7 @@ static const SYNC_Config configAsia1 = {
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
+            .lsbFirst = true,
         },
     },
 };

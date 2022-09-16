@@ -30,6 +30,7 @@ typedef struct {
         int startOffset;                    /* Start offset in buffer for storing first payload byte */
         SYNC_State dataState;               /* State to jump to when receiving data */
         bool inverted;                      /* Invert bits if set */
+        bool lsbFirst;                      /* Store payload bytes LSB first (only in raw mode) */
         ProcessFunc postProcess;            /* Called after frame has been received */
         ProcessFunc byteProcess;            /* Called after each byte received */
 
