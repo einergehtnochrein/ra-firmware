@@ -226,7 +226,7 @@ static void _gth3_cf06_postProcess (SYNC_Handle handle, volatile IPC_S2M *buffer
     (void)writeIndex;
 
     // Restore 1st payload byte which was used to extend the sync word
-    buffer->data8[0] = 0xC6;
+    buffer->data8[0] = 0x63;
 }
 
 
