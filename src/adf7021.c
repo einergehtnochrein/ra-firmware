@@ -417,6 +417,24 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
             _ADF7021_configureAll(handle);
             break;
 
+        case ADF7021_OPCODE_SET_SYNCWORD:
+            regval = 0
+                | (3 << 4)                              /* 24 bits */
+                | ((pConfig->sync.maxErrors % 4) << 6)  /* Max number of bit mismatches (0...3) */
+                | (pConfig->sync.pattern << 8)          /* Sync pattern (24 bits) */
+                ;
+            ADF7021_write(handle, ADF7021_REGISTER_11, regval);
+            regval = 0x100;
+            if (pConfig->sync.enable) {
+                regval = 0
+                    | ((pConfig->sync.packetLength ? 2 : 1) << 4)   /* Threshold lock duration */
+                    | (2 << 6)
+                    | (pConfig->sync.packetLength << 8)             /* Payload length in bytes (1...255) */
+                    ;
+            }
+            ADF7021_write(handle, ADF7021_REGISTER_12, regval);
+            break;
+
         case ADF7021_OPCODE_INVALID:
             /* Nothing to do */
             break;
