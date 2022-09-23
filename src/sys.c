@@ -475,7 +475,7 @@ static const UART_Config _uartFlushTx[] = {
 //TODO need a mailbox driver
 void MAILBOX_IRQHandler (void)
 {
-    SYS_Message *pMessage;
+    SYS_Message *pMessage = NULL;
     SYS_Handle handle = &sysContext;
     uint32_t requests = LPC_MAILBOX->IRQ1;
 
@@ -503,6 +503,10 @@ void MAILBOX_IRQHandler (void)
     else {
         /* No supported request. Clear them all */
         LPC_MAILBOX->IRQ1CLR = requests;
+    }
+
+    if (pMessage) {
+        osMailPut(sysContext.queue, pMessage);
     }
 }
 

@@ -220,6 +220,16 @@ static const SYNC_Config configMrz = {
 };
 
 
+static void _gth3_cf06_postProcess (SYNC_Handle handle, volatile IPC_S2M *buffer, int writeIndex)
+{
+    (void)handle;
+    (void)writeIndex;
+
+    // Restore 1st payload byte which was used to extend the sync word
+    buffer->data8[0] = 0x63;
+}
+
+
 static const SYNC_Config configAsia1 = {
     .nPatterns = 4,
     .conf = {
@@ -259,13 +269,15 @@ static const SYNC_Config configAsia1 = {
         },
         {
             .id = IPC_PACKET_TYPE_HT03G_CF06AH,
-            .pattern     = {0x0000005555B42BLL, 0},
-            .patternMask = {0x000000FFFFFFFFLL, 0},
+            .pattern     = {0x00005555B42BC6LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 102 * 8,
-            .startOffset = 0,
+            .startOffset = 1,
             .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
+            .lsbFirst = true,
+            .postProcess = _gth3_cf06_postProcess,
         },
     },
 };
