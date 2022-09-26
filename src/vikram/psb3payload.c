@@ -75,6 +75,7 @@ LPCLIB_Result _PSB3_processPayload (
     instance->gps.observerLLA = lla;
 
     instance->gps.usedSats = _PSB3_readBCD(payload->usedSats);
+    instance->gps.pdop = _PSB3_readBCD(payload->pdop);
 
     /* PTU */
 

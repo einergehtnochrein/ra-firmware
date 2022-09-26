@@ -79,9 +79,10 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",15,0,%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",15,0,%s,%.1f",
                 instance->id,
-                instance->name
+                instance->name,
+                instance->gps.pdop
                 );
 
     if (length > 0) {

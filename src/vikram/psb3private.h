@@ -28,9 +28,9 @@ typedef union {
         uint16_t reserved06;
         uint16_t rawHumidity;                   /* Raw ADC value of humidity sensor HIH-4021 (BE) */
         uint8_t speed[3];
-        uint8_t direction[3];
+        uint8_t direction[3];                   /* Course. (High nibble of first byte contains UTC month (1...12) */
         uint8_t day;
-        uint8_t reserved11;
+        uint8_t pdop;                           /* Integer part of PDOP from GSA sentence */
         uint8_t year;
         uint8_t hour;                           /* UTC Hour (BCD) */
         uint8_t minute;                         /* UTC Minute (BCD) */
@@ -54,6 +54,7 @@ typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
     uint8_t usedSats;
+    float pdop;
 } PSB3_CookedGps;
 
 
