@@ -27,8 +27,8 @@ typedef union {
         uint16_t rawTemperature;                /* Raw ADC value of ambient temperature sensor (BE) */
         uint16_t reserved06;
         uint16_t rawHumidity;                   /* Raw ADC value of humidity sensor HIH-4021 (BE) */
-        uint8_t reserved0A[3];
-        uint8_t reserved0D[3];
+        uint8_t speed[3];
+        uint8_t direction[3];
         uint8_t day;
         uint8_t reserved11;
         uint8_t year;
@@ -37,7 +37,7 @@ typedef union {
         uint8_t second;                         /* UTC Second (BCD) */
         uint8_t latitude[4];                    /* Latitude (BCD) */
         uint8_t longitude[5];                   /* Longitude (BCD) */
-        uint8_t reserved1F;
+        uint8_t usedSats;                       /* Number of used satellites */
         uint8_t altitude[3];                    /* Altitude (BCD) */
         uint8_t fec[9];
     });
@@ -53,6 +53,7 @@ typedef struct {
 typedef struct {
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
+    uint8_t usedSats;
 } PSB3_CookedGps;
 
 

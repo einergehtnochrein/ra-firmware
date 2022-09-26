@@ -13,6 +13,7 @@ typedef enum {
     MODE_JINYANG = 7,
     MODE_MRZ = 9,
     MODE_ASIA1 = 10,    /* Various sondes (mostly Asia) with 2FSK 2400 sym/s */
+    MODE_PSB3 = 11,
 } SYNC_Mode;
 
 
@@ -283,6 +284,23 @@ static const SYNC_Config configAsia1 = {
 };
 
 
+static const SYNC_Config configPSB3 = {
+    .nPatterns = 1,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_VIKRAM_PSB3,
+            .pattern     = {0xAA969965599A9A56LL, 0},
+            .patternMask = {0x0FFFFFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 1,
+            .frameLengthBits = 8*44,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_MANCHESTER,
+            .inverted = true,
+        },
+    },
+};
+
+
 
 void MAILBOX_IRQHandler (void)
 {
@@ -324,6 +342,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 9)) {
         newMode = MODE_ASIA1;
         LPC_MAILBOX->IRQ0CLR = (1u << 9);
+    }
+    else if (requests & (1u << 10)) {
+        newMode = MODE_PSB3;
+        LPC_MAILBOX->IRQ0CLR = (1u << 10);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -384,6 +406,9 @@ int main (void)
                     break;
                 case MODE_ASIA1:
                     syncConfig = &configAsia1;
+                    break;
+                case MODE_PSB3:
+                    syncConfig = &configPSB3;
                     break;
                 case MODE_AFSK:
                 default:

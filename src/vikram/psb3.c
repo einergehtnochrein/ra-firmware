@@ -51,13 +51,24 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
     if (!isnan(longitude)) {
         longitude *= 180.0 / M_PI;
     }
+    float direction = instance->gps.observerLLA.direction;
+    if (!isnan(direction)) {
+        direction *= 180.0 / M_PI;
+    }
+    float kmh = instance->gps.observerLLA.velocity;
+    if (!isnan(kmh)) {
+        kmh *= 3.6f;
+    }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",15,%.3f,,%.5lf,%.5lf,%.0f,,,,%.1f,,,,%.1f,,%.1f,,,%d",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",15,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
+                    instance->gps.usedSats,
                     latitude,                               /* Latitude [degrees] */
                     longitude,                              /* Longitude [degrees] */
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
+                    direction,                              /* Course [°] */
+                    kmh,                                    /* Speed [km/h] */
                     instance->metro.temperature,            /* Temperature [°C] */
                     instance->metro.humidity,               /* Relative humidity [%] */
                     SYS_getFrameRssi(sys),

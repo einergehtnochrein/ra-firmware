@@ -56,6 +56,7 @@ static PSB3_InstanceData *_PSB3_getInstanceDataStructure (float frequencyMHz)
     if (instance) {
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
+        strcpy(instance->name, "PS-B3");
 
         /* Insert into list */
         p = instanceList;
