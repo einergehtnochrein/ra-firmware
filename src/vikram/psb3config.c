@@ -104,7 +104,7 @@ LPCLIB_Result _PSB3_prepare (
     }
 
     instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
-    //instance->frameCounter = packet->frameCounter;
+    instance->frameCounter = __REV16(packet->frameNumber);
 
     /* Set time marker to be able to identify old records */
     instance->lastUpdated = os_time;
