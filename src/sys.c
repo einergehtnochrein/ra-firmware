@@ -1678,6 +1678,7 @@ if (cl[0] != 0) {
             break;
 
         case 99:        /* Keep-alive message */
+            handle->linkEstablished = true;
             break;
         }
     }
