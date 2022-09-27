@@ -12,6 +12,33 @@
 #include "psb3private.h"
 #include "bch.h"
 
+/*
+ * PS-B3 frame parameters
+ *
+ * 2FSK, 768 sym/s Manchester encoded, 384 bit/s, 5.0 kHz deviation
+ * Continuous transmission (no preamble)
+ * Sync word: 11111001 10100100 00101011 10110001 (F9 A4 2B B1)
+ *
+ * Packet length: 4 sync bytes + 44 data bytes = 48 bytes (--> 384 bits, frame duration = one second)
+ * Packet structure (all bytes received MSB first):
+ *
+ * +---------+-------+----------+---------+
+ * | Part 1  | CRC16 | Part 2   | Parity  |
+ * | 6 bytes | 2 b.  | 27 bytes | 9 bytes |
+ * +---------+-------+----------+---------+
+ * \-------------- Codeword --------------/
+ * \------------ CRC -----------/
+ *
+ * Structure of the codeword unknown. According to public documentation the sonde uses a Reed Solomon
+ * code, but no luck with various parameter combinations :-(
+ * However, a function to validate the codeword has been found (no code correction capability yet)
+ *
+ * Regular CRC:
+ * CRC parameters: polynomial=0x8005, seed=0, LSB first, output-XOR=0
+ * CRC is sent in big-endian format
+ * NOTE: For CRC calculation the two byte CRC field is set to zero!
+ */
+
 
 /** Context */
 typedef struct PSB3_Context {
