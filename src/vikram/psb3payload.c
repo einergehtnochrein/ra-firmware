@@ -92,8 +92,8 @@ LPCLIB_Result _PSB3_processPayload (
      *       RH sensor temperature correction?
      */
     float R = __REV16(payload->rawTemperature) / (65536.0f - __REV16(payload->rawTemperature)) * 56.2e3f;
-    const float B = 3000.0f;
-    const float R25 = 1500.0f;
+    const float B = 2800.0f;
+    const float R25 = 1000.0f;
     instance->metro.temperature = 1.0f / (1.0f/(273.15f+25.0f) + 1/B*logf(R/R25)) - 273.15f;
 
     float Vout = __REV16(payload->rawHumidity) / 65536.0f * 1.25f * 62.5f/15.0f;
