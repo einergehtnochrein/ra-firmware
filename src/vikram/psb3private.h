@@ -25,7 +25,7 @@ typedef union {
         uint16_t frameNumber;                   /* Frame number (BE) */
         uint16_t rawAnalogU4;                   /* Raw ADC input from extension module U4 (BE) */
         uint16_t rawTemperature;                /* Raw ADC value of ambient temperature sensor (BE) */
-        uint16_t reserved06;
+        uint16_t crc;                           /* CRC16 (BE). Weird place to have a frame CRC... */
         uint16_t rawHumidity;                   /* Raw ADC value of humidity sensor HIH-4021 (BE) */
         uint8_t speed[3];
         uint8_t direction[3];                   /* Course. (High nibble of first byte contains UTC month (1...12) */
@@ -87,6 +87,9 @@ void _PSB3_deleteInstance (PSB3_InstanceData *instance);
 
 /* Check parity bits */
 _Bool _PSB3_checkParity (uint8_t *buffer, int length);
+
+/* Check frame CRC */
+_Bool _PSB3_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
 
 /* Process the payload */
 LPCLIB_Result _PSB3_processPayload (

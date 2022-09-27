@@ -115,13 +115,23 @@ LPCLIB_Result PSB3_processBlock (
 
         /* Validate codeword */
         if (_PSB3_checkParity((uint8_t *)&handle->packet, sizeof(handle->packet))) {
-            _PSB3_sendRaw(handle, buffer);
+            /* Probably a valid codeword. Check CRC!.
+             * CRC is transmitted amid the data block. Read it and set these locations to zero
+             * before for CRC calculation.
+             */
+            uint16_t receivedCRC = __REV16(handle->packet.crc);
+            handle->packet.crc = 0;
 
-            result = _PSB3_prepare(&handle->packet, &handle->instance, rxFrequencyHz);
-            if (result == LPCLIB_SUCCESS) {
-                _PSB3_processPayload(&handle->packet, handle->instance);
+            /* Validate CRC16: Polynomial 0x8005, seed=0, output-xor=0 */
+            if (_PSB3_checkCRC((uint8_t *)&handle->packet.rawData, 35, receivedCRC)) {
+                _PSB3_sendRaw(handle, buffer);
+
+                result = _PSB3_prepare(&handle->packet, &handle->instance, rxFrequencyHz);
                 if (result == LPCLIB_SUCCESS) {
-                    _PSB3_sendKiss(handle->instance);
+                    _PSB3_processPayload(&handle->packet, handle->instance);
+                    if (result == LPCLIB_SUCCESS) {
+                        _PSB3_sendKiss(handle->instance);
+                    }
                 }
             }
         }
