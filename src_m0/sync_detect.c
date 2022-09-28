@@ -21,6 +21,7 @@ struct _SyncDetectorContext {
     int writeIndex;
     int uartBitCounter;
     bool inverted;
+    bool lsbFirst;
     int lastBit;
     ProcessFunc postProcess;
     ProcessFunc byteProcess;
@@ -82,6 +83,7 @@ void PIN_INT3_IRQHandler (void)
                             handle->bitCounter = 0;
                             handle->state = handle->config->conf[i].dataState;
                             handle->inverted = handle->config->conf[i].inverted;
+                            handle->lsbFirst = handle->config->conf[i].lsbFirst;
                             handle->uartBitCounter = 0;
                             handle->writeIndex = handle->config->conf[i].startOffset;
                             handle->postProcess = handle->config->conf[i].postProcess;
@@ -103,8 +105,14 @@ void PIN_INT3_IRQHandler (void)
                     bit = bit ^ 1;
                 }
 
-                ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] =
-                    (ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] << 1) | bit;
+                if (handle->lsbFirst) {
+                    ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] =
+                        (ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] >> 1) | (bit << 7);
+                }
+                else {
+                    ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] =
+                        (ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] << 1) | bit;
+                }
 
                 if (++handle->bitCounter >= 8) {
                     handle->bitCounter = 0;

@@ -13,6 +13,7 @@ typedef enum {
     MODE_JINYANG = 7,
     MODE_MRZ = 9,
     MODE_ASIA1 = 10,    /* Various sondes (mostly Asia) with 2FSK 2400 sym/s */
+    MODE_PSB3 = 11,
 } SYNC_Mode;
 
 
@@ -220,6 +221,16 @@ static const SYNC_Config configMrz = {
 };
 
 
+static void _gth3_cf06_postProcess (SYNC_Handle handle, volatile IPC_S2M *buffer, int writeIndex)
+{
+    (void)handle;
+    (void)writeIndex;
+
+    // Restore 1st payload byte which was used to extend the sync word
+    buffer->data8[0] = 0x63;
+}
+
+
 static const SYNC_Config configAsia1 = {
     .nPatterns = 4,
     .conf = {
@@ -259,13 +270,32 @@ static const SYNC_Config configAsia1 = {
         },
         {
             .id = IPC_PACKET_TYPE_HT03G_CF06AH,
-            .pattern     = {0x0000005555B42BLL, 0},
-            .patternMask = {0x000000FFFFFFFFLL, 0},
+            .pattern     = {0x00005555B42BC6LL, 0},
+            .patternMask = {0x0000FFFFFFFFFFLL, 0},
             .nMaxDifference = 0,
             .frameLengthBits = 102 * 8,
-            .startOffset = 0,
+            .startOffset = 1,
             .dataState = SYNC_STATE_DATA_RAW,
             .inverted = false,
+            .lsbFirst = true,
+            .postProcess = _gth3_cf06_postProcess,
+        },
+    },
+};
+
+
+static const SYNC_Config configPSB3 = {
+    .nPatterns = 1,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_VIKRAM_PSB3,
+            .pattern     = {0xAA969965599A9A56LL, 0},
+            .patternMask = {0x0FFFFFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 1,
+            .frameLengthBits = 8*44,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_MANCHESTER,
+            .inverted = true,
         },
     },
 };
@@ -312,6 +342,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 9)) {
         newMode = MODE_ASIA1;
         LPC_MAILBOX->IRQ0CLR = (1u << 9);
+    }
+    else if (requests & (1u << 10)) {
+        newMode = MODE_PSB3;
+        LPC_MAILBOX->IRQ0CLR = (1u << 10);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -372,6 +406,9 @@ int main (void)
                     break;
                 case MODE_ASIA1:
                     syncConfig = &configAsia1;
+                    break;
+                case MODE_PSB3:
+                    syncConfig = &configPSB3;
                     break;
                 case MODE_AFSK:
                 default:

@@ -32,6 +32,7 @@ C_SRCS = \
     mrz/mrz.c mrz/mrzconfig.c mrz/mrzgps.c mrz/mrzmetrology.c \
     china1/china1.c china1/cf06.c china1/cf06config.c china1/cf06utils.c china1/cf06payload.c \
     china1/gth3.c china1/gth3config.c china1/gth3utils.c china1/gth3payload.c \
+    vikram/psb3.c vikram/psb3config.c vikram/psb3utils.c vikram/psb3payload.c \
     \
     semihosting/syscalls.c semihosting/t32term.c semihosting/t32term_memory.c
 
@@ -66,6 +67,7 @@ INCLUDES += \
     -I../src/rs92 \
     -I../src/semihosting \
     -I../src/srsc \
+    -I../src/vikram \
     -I../libs/pdm \
     -I../libs/pt/pt-1.4 \
 

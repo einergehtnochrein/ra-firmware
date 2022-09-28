@@ -112,6 +112,7 @@ typedef enum ADF7021_Opcode {
     ADF7021_OPCODE_SET_AGC,                 /** Set AGC mode and parameters */
     ADF7021_OPCODE_SET_AGC_CLOCK,           /** Set AGC clock frequency (default: 8 kHz) */
     ADF7021_OPCODE_CONFIGURE,               /** Apply all configuration settings */
+    ADF7021_OPCODE_SET_SYNCWORD,            /** Configure sync word detector */
 } ADF7021_Opcode;
 
 struct ADF7021_ConfigAFC {
@@ -132,6 +133,13 @@ struct ADF7021_ConfigAGC {
     uint8_t filterGain;
 };
 
+struct ADF7021_ConfigSyncWord {
+    uint32_t pattern;
+    LPCLIB_Switch enable;
+    uint8_t maxErrors;
+    uint8_t packetLength;
+};
+
 /** Descriptor to specify the configuration in a call to \ref ADF7021_ioctl. */
 typedef struct ADF7021_Config {
     ADF7021_Opcode opcode;                  /**< Config action opcode */
@@ -144,6 +152,7 @@ typedef struct ADF7021_Config {
         struct ADF7021_ConfigDemodulatorParams demodParams;
         struct ADF7021_ConfigAGC agc;
         float agcClockFrequency;
+        struct ADF7021_ConfigSyncWord sync;
     };
 } ADF7021_Config;
 
