@@ -82,7 +82,7 @@ LPCLIB_Result _PSB3_processPayload (
     /* ADC conversion results (temperature/humidity) are 16-bit results (65536 or 1.25V full-scale).
      *
      * Temperature: NTC with 56k2 series bias resistor @ 1.25V
-     *              Resistance R = raw / 65536 - raw) * 56k2
+     *              Resistance R = raw / (65536 - raw) * 56k2
      *              Temperature 1/T = 1/T25 + 1/B * ln (R/R25)
      *              B and R25 guessed from UAII2022 flights in Lindenberg
      * Humidity: HIH-4021 sensor with 5.0V supply, uncompensated RH = (Vout/5.0 - 0.16) / 0.0062

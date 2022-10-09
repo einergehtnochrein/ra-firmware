@@ -343,8 +343,8 @@ LPCLIB_Result DFM_processBlock (
                     | (handle->packet.gps[1].d1[11] <<  4)
                     | (handle->packet.gps[1].d1[12] <<  0)
                     ;
-            snprintf(log, sizeof(log), "%s,2,1,%07"PRIX32"%05"PRIX32"%08"PRIX32"%05"PRIX32"%08"PRIX32,
-                        handle->instance->name,
+            snprintf(log, sizeof(log), "%"PRIu32",2,1,%07"PRIX32"%05"PRIX32"%08"PRIX32"%05"PRIX32"%08"PRIX32,
+                        handle->instance->id,
                         confval,
                         gps0val1,
                         gps0val2,
