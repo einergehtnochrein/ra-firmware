@@ -188,8 +188,8 @@ LPCLIB_Result SRSC_processBlock (
             /* Log */
             if (handle->instance->detectorState == SRSC_DETECTOR_READY) {
                 char log[40];
-                snprintf(log, sizeof(log), "%s,8,1,%d,%08"PRIX32,
-                            handle->instance->name,
+                snprintf(log, sizeof(log), "%"PRIu32",8,1,%d,%08"PRIX32,
+                            handle->instance->id,
                             handle->packet.type,
                             handle->packet.d_bigendian);
                 SYS_send2Host(HOST_CHANNEL_INFO, log);
