@@ -48,6 +48,8 @@ LPCLIB_Result _CF06_processPayloadBlock1 (
     /* PTU */
     cookedMetro->temperature = payload->temperature / 100.0f;
     cookedMetro->humidity = payload->humidity / 100.0f;
+    cookedMetro->humidity = fmaxf(cookedMetro->humidity, 0.0f);
+    cookedMetro->humidity = fminf(cookedMetro->humidity, 100.0f);
     cookedMetro->temperature_Usensor = payload->temperature_Usensor / 100.0f;
     cookedMetro->temperature_CPU = payload->temperature_CPU;
     cookedMetro->batteryVoltage = payload->vbat / 10.0f;
