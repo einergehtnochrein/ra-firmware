@@ -117,7 +117,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         f,                              /* Frequency [MHz] */
                         sAltitude,                      /* Altitude [m] */
                         sClimbRate,                     /* Climb rate [m/s] */
-                        SYS_getFrameRssi(sys),
+                        instance->rssi,
                         instance->rxOffset / 1e3f       /* RX frequency offset [kHz] */
                         );
     }
@@ -135,7 +135,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         instance->metro.temperature,    /* Temperature [°C] */
                         instance->metro.pressure,       /* Pressure [hPa] */
                         instance->metro.humidity,       /* Humidity [%] */
-                        SYS_getFrameRssi(sys),
+                        instance->rssi,
                         instance->rxOffset / 1e3f,      /* RX frequency offset [kHz] */
                         instance->gps.usedSats,
                         instance->metro.frameCounter,
@@ -167,7 +167,8 @@ LPCLIB_Result IMET_processBlock (
         void *buffer,
         uint32_t length,
         float rxSetFrequencyHz,
-        float rxOffset)
+        float rxOffset,
+        float rssi)
 {
     /* Determine length from frame type */
     uint8_t *p = (uint8_t *)buffer;
@@ -210,6 +211,7 @@ LPCLIB_Result IMET_processBlock (
             /* Get/create an instance */
             handle->instance = _IMET_getInstanceDataStructure(rxSetFrequencyHz);
             if (handle->instance) {
+                handle->instance->rssi = rssi;
                 switch (frameType) {
                     case IMET_FRAME_GPS:
                         _IMET_processGpsFrame((IMET_FrameGps *)p, &handle->instance->gps);

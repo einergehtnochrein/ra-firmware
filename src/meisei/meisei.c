@@ -107,7 +107,7 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
                     instance->metro.temperature,
                     sSpecial,
                     instance->metro.humidity,               /* Relative humidity [%] */
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     instance->gps.visibleSats,
                     instance->frameCounter / 2,
                     instance->metro.cpuTemperature
@@ -200,7 +200,8 @@ LPCLIB_Result MEISEI_processBlock (
         SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi)
 {
     int nErrors;
     int nTotalErrors;
@@ -261,6 +262,7 @@ LPCLIB_Result MEISEI_processBlock (
                 }
 
                 _MEISEI_processConfigFrame(&handle->configPacket, &handle->instance, rxFrequencyHz);
+                handle->instance->rssi = rssi;
 
                 /* Store GPS data depending on frame number even/odd */
                 if ((handle->instance->frameCounter % 2) == 0) {

@@ -170,7 +170,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
                     special,                    /* Flags (Ozone, ...) */
                     instance->metro.humidity,   /* RH [%] */
                     instance->gps.hdop,
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     offset,                     /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,
                     instance->frameCounter,     /* Current frame number */
@@ -265,7 +265,12 @@ static void _RS92_sendRaw (RS92_InstanceData *instance, uint8_t *buffer, uint32_
 }
 
 
-LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result RS92_processBlock (
+        RS92_Handle handle,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi)
 {
     if (numBits == 234*8) {
         /* Copy RX frame */
@@ -313,6 +318,7 @@ LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t numB
                 /* Process the config/calib block, and obtain the sonde name and the calibration data */
                 if (_RS92_processConfigBlock(&handle->packet.config, &handle->instance) == LPCLIB_SUCCESS) {
                     handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
+                    handle->instance->rssi = rssi;
 
                     /* Process the (valid) metrology block only if there is calibration data available. */
                     if (handle->crcOK[1] && handle->instance) {

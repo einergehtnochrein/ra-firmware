@@ -109,7 +109,7 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
                     velocity,                               /* GPS velocity [km/h] */
                     instance->metro.temperature,            /* Temperature main sensor [°C] */
                     instance->metro.humidity,               /* Relative humidity [%] */
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     instance->frameCounter,
                     instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
                     instance->metro.temperature_CPU         /* (Main board) CPU temperature [°C] */
@@ -165,7 +165,8 @@ LPCLIB_Result CF06_processBlock (
         CF06_Handle handle,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi)
 {
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
@@ -188,6 +189,7 @@ LPCLIB_Result CF06_processBlock (
             frameOk = true;
             _CF06_prepare(&handle->pRawData->block1, &handle->instance, rxFrequencyHz);
             if (handle->instance) {
+                handle->instance->rssi = rssi;
                 _CF06_processPayloadBlock2(&handle->pRawData->block2, &handle->instance->gps, &handle->instance->metro);
             }
         }

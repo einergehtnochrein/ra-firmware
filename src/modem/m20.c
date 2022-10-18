@@ -148,7 +148,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
                 instance->metro.TU,                      /* Temperature humidity sensor [°C] (main sensor calibration broken) */
                     instance->metro.pressure,               /* Pressure [hPa] */
                     instance->metro.humidity,               /* Relative humidity [%] */
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
                     instance->metro.cpuTemperature,         /* CPU temperature [°C] */
                     instance->metro.TU                      /* Temperature humidity sensor [°C] */
@@ -192,7 +192,12 @@ static void _M20_sendRaw (M20_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 
 
-LPCLIB_Result M20_processBlock (M20_Handle handle, uint8_t *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result M20_processBlock (
+        M20_Handle handle,
+        uint8_t *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi)
 {
     handle->packetLength = numBits / 8 - 1; /* -1: ignore the length byte */
     if (handle->packetLength >= sizeof(M20_Packet)) { /* Must have at least minimum packet length */
@@ -230,6 +235,7 @@ if(1){//            if (handle->instance->logMode == M20_LOGMODE_RAW) {
             /* Get an instance */
             _M20_processConfigBlock(&handle->packet, &handle->instance);
             if (handle->instance) {
+                handle->instance->rssi = rssi;
                 handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
                 /* Process the inner data block */

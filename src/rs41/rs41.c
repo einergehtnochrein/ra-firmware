@@ -164,7 +164,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         special,
-                        SYS_getFrameRssi(sys),
+                        instance->rssi,
                         offset,    /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
@@ -187,7 +187,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         sPressure,                              /* Pressure sensor [hPa] */
                         special,
                         instance->metro.RH,
-                        SYS_getFrameRssi(sys),
+                        instance->rssi,
                         offset,                                 /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
@@ -283,7 +283,12 @@ static void _RS41_sendRaw (RS41_InstanceData *instance, uint8_t *buffer, uint32_
 }
 
 
-LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result RS41_processBlock (
+        RS41_Handle handle,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi)
 {
     bool longFrame = false;
 
@@ -352,6 +357,7 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numB
                 case RS41_SUBFRAME_CALIB_CONFIG:
                     _RS41_processConfigBlock((RS41_SubFrameCalibConfig *)(p + 2), &handle->instance);
                     if (handle->instance) {
+                        handle->instance->rssi = rssi;
                         handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
                         handle->instance->metro.numXdataInstruments = 0;
                         if (handle->instance->metro.hasO3) {

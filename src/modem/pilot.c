@@ -118,7 +118,7 @@ static void _PILOT_sendKiss (PILOT_InstanceData *instance)
                     direction,                              /* Direction [°] */
                     velocity,                               /* Horizontal speed [km/h] */
                     instance->gps.hdop,
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     offset,    /* RX frequency offset [kHz] */
                     instance->gps.visibleSats               /* # satellites */
                     );
@@ -159,7 +159,12 @@ static void _PILOT_sendRaw (PILOT_InstanceData *instance, uint8_t *buffer, uint3
 
 
 
-LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result PILOT_processBlock (
+        PILOT_Handle handle,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi)
 {
     if (numBits == 8*sizeof(struct _PILOT_Payload)) {
         memcpy(&handle->payload, buffer, sizeof(handle->payload));
@@ -174,6 +179,7 @@ LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t nu
             _PILOT_processConfigBlock(&handle->payload, &handle->instance);
 
             if (handle->instance) {
+                handle->instance->rssi = rssi;
                 handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
                 _PILOT_fromBigEndianGps(&handle->payload);

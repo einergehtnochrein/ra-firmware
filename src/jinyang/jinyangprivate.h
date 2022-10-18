@@ -92,6 +92,7 @@ typedef struct _JINYANG_InstanceData {
     JINYANG_Model model;
     float rxFrequencyMHz;
     uint32_t lastUpdated;
+    float rssi;
 
     uint32_t lastGpsTime;
     JINYANG_CookedGps gps;

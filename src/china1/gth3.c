@@ -148,7 +148,8 @@ LPCLIB_Result GTH3_processBlock (
         GTH3_Handle handle,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi)
 {
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
@@ -165,6 +166,7 @@ LPCLIB_Result GTH3_processBlock (
     if (_GTH3_checkCRC((uint8_t *)&handle->packet->payload, sizeof(GTH3_Payload), handle->packet->crc_magic)) {
         _GTH3_prepare(&handle->packet->payload, &handle->instance, rxFrequencyHz);
         if (handle->instance) {
+            handle->instance->rssi = rssi;
             _GTH3_processPayload(&handle->packet->payload, &handle->instance->gps, &handle->instance->metro);
             _GTH3_sendRaw(handle, &handle->packet->payload);
             _GTH3_sendKiss(handle->instance);

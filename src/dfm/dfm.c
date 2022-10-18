@@ -221,7 +221,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         sClimbRate,                 /* Climb rate [m/s] */
                         sTemperature,               /* Temperature [°C] */
                         sSpecial,
-                        SYS_getFrameRssi(sys)
+                        instance->rssi
                         );
     }
     else {
@@ -236,7 +236,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         sVelocity,                  /* Horizontal speed [km/h] */
                         sTemperature,               /* Temperature [°C] */
                         sSpecial,
-                        SYS_getFrameRssi(sys),
+                        instance->rssi,
                         instance->gps.usedSats,
                         sVbat                       /* Battery voltage [V] */
                         );
@@ -267,7 +267,8 @@ LPCLIB_Result DFM_processBlock (
         uint8_t *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        uint32_t rxTime)
+        uint32_t rxTime,
+        float rssi)
 {
     LPCLIB_Result result = LPCLIB_ERROR;
 
@@ -296,6 +297,7 @@ LPCLIB_Result DFM_processBlock (
         }
 
         if (handle->instance) {
+            handle->instance->rssi = rssi;
             handle->instance->platform = type;
 
             /* Log */

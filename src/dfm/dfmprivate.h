@@ -139,6 +139,7 @@ typedef struct _DFM_InstanceData {
     char name[20];
     float rxFrequencyMHz;
     SONDE_Type platform;
+    float rssi;
 
     uint32_t lastUpdated;
     DFM_DetectorState detectorState;

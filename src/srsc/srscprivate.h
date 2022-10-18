@@ -170,6 +170,7 @@ typedef struct _SRSC_InstanceData {
     char name[20];
     float rxFrequencyMHz;
     float rxOffset;
+    float rssi;
 
     SRSC_DetectorState detectorState;
     uint8_t obfuscation;

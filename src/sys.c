@@ -1809,7 +1809,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     (uint8_t *)pMessage->event.parameter,
                                     7,
                                     handle->currentFrequency,
-                                    rxOffset);
+                                    rxOffset,
+                                    SYS_getFrameRssi(handle));
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_IMET_RSB) {
                         float rxOffset = 0;
@@ -1821,7 +1822,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     (uint8_t *)pMessage->event.parameter,
                                     0,  /* variable packet length */
                                     handle->currentFrequency,
-                                    rxOffset);
+                                    rxOffset,
+                                    SYS_getFrameRssi(handle));
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_BEACON) {
                         BEACON_processBlock(
@@ -1829,7 +1831,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     (uint8_t *)pMessage->event.parameter,
                                     15,
                                     handle->currentFrequency,
-                                    pMessage->event.channel);
+                                    pMessage->event.channel,
+                                    SYS_getFrameRssi(handle));
                     }
                     break;
                 }
@@ -1866,7 +1869,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->m10,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle));
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1876,7 +1880,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->m20,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle));
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1886,7 +1891,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->pilot,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle));
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1896,7 +1902,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->rs41,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle));
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1906,7 +1913,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->rs92,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle));
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1918,7 +1926,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,
-                                        ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
+                                        ipc[bufferIndex].rxTime,
+                                        SYS_getFrameRssi(handle)) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1930,7 +1939,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,
-                                        ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
+                                        ipc[bufferIndex].rxTime,
+                                        SYS_getFrameRssi(handle)) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1941,7 +1951,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle)) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1951,7 +1962,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->jinyang,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle)) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1961,7 +1973,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->mrz,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle)) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1971,7 +1984,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->cf06,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle)) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1981,7 +1995,8 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->psb3,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle)) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }

@@ -98,7 +98,7 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
                     kmh,                                    /* Speed [km/h] */
                     instance->metro.temperature,            /* Temperature [°C] */
                     instance->metro.humidity,               /* Relative humidity [%] */
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     instance->frameCounter
                     );
 
@@ -130,7 +130,8 @@ LPCLIB_Result PSB3_processBlock (
         PSB3_Handle handle,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi)
 {
     (void)rxFrequencyHz;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
@@ -153,6 +154,7 @@ LPCLIB_Result PSB3_processBlock (
 
                 result = _PSB3_prepare(&handle->packet, &handle->instance, rxFrequencyHz);
                 if (result == LPCLIB_SUCCESS) {
+                    handle->instance->rssi = rssi;
                     _PSB3_processPayload(&handle->packet, handle->instance);
                     if (result == LPCLIB_SUCCESS) {
                         _PSB3_sendKiss(handle->instance);

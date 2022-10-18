@@ -81,6 +81,7 @@ typedef struct _BEACON_InstanceData {
     float rxFrequencyMHz;
     float rxOffset;
     bool emergency;
+    float rssi;
 
     uint32_t lastUpdated;
     

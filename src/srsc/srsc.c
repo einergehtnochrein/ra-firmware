@@ -137,7 +137,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                     instance->config.rfPwrDetect,       /* RF power detector [V] */
                     instance->metro.humidity,           /* Humidity [%] */
                     instance->gps.hdop,
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     instance->rxOffset / 1e3f,
                     instance->gps.usedSats,
                     instance->config.batteryVoltage     /* Battery voltage [V] */
@@ -179,7 +179,8 @@ LPCLIB_Result SRSC_processBlock (
         void *buffer,
         uint32_t length,
         float rxSetFrequencyHz,
-        float rxOffset)
+        float rxOffset,
+        float rssi)
 {
     if (length == 7) {
         if (_SRSC_doParityCheck(buffer, length)) {
@@ -203,6 +204,7 @@ LPCLIB_Result SRSC_processBlock (
 
             /* Always call config handler first to obtain an instance */
             if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxSetFrequencyHz) == LPCLIB_SUCCESS) {
+                handle->instance->rssi = rssi;
                 handle->instance->rxOffset = rxOffset;
 
                 if (SRSC_isGpsType(handle->packet.type)) {

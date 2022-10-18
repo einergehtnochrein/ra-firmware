@@ -46,7 +46,12 @@ typedef enum {
 
 LPCLIB_Result RS41_open (RS41_Handle *pHandle);
 LPCLIB_Result RS41_setLogMode (RS41_Handle handle, uint32_t id, RS41_LogMode mode);
-LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz);
+LPCLIB_Result RS41_processBlock (
+        RS41_Handle handle,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi);
 LPCLIB_Result RS41_resendLastPositions (RS41_Handle handle);
 LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id, float *frequency);
 

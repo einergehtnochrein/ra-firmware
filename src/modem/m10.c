@@ -118,7 +118,7 @@ static void _M10_sendKiss (M10_InstanceData *instance)
                     direction,                              /* Direction [degrees} */
                     velocity,                               /* Velocity [km/h] */
                     instance->metro.temperature,            /* Temperature [°C] */
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     offset,    /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,              /* # satellites */
                     instance->metro.batteryVoltage
@@ -161,7 +161,12 @@ static void _M10_sendRaw (M10_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 
 
-LPCLIB_Result M10_processBlock (M10_Handle handle, uint8_t *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result M10_processBlock (
+        M10_Handle handle,
+        uint8_t *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi)
 {
     handle->packetLength = numBits / 8 - 1; /* -1: ignore the length byte */
     if (handle->packetLength == sizeof(M10_Packet)) {
@@ -175,6 +180,7 @@ LPCLIB_Result M10_processBlock (M10_Handle handle, uint8_t *buffer, uint32_t num
                 _M10_processConfigBlock(&handle->packet.data.config, &handle->instance);
 
                 if (handle->instance) {
+                    handle->instance->rssi = rssi;
                     handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
 if(1){//                    if (handle->instance->logMode == M10_LOGMODE_RAW) {

@@ -66,6 +66,7 @@ typedef struct _PSB3_InstanceData {
     uint16_t frameCounter;
     float rxFrequencyMHz;
     uint32_t lastUpdated;
+    float rssi;
 
     uint32_t lastGpsTime;
     PSB3_CookedGps gps;

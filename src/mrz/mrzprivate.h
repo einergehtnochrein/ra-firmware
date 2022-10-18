@@ -81,6 +81,7 @@ typedef struct _MRZ_InstanceData {
     float rxFrequencyMHz;
     uint32_t lastUpdated;
     uint32_t fragmentValidFlags;
+    float rssi;
 
     __PACKED(union {
         uint32_t rawCalib[16];

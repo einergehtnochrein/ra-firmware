@@ -39,7 +39,8 @@ LPCLIB_Result PSB3_processBlock (
         PSB3_Handle handle,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz);
+        float rxFrequencyHz,
+        float rssi);
 LPCLIB_Result PSB3_resendLastPositions (PSB3_Handle handle);
 LPCLIB_Result PSB3_removeFromList (PSB3_Handle handle, uint32_t id, float *frequency);
 

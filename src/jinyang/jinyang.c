@@ -120,7 +120,7 @@ static void _JINYANG_sendKiss (JINYANG_InstanceData *instance)
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     instance->frameCounter
                     );
 
@@ -170,7 +170,8 @@ LPCLIB_Result JINYANG_processBlock (
         JINYANG_Handle handle,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi)
 {
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
@@ -186,6 +187,7 @@ LPCLIB_Result JINYANG_processBlock (
 
             result = _JINYANG_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
             if (result == LPCLIB_SUCCESS) {
+                handle->instance->rssi = rssi;
                 /* Process subframe type */
                 switch (handle->packet.subType) {
                     case 0:

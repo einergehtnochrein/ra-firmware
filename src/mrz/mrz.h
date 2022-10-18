@@ -39,7 +39,8 @@ LPCLIB_Result MRZ_processBlock (
         MRZ_Handle handle,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz);
+        float rxFrequencyHz,
+        float rssi);
 LPCLIB_Result MRZ_resendLastPositions (MRZ_Handle handle);
 LPCLIB_Result MRZ_removeFromList (MRZ_Handle handle, uint32_t id, float *frequency);
 

@@ -73,7 +73,7 @@ static void _BEACON_sendKiss (BEACON_InstanceData *instance)
                     lat,
                     lon,
                     special,
-                    SYS_getFrameRssi(sys)
+                    instance->rssi
                     );
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
@@ -163,7 +163,8 @@ LPCLIB_Result BEACON_processBlock (
         void *buffer,
         uint32_t length,
         float rxFrequencyHz,
-        uint8_t emergency)
+        uint8_t emergency,
+        float rssi)
 {
     int nErrors;
 
@@ -199,6 +200,7 @@ LPCLIB_Result BEACON_processBlock (
         if (BCH_127_106_t3_process(_BEACON_getDataBCH1, _BEACON_toggleDataBCH1, &nErrors) == LPCLIB_SUCCESS) {
             /* Process protected data field 1 (also updates 'longMessage' flag) */
             if (_BEACON_processConfigFrame(&handle->instance) == LPCLIB_SUCCESS) {
+                handle->instance->rssi = rssi;
                 handle->instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
                 handle->instance->emergency = (emergency != 0);
                 if (handle->instance->pdf1.longMessage) {
