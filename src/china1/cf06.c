@@ -163,12 +163,10 @@ static void _CF06_sendRaw (CF06_Handle handle, CF06_Packet *p1)
 
 LPCLIB_Result CF06_processBlock (
         CF06_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz)
 {
-    (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (numBits < 8*sizeof(CF06_Packet)) {

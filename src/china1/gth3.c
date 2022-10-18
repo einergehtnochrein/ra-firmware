@@ -146,12 +146,10 @@ static void _GTH3_sendRaw (GTH3_Handle handle, GTH3_Payload *payload)
 
 LPCLIB_Result GTH3_processBlock (
         GTH3_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz)
 {
-    (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (numBits < 8*sizeof(GTH3_Packet)) {

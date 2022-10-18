@@ -37,7 +37,6 @@ typedef struct JINYANG_Context *JINYANG_Handle;
 LPCLIB_Result JINYANG_open (JINYANG_Handle *pHandle);
 LPCLIB_Result JINYANG_processBlock (
         JINYANG_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz);

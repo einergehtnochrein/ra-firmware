@@ -1949,7 +1949,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_RSG20) {
                                 if (JINYANG_processBlock(
                                         handle->jinyang,
-                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
@@ -1960,7 +1959,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_MRZ) {
                                 if (MRZ_processBlock(
                                         handle->mrz,
-                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
@@ -1971,7 +1969,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_GTH3_CF06AH) {
                                 if (CHINA1_processBlock(
                                         handle->cf06,
-                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {
@@ -1982,7 +1979,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_PSB3) {
                                 if (PSB3_processBlock(
                                         handle->psb3,
-                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency) == LPCLIB_SUCCESS) {

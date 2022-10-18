@@ -37,7 +37,6 @@ typedef struct PSB3_Context *PSB3_Handle;
 LPCLIB_Result PSB3_open (PSB3_Handle *pHandle);
 LPCLIB_Result PSB3_processBlock (
         PSB3_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz);

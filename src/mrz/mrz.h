@@ -37,7 +37,6 @@ typedef struct MRZ_Context *MRZ_Handle;
 LPCLIB_Result MRZ_open (MRZ_Handle *pHandle);
 LPCLIB_Result MRZ_processBlock (
         MRZ_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz);

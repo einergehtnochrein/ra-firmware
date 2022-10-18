@@ -128,13 +128,11 @@ static void _PSB3_sendRaw (PSB3_Handle handle, PSB3_Packet *p1)
 
 LPCLIB_Result PSB3_processBlock (
         PSB3_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
-    (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (numBits == 8*sizeof(PSB3_Packet)) {
@@ -144,7 +142,7 @@ LPCLIB_Result PSB3_processBlock (
         if (_PSB3_checkParity((uint8_t *)&handle->packet, sizeof(handle->packet))) {
             /* Probably a valid codeword. Check CRC!.
              * CRC is transmitted amid the data block. Read it and set these locations to zero
-             * before for CRC calculation.
+             * before CRC calculation.
              */
             uint16_t receivedCRC = __REV16(handle->packet.crc);
             handle->packet.crc = 0;

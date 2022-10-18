@@ -168,13 +168,11 @@ static void _JINYANG_sendRaw (JINYANG_Handle handle, JINYANG_Packet *p1)
 
 LPCLIB_Result JINYANG_processBlock (
         JINYANG_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz)
 {
     (void)rxFrequencyHz;
-    (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     /* Remove data whitening */
