@@ -162,7 +162,6 @@ LPCLIB_Result MRZ_processBlock (
         uint32_t numBits,
         float rxFrequencyHz)
 {
-    (void)rxFrequencyHz;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (numBits == 8*sizeof(MRZ_Packet)) {

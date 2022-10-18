@@ -202,7 +202,6 @@ LPCLIB_Result MEISEI_processBlock (
         uint32_t numBits,
         float rxFrequencyHz)
 {
-    (void)rxFrequencyHz;
     int nErrors;
     int nTotalErrors;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;

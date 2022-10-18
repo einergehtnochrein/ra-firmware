@@ -165,7 +165,6 @@ LPCLIB_Result BEACON_processBlock (
         float rxFrequencyHz,
         uint8_t emergency)
 {
-    (void)rxFrequencyHz;
     int nErrors;
 
     if (length == 15) {

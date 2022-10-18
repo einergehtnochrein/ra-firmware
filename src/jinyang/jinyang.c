@@ -172,7 +172,6 @@ LPCLIB_Result JINYANG_processBlock (
         uint32_t numBits,
         float rxFrequencyHz)
 {
-    (void)rxFrequencyHz;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     /* Remove data whitening */
