@@ -1807,7 +1807,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                         SRSC_processBlock(
                                     handle->srsc,
                                     (uint8_t *)pMessage->event.parameter,
-                                    7,
                                     handle->currentFrequency,
                                     rxOffset,
                                     SYS_getFrameRssi(handle));
@@ -1820,7 +1819,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                         IMET_processBlock(
                                     handle->imet,
                                     (uint8_t *)pMessage->event.parameter,
-                                    0,  /* variable packet length */
                                     handle->currentFrequency,
                                     rxOffset,
                                     SYS_getFrameRssi(handle));
@@ -1829,7 +1827,6 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                         BEACON_processBlock(
                                     handle->beacon,
                                     (uint8_t *)pMessage->event.parameter,
-                                    15,
                                     handle->currentFrequency,
                                     pMessage->event.channel,
                                     SYS_getFrameRssi(handle));

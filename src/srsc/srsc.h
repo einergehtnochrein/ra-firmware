@@ -37,7 +37,6 @@ LPCLIB_Result SRSC_open (SRSC_Handle *pHandle);
 LPCLIB_Result SRSC_processBlock (
         SRSC_Handle handle,
         void *buffer,
-        uint32_t length,
         float rxSetFrequencyHz,
         float rxOffset,
         float rssi);

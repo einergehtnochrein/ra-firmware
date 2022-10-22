@@ -165,7 +165,6 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
 LPCLIB_Result IMET_processBlock (
         IMET_Handle handle,
         void *buffer,
-        uint32_t length,
         float rxSetFrequencyHz,
         float rxOffset,
         float rssi)
@@ -173,6 +172,7 @@ LPCLIB_Result IMET_processBlock (
     /* Determine length from frame type */
     uint8_t *p = (uint8_t *)buffer;
     int frameType = p[0];
+    uint32_t length;
     switch (frameType) {
         case 0x01:
             length = 13;

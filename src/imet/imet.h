@@ -37,7 +37,6 @@ LPCLIB_Result IMET_open (IMET_Handle *pHandle);
 LPCLIB_Result IMET_processBlock (
         IMET_Handle handle,
         void *buffer,
-        uint32_t length,
         float rxSetFrequencyHz,
         float rxOffset,
         float rssi);

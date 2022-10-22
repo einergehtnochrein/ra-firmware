@@ -37,7 +37,6 @@ LPCLIB_Result BEACON_open (BEACON_Handle *pHandle);
 LPCLIB_Result BEACON_processBlock (
         BEACON_Handle handle,
         void *buffer,
-        uint32_t length,
         float rxFrequencyHz,
         uint8_t emergency,
         float rssi);
