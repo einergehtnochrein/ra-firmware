@@ -137,16 +137,17 @@ osStatus osKernelStart (void)
     uint32_t rvr;
     uint32_t tenms;
 
-
-    SysTick_Config(SystemCoreClock / 100);
-
-    /* Calculate factor for ticks<->milliseconds transformation */
-    rvr = (SysTick->LOAD & SysTick_LOAD_RELOAD_Msk) >> SysTick_LOAD_RELOAD_Pos;
+    /* Has the clock driver configured the SysTick calibration register? */
     tenms = (SysTick->CALIB & SysTick_CALIB_TENMS_Msk) >> SysTick_CALIB_TENMS_Pos;
     if (tenms == 0) {
         /* TODO: Wild guess: 100 MHz core clock */
         tenms = 1000000;
     }
+    /* Set SysTick to 10ms */
+    SysTick_Config(tenms);
+
+    /* Calculate factor for ticks<->milliseconds transformation */
+    rvr = (SysTick->LOAD & SysTick_LOAD_RELOAD_Msk) >> SysTick_LOAD_RELOAD_Pos;
     appTicksMult = (((tenms * 256) / rvr) * 4) / 10;
 #endif
 

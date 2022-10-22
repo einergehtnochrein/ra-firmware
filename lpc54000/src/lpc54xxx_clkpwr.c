@@ -104,6 +104,10 @@ enum {
 
 
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5410X
+LPCLIB_DefineRegBit(SYSCON_SYSTCKCAL_CAL,           0, 24);
+LPCLIB_DefineRegBit(SYSCON_SYSTCKCAL_SKEW,          24, 1);
+LPCLIB_DefineRegBit(SYSCON_SYSTCKCAL_NOREF,         25, 1);
+
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_IRC_OSC,   3,  1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_IRC,       4,  1);
 LPCLIB_DefineRegBit(SYSCON_PDRUNCFG_PDEN_FLASH,     5,  1);
@@ -125,6 +129,10 @@ LPCLIB_DefineRegBit(SYSCON_AHBCLKDIV_DIV,           0,  8);
 #endif
 
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
+LPCLIB_DefineRegBit(SYSCON_SYSTCKCAL_CAL,           0, 24);
+LPCLIB_DefineRegBit(SYSCON_SYSTCKCAL_SKEW,          24, 1);
+LPCLIB_DefineRegBit(SYSCON_SYSTCKCAL_NOREF,         25, 1);
+
 LPCLIB_DefineRegBit(SYSCON_PRESETCTRL0_FLASH_RST,   7,  1);
 
 LPCLIB_DefineRegBit(SYSCON_AHBCLKCTRL0_ROM,         1,  1);
@@ -570,6 +578,13 @@ seli = 12;
     SystemCoreClock = CLKPWR_getBusClock(CLKPWR_CLOCK_MAIN) / ahbDivider;
 }
 #endif
+
+    /* Update SysTick calibration register */
+    LPC_SYSCON->SYSTCKCAL = 0
+            | (((SystemCoreClock / 100) << SYSCON_SYSTCKCAL_CAL_Pos) & SYSCON_SYSTCKCAL_CAL_Msk)
+            | (0 << SYSCON_SYSTCKCAL_SKEW_Pos)
+            | (0 << SYSCON_SYSTCKCAL_NOREF_Pos)
+            ;
 
     return LPCLIB_SUCCESS;
 }

@@ -113,7 +113,7 @@ static IPC_S2M ipc[IPC_S2M_NUM_BUFFERS];
 
 #define COMMAND_LINE_SIZE   400
 
-#define INACTIVITY_TIMEOUT  20000
+#define INACTIVITY_TIMEOUT  40000
 
 #define VBAT_FILTER_LENGTH  50
 
@@ -1519,7 +1519,7 @@ if (cl[0] != 0) {
                                     handle->currentFrequency = 0;
                                     _SYS_reportRadioFrequency(handle);
                                 }
-                                osTimerStart(handle->rssiTick, 20);
+                                osTimerStart(handle->rssiTick, 40);
                             }
                             break;
 
@@ -1758,7 +1758,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     PDM_open(0, &handle->pdm);
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
-    osTimerStart(handle->rssiTick, 20);
+    osTimerStart(handle->rssiTick, 40);
 
     handle->inactivityTimeout = osTimerCreate(osTimer(inactivityTimer), osTimerOnce, (void *)SYS_TIMERMAGIC_INACTIVITY);
     osTimerStart(handle->inactivityTimeout, INACTIVITY_TIMEOUT);
