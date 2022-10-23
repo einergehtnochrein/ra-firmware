@@ -157,7 +157,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         special += 1;
     }
 
-    length = sprintf((char *)s, "%"PRIu32",0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%"PRIu32",,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,",
+    length = sprintf((char *)s, "%"PRIu32",0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%"PRIu32",,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,   /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -174,7 +174,8 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
                     offset,                     /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,
                     instance->frameCounter,     /* Current frame number */
-                    sKillTimer                  /* Kill timer (frame) */
+                    sKillTimer,                 /* Kill timer (frame) */
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -270,7 +271,8 @@ LPCLIB_Result RS92_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     if (numBits == 234*8) {
         /* Copy RX frame */
@@ -319,6 +321,7 @@ LPCLIB_Result RS92_processBlock (
                 if (_RS92_processConfigBlock(&handle->packet.config, &handle->instance) == LPCLIB_SUCCESS) {
                     handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
                     handle->instance->rssi = rssi;
+                    handle->instance->realTime = realTime;
 
                     /* Process the (valid) metrology block only if there is calibration data available. */
                     if (handle->crcOK[1] && handle->instance) {

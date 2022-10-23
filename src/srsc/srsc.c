@@ -77,7 +77,7 @@ LPCLIB_Result SRSC_open (SRSC_Handle *pHandle)
 /* Send position report */
 static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 {
-    char s[140];
+    char s[160];
     char sAltitude[20];
     char sTemperature[8];
     int length = 0;
@@ -124,7 +124,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f",
+    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f,,,%.1lf",
                     instance->id,
                     f,                                  /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -140,7 +140,8 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                     instance->rssi,
                     instance->rxOffset / 1e3f,
                     instance->gps.usedSats,
-                    instance->config.batteryVoltage     /* Battery voltage [V] */
+                    instance->config.batteryVoltage,    /* Battery voltage [V] */
+                    instance->realTime / 10.0
                     );
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
@@ -179,7 +180,8 @@ LPCLIB_Result SRSC_processBlock (
         void *buffer,
         float rxSetFrequencyHz,
         float rxOffset,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     if (_SRSC_doParityCheck(buffer, 7)) {
         memcpy(&handle->packet, buffer, sizeof(handle->packet));
@@ -204,6 +206,7 @@ LPCLIB_Result SRSC_processBlock (
         if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxSetFrequencyHz) == LPCLIB_SUCCESS) {
             handle->instance->rssi = rssi;
             handle->instance->rxOffset = rxOffset;
+            handle->instance->realTime = realTime;
 
             if (SRSC_isGpsType(handle->packet.type)) {
                 _SRSC_processGpsFrame(&handle->packet, &handle->instance->gps);

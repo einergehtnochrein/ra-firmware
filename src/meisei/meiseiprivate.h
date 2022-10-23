@@ -72,6 +72,7 @@ typedef struct _MEISEI_InstanceData {
     uint32_t lastUpdated;
     uint16_t frameCounter;
     float rssi;
+    uint64_t realTime;
 
     uint64_t configValidFlags;                  /* Indicates valid fields in "config" */
     float config[64];

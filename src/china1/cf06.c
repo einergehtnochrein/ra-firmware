@@ -97,7 +97,7 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,%.1f,%.0f",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,%.1f,%.0f,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,                 /* #sats in position solution */
@@ -112,7 +112,8 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
                     instance->rssi,
                     instance->frameCounter,
                     instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
-                    instance->metro.temperature_CPU         /* (Main board) CPU temperature [°C] */
+                    instance->metro.temperature_CPU,        /* (Main board) CPU temperature [°C] */
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -166,7 +167,8 @@ LPCLIB_Result CF06_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
@@ -190,6 +192,7 @@ LPCLIB_Result CF06_processBlock (
             _CF06_prepare(&handle->pRawData->block1, &handle->instance, rxFrequencyHz);
             if (handle->instance) {
                 handle->instance->rssi = rssi;
+                handle->instance->realTime = realTime;
                 _CF06_processPayloadBlock2(&handle->pRawData->block2, &handle->instance->gps, &handle->instance->metro);
             }
         }

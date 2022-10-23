@@ -74,6 +74,7 @@ typedef struct _M10_InstanceData {
     float rxFrequencyMHz;
     uint16_t frameCounter;
     float rssi;
+    uint64_t realTime;
 
     M10_CookedGps gps;
     M10_CookedMetrology metro;

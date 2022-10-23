@@ -112,7 +112,7 @@ static void _JINYANG_sendKiss (JINYANG_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",12,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",12,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -121,7 +121,8 @@ static void _JINYANG_sendKiss (JINYANG_InstanceData *instance)
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
                     instance->rssi,
-                    instance->frameCounter
+                    instance->frameCounter,
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -171,7 +172,8 @@ LPCLIB_Result JINYANG_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
@@ -188,6 +190,7 @@ LPCLIB_Result JINYANG_processBlock (
             result = _JINYANG_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
             if (result == LPCLIB_SUCCESS) {
                 handle->instance->rssi = rssi;
+                handle->instance->realTime = realTime;
                 /* Process subframe type */
                 switch (handle->packet.subType) {
                     case 0:

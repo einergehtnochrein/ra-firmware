@@ -64,6 +64,7 @@ typedef struct _PILOT_InstanceData {
     float rxFrequencyMHz;
     uint16_t frameCounter;
     float rssi;
+    uint64_t realTime;
 
     PILOT_CookedGps gps;
 } PILOT_InstanceData;

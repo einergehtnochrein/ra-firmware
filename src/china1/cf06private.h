@@ -101,6 +101,7 @@ typedef struct _CF06_InstanceData {
     float rxFrequencyMHz;
     uint32_t lastUpdated;
     float rssi;
+    uint64_t realTime;
 
     uint32_t lastGpsTime;
     CF06_CookedGps gps;

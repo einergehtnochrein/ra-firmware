@@ -48,7 +48,8 @@ LPCLIB_Result RS92_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result RS92_resendLastPositions (RS92_Handle handle);
 LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id, float *frequency);
 LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold);

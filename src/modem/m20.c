@@ -112,7 +112,7 @@ LPCLIB_Result M20_open (M20_Handle *pHandle)
 /* Send position as a KISS packet */
 static void _M20_sendKiss (M20_InstanceData *instance)
 {
-    char s[100];
+    char s[160];
     int length = 0;
 
 
@@ -135,7 +135,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
     }
 
     length = snprintf((char *)s, sizeof(s),
-                "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,,,%.1f,%.1f,%.1f,",
+                "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,,,%.1f,%.1f,%.1f,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -151,7 +151,8 @@ static void _M20_sendKiss (M20_InstanceData *instance)
                     instance->rssi,
                     instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
                     instance->metro.cpuTemperature,         /* CPU temperature [°C] */
-                    instance->metro.TU                      /* Temperature humidity sensor [°C] */
+                    instance->metro.TU,                     /* Temperature humidity sensor [°C] */
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -197,7 +198,8 @@ LPCLIB_Result M20_processBlock (
         uint8_t *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     handle->packetLength = numBits / 8 - 1; /* -1: ignore the length byte */
     if (handle->packetLength >= sizeof(M20_Packet)) { /* Must have at least minimum packet length */
@@ -236,6 +238,7 @@ if(1){//            if (handle->instance->logMode == M20_LOGMODE_RAW) {
             _M20_processConfigBlock(&handle->packet, &handle->instance);
             if (handle->instance) {
                 handle->instance->rssi = rssi;
+                handle->instance->realTime = realTime;
                 handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
                 /* Process the inner data block */

@@ -225,7 +225,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s",
+        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s,,,%.1lf",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -238,7 +238,8 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         sSpecial,
                         instance->rssi,
                         instance->gps.usedSats,
-                        sVbat                       /* Battery voltage [V] */
+                        sVbat,                      /* Battery voltage [V] */
+                        instance->realTime / 10.0
                         );
     }
 
@@ -268,7 +269,8 @@ LPCLIB_Result DFM_processBlock (
         uint32_t numBits,
         float rxFrequencyHz,
         uint32_t rxTime,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     LPCLIB_Result result = LPCLIB_ERROR;
 
@@ -298,6 +300,7 @@ LPCLIB_Result DFM_processBlock (
 
         if (handle->instance) {
             handle->instance->rssi = rssi;
+            handle->instance->realTime = realTime;
             handle->instance->platform = type;
 
             /* Log */

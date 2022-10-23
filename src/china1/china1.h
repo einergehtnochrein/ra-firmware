@@ -36,6 +36,7 @@ LPCLIB_Result CHINA1_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 
 #endif

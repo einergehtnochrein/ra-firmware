@@ -40,7 +40,8 @@ LPCLIB_Result CF06_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result CF06_resendLastPositions (CF06_Handle handle);
 LPCLIB_Result CF06_removeFromList (CF06_Handle handle, uint32_t id, float *frequency);
 

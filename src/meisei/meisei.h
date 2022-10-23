@@ -41,7 +41,8 @@ LPCLIB_Result MEISEI_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result MEISEI_resendLastPositions (MEISEI_Handle handle);
 LPCLIB_Result MEISEI_removeFromList (MEISEI_Handle handle, uint32_t id, float *frequency);
 

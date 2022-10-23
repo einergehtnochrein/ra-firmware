@@ -87,7 +87,7 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
         kmh *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",15,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",15,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
@@ -99,7 +99,8 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
                     instance->metro.temperature,            /* Temperature [°C] */
                     instance->metro.humidity,               /* Relative humidity [%] */
                     instance->rssi,
-                    instance->frameCounter
+                    instance->frameCounter,
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -131,7 +132,8 @@ LPCLIB_Result PSB3_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     (void)rxFrequencyHz;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
@@ -155,6 +157,7 @@ LPCLIB_Result PSB3_processBlock (
                 result = _PSB3_prepare(&handle->packet, &handle->instance, rxFrequencyHz);
                 if (result == LPCLIB_SUCCESS) {
                     handle->instance->rssi = rssi;
+                    handle->instance->realTime = realTime;
                     _PSB3_processPayload(&handle->packet, handle->instance);
                     if (result == LPCLIB_SUCCESS) {
                         _PSB3_sendKiss(handle->instance);

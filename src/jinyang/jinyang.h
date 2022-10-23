@@ -40,7 +40,8 @@ LPCLIB_Result JINYANG_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result JINYANG_resendLastPositions (JINYANG_Handle handle);
 LPCLIB_Result JINYANG_removeFromList (JINYANG_Handle handle, uint32_t id, float *frequency);
 

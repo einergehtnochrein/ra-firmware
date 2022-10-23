@@ -88,7 +88,7 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,%d,,%.1f",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,%d,,%.1f,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
@@ -102,7 +102,8 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
                     instance->metro.humidity,               /* Relative humidity [%] */
                     instance->rssi,
                     instance->frameCounter,
-                    instance->metro.batteryVoltage          /* Battery voltage [V] */
+                    instance->metro.batteryVoltage,         /* Battery voltage [V] */
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -161,7 +162,8 @@ LPCLIB_Result MRZ_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
@@ -175,6 +177,7 @@ LPCLIB_Result MRZ_processBlock (
             result = _MRZ_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
             if (result == LPCLIB_SUCCESS) {
                 handle->instance->rssi = rssi;
+                handle->instance->realTime = realTime;
                 _MRZ_processMetrology(&handle->packet, handle->instance);
                 result = _MRZ_processGpsFrame(&handle->packet, handle->instance);
                 if (result == LPCLIB_SUCCESS) {

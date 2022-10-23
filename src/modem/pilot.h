@@ -41,7 +41,8 @@ LPCLIB_Result PILOT_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result PILOT_resendLastPositions (PILOT_Handle handle);
 LPCLIB_Result PILOT_removeFromList (PILOT_Handle handle, uint32_t id, float *frequency);
 

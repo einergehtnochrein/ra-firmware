@@ -87,7 +87,7 @@ static void _GTH3_sendKiss (GTH3_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",17,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",17,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -96,7 +96,8 @@ static void _GTH3_sendKiss (GTH3_InstanceData *instance)
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
                     SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->frameCounter,
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -149,7 +150,8 @@ LPCLIB_Result GTH3_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
@@ -167,6 +169,7 @@ LPCLIB_Result GTH3_processBlock (
         _GTH3_prepare(&handle->packet->payload, &handle->instance, rxFrequencyHz);
         if (handle->instance) {
             handle->instance->rssi = rssi;
+            handle->instance->realTime = realTime;
             _GTH3_processPayload(&handle->packet->payload, &handle->instance->gps, &handle->instance->metro);
             _GTH3_sendRaw(handle, &handle->packet->payload);
             _GTH3_sendKiss(handle->instance);

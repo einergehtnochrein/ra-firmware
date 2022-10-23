@@ -226,6 +226,7 @@ typedef struct _RS41_InstanceData {
     RS41_CookedMetrology metro;
     RS41_LogMode logMode;
     float rssi;
+    uint64_t realTime;
 
     __PACKED(union {
         uint8_t rawData[RS41_CALIBRATION_MAX_INDEX + 1][16];

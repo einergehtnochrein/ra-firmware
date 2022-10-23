@@ -120,6 +120,7 @@ typedef struct _IMET_InstanceData {
     float frequency;
     float rxOffset;
     float rssi;
+    uint64_t realTime;
 
     uint32_t lastUpdated;
 

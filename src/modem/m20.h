@@ -41,7 +41,8 @@ LPCLIB_Result M20_processBlock (
         uint8_t *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result M20_resendLastPositions (M20_Handle handle);
 LPCLIB_Result M20_removeFromList (M20_Handle handle, uint32_t id, float *frequency);
 

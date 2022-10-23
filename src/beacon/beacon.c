@@ -67,13 +67,14 @@ static void _BEACON_sendKiss (BEACON_InstanceData *instance)
         special |= 2;
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,",
+    length = snprintf(s, sizeof(s), "%"PRIu32",9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,           /* Frequency [MHz] */
                     lat,
                     lon,
                     special,
-                    instance->rssi
+                    instance->rssi,
+                    instance->realTime / 10.0
                     );
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
@@ -163,7 +164,8 @@ LPCLIB_Result BEACON_processBlock (
         void *buffer,
         float rxFrequencyHz,
         uint8_t emergency,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     int nErrors;
 
@@ -200,6 +202,7 @@ LPCLIB_Result BEACON_processBlock (
         if (_BEACON_processConfigFrame(&handle->instance) == LPCLIB_SUCCESS) {
             handle->instance->rssi = rssi;
             handle->instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
+            handle->instance->realTime = realTime;
             handle->instance->emergency = (emergency != 0);
             if (handle->instance->pdf1.longMessage) {
                 /* Check BCH-2 */

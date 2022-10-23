@@ -39,7 +39,8 @@ LPCLIB_Result IMET_processBlock (
         void *buffer,
         float rxSetFrequencyHz,
         float rxOffset,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 void IMET_handleAudioCallback (int32_t *samples, int nSamples);
 LPCLIB_Result IMET_resendLastPositions (IMET_Handle handle);
 LPCLIB_Result IMET_pauseResume (IMET_Handle handle, bool pause);

@@ -51,7 +51,8 @@ LPCLIB_Result RS41_processBlock (
         void *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        float rssi);
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result RS41_resendLastPositions (RS41_Handle handle);
 LPCLIB_Result RS41_removeFromList (RS41_Handle handle, uint32_t id, float *frequency);
 

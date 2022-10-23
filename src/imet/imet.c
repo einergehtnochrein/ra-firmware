@@ -65,7 +65,7 @@ LPCLIB_Result IMET_open (IMET_Handle *pHandle)
 /* Send position report */
 static void _IMET_sendKiss (IMET_InstanceData *instance)
 {
-    char s[120];
+    char s[160];
     char sAltitude[20];
     char sClimbRate[16];
     char sVelocity[8];
@@ -122,7 +122,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%"PRIu32",%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%.1f,%.1f,,,%.1f,,%.1f,%.1f,%d,%d,,%.1f",
+        length = sprintf((char *)s, "%"PRIu32",%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%.1f,%.1f,,,%.1f,,%.1f,%.1f,%d,%d,,%.1f,,,%.1lf",
                         instance->id,
                         sType,
                         f,                              /* Frequency [MHz] */
@@ -139,7 +139,8 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         instance->rxOffset / 1e3f,      /* RX frequency offset [kHz] */
                         instance->gps.usedSats,
                         instance->metro.frameCounter,
-                        instance->metro.batteryVoltage  /* Battery voltage [V] */
+                        instance->metro.batteryVoltage, /* Battery voltage [V] */
+                        instance->realTime / 10.0
                         );
     }
 
@@ -167,7 +168,8 @@ LPCLIB_Result IMET_processBlock (
         void *buffer,
         float rxSetFrequencyHz,
         float rxOffset,
-        float rssi)
+        float rssi,
+        uint64_t realTime)
 {
     /* Determine length from frame type */
     uint8_t *p = (uint8_t *)buffer;
@@ -212,6 +214,7 @@ LPCLIB_Result IMET_processBlock (
             handle->instance = _IMET_getInstanceDataStructure(rxSetFrequencyHz);
             if (handle->instance) {
                 handle->instance->rssi = rssi;
+                handle->instance->realTime = realTime;
                 switch (frameType) {
                     case IMET_FRAME_GPS:
                         _IMET_processGpsFrame((IMET_FrameGps *)p, &handle->instance->gps);
