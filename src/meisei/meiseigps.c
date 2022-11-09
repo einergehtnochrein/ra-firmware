@@ -66,8 +66,6 @@ LPCLIB_Result _MEISEI_processGpsFrame (
 
             f = (int16_t)instance->gpsPacketOdd.w[1];
             instance->gps.observerLLA.climbRate = f * 0.051444f;    /* [1/10 kn] --> [m/s] */
-
-            GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
         }
 
         /* Satellite info */
