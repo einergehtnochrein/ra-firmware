@@ -40,6 +40,7 @@
 #include "dfm.h"
 #include "gth3.h"
 #include "imet.h"
+#include "imet54.h"
 #include "jinyang.h"
 #include "m10.h"
 #include "m20.h"
@@ -133,6 +134,7 @@ struct SYS_Context {
     DFM_Handle dfm;
     GTH3_Handle gth3;
     IMET_Handle imet;
+    IMET54_Handle imet54;
     JINYANG_Handle jinyang;
     M10_Handle m10;
     M20_Handle m20;
@@ -344,6 +346,31 @@ static const ADF7021_Config radioModePSB3[] = {
         {.demodParams = {
             .deviation = 5000,
             .postDemodBandwidth = 1875, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeIMET54[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 4,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 3600, }}},
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
@@ -784,6 +811,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
             LPC_MAILBOX->IRQ0SET = (1u << 10); //TODO
+            break;
+
+        case SONDE_DETECTOR_IMET54:
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setBitRate(radio, 4800);
+            ADF7021_ioctl(radio, radioModeIMET54);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+            LPC_MAILBOX->IRQ0SET = (1u << 11); //TODO
             break;
 
         default:
@@ -1358,6 +1396,7 @@ if (cl[0] != 0) {
                     DFM_resendLastPositions(handle->dfm);
                     SRSC_resendLastPositions(handle->srsc);
                     IMET_resendLastPositions(handle->imet);
+                    IMET54_resendLastPositions(handle->imet54);
                     JINYANG_resendLastPositions(handle->jinyang);
                     M10_resendLastPositions(handle->m10);
                     M20_resendLastPositions(handle->m20);
@@ -1403,6 +1442,7 @@ if (cl[0] != 0) {
                         case 6:     detector = SONDE_DETECTOR_MEISEI; break;
                         case 7:     detector = SONDE_DETECTOR_PILOT; break;
                         case 8:     detector = SONDE_DETECTOR_JINYANG; break;
+                        case 9:     detector = SONDE_DETECTOR_IMET54; break;
                         case 10:    detector = SONDE_DETECTOR_MRZ; break;
                         case 11:    detector = SONDE_DETECTOR_ASIA1; break;
                         case 12:    detector = SONDE_DETECTOR_PSB3; break;
@@ -1751,6 +1791,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     BEACON_open(&handle->beacon);
     SRSC_open(&handle->srsc);
     IMET_open(&handle->imet);
+    IMET54_open(&handle->imet54);
     JINYANG_open(&handle->jinyang);
     M10_open(&handle->m10);
     M20_open(&handle->m20);
@@ -1873,6 +1914,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 12: sondeType = SONDE_MRZ; break;
                                 case 13: sondeType = SONDE_GTH3_CF06AH; break;
                                 case 14: sondeType = SONDE_PSB3; break;
+                                case 15: sondeType = SONDE_IMET54; break;
                             }
 
                             /* Process buffer */
@@ -2016,6 +2058,18 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_PSB3) {
                                 if (PSB3_processBlock(
                                         handle->psb3,
+                                        ipc[bufferIndex].data8,
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_IMET54) {
+                                if (IMET54_processBlock(
+                                        handle->imet54,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,

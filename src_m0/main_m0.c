@@ -14,6 +14,7 @@ typedef enum {
     MODE_MRZ = 9,
     MODE_ASIA1 = 10,    /* Various sondes (mostly Asia) with 2FSK 2400 sym/s */
     MODE_PSB3 = 11,
+    MODE_IMET54 = 12,
 } SYNC_Mode;
 
 
@@ -301,6 +302,21 @@ static const SYNC_Config configPSB3 = {
 };
 
 
+static const SYNC_Config configIMET54 = {
+    .nPatterns = 1,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_IMET54,
+            .pattern     = {0x0005551244912449LL, 0},
+            .patternMask = {0x0FFFFFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 1,
+            .frameLengthBits = 8*(1+432),
+            .dataState = SYNC_STATE_DATA_UART_8N1,
+            .inverted = false,
+        },
+    },
+};
+
 
 void MAILBOX_IRQHandler (void)
 {
@@ -346,6 +362,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 10)) {
         newMode = MODE_PSB3;
         LPC_MAILBOX->IRQ0CLR = (1u << 10);
+    }
+    else if (requests & (1u << 11)) {
+        newMode = MODE_IMET54;
+        LPC_MAILBOX->IRQ0CLR = (1u << 11);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -409,6 +429,9 @@ int main (void)
                     break;
                 case MODE_PSB3:
                     syncConfig = &configPSB3;
+                    break;
+                case MODE_IMET54:
+                    syncConfig = &configIMET54;
                     break;
                 case MODE_AFSK:
                 default:
