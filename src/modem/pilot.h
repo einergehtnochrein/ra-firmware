@@ -36,7 +36,13 @@ typedef struct PILOT_Context *PILOT_Handle;
 
 
 LPCLIB_Result PILOT_open (PILOT_Handle *pHandle);
-LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz);
+LPCLIB_Result PILOT_processBlock (
+        PILOT_Handle handle,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result PILOT_resendLastPositions (PILOT_Handle handle);
 LPCLIB_Result PILOT_removeFromList (PILOT_Handle handle, uint32_t id, float *frequency);
 

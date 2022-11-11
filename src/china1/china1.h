@@ -33,9 +33,10 @@
 
 LPCLIB_Result CHINA1_processBlock (
         void *handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz);
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime);
 
 #endif

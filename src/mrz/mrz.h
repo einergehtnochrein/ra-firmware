@@ -37,10 +37,11 @@ typedef struct MRZ_Context *MRZ_Handle;
 LPCLIB_Result MRZ_open (MRZ_Handle *pHandle);
 LPCLIB_Result MRZ_processBlock (
         MRZ_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz);
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result MRZ_resendLastPositions (MRZ_Handle handle);
 LPCLIB_Result MRZ_removeFromList (MRZ_Handle handle, uint32_t id, float *frequency);
 

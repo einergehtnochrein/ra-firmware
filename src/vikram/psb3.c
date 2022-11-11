@@ -87,7 +87,7 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
         kmh *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",15,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",15,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
@@ -98,8 +98,9 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
                     kmh,                                    /* Speed [km/h] */
                     instance->metro.temperature,            /* Temperature [°C] */
                     instance->metro.humidity,               /* Relative humidity [%] */
-                    SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->rssi,
+                    instance->frameCounter,
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -128,13 +129,13 @@ static void _PSB3_sendRaw (PSB3_Handle handle, PSB3_Packet *p1)
 
 LPCLIB_Result PSB3_processBlock (
         PSB3_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime)
 {
     (void)rxFrequencyHz;
-    (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (numBits == 8*sizeof(PSB3_Packet)) {
@@ -144,7 +145,7 @@ LPCLIB_Result PSB3_processBlock (
         if (_PSB3_checkParity((uint8_t *)&handle->packet, sizeof(handle->packet))) {
             /* Probably a valid codeword. Check CRC!.
              * CRC is transmitted amid the data block. Read it and set these locations to zero
-             * before for CRC calculation.
+             * before CRC calculation.
              */
             uint16_t receivedCRC = __REV16(handle->packet.crc);
             handle->packet.crc = 0;
@@ -155,6 +156,8 @@ LPCLIB_Result PSB3_processBlock (
 
                 result = _PSB3_prepare(&handle->packet, &handle->instance, rxFrequencyHz);
                 if (result == LPCLIB_SUCCESS) {
+                    handle->instance->rssi = rssi;
+                    handle->instance->realTime = realTime;
                     _PSB3_processPayload(&handle->packet, handle->instance);
                     if (result == LPCLIB_SUCCESS) {
                         _PSB3_sendKiss(handle->instance);

@@ -66,6 +66,8 @@ typedef struct _GTH3_InstanceData {
     uint16_t frameCounter;
     float rxFrequencyMHz;
     uint32_t lastUpdated;
+    float rssi;
+    uint64_t realTime;
 
     uint32_t lastGpsTime;
     GTH3_CookedGps gps;

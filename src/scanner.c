@@ -436,7 +436,7 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
     handle->previousMode = SCANNER_MODE_MANUAL;
 
     handle->scanTick = osTimerCreate(osTimer(scannerTickDef), osTimerOnce, (void *)handle);
-    osTimerStart(handle->scanTick, 10);
+    osTimerStart(handle->scanTick, 20);
 
     while (1) {
         /* Wait for an event */
@@ -455,7 +455,7 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
                 }
 
                 _SCANNER_getSpectrum();
-//                osTimerStart(handle->scanTick, 10);
+//                osTimerStart(handle->scanTick, 20);
                 handle->scanTickTimeout = true;
                 PT_YIELD(&handle->pt);
             }
@@ -470,7 +470,7 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
                     }
 //durationMs = 0xFFFFFFFF;
                 }
-                osTimerStart(handle->scanTick, durationMs);
+                osTimerStart(handle->scanTick, 2*durationMs);
             }
         }
     }

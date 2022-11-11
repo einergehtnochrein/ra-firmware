@@ -112,7 +112,7 @@ static void _JINYANG_sendKiss (JINYANG_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",12,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",12,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -120,8 +120,9 @@ static void _JINYANG_sendKiss (JINYANG_InstanceData *instance)
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
-                    SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->rssi,
+                    instance->frameCounter,
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -168,13 +169,12 @@ static void _JINYANG_sendRaw (JINYANG_Handle handle, JINYANG_Packet *p1)
 
 LPCLIB_Result JINYANG_processBlock (
         JINYANG_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime)
 {
-    (void)rxFrequencyHz;
-    (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     /* Remove data whitening */
@@ -189,6 +189,8 @@ LPCLIB_Result JINYANG_processBlock (
 
             result = _JINYANG_processConfigFrame(&handle->packet, &handle->instance, rxFrequencyHz);
             if (result == LPCLIB_SUCCESS) {
+                handle->instance->rssi = rssi;
+                handle->instance->realTime = realTime;
                 /* Process subframe type */
                 switch (handle->packet.subType) {
                     case 0:

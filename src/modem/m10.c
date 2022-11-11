@@ -108,7 +108,7 @@ static void _M10_sendKiss (M10_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%"PRIu32",7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,%.1f,%d,,,%.3f",
+    length = sprintf((char *)s, "%"PRIu32",7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,%.1f,%d,,,%.3f,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -118,10 +118,11 @@ static void _M10_sendKiss (M10_InstanceData *instance)
                     direction,                              /* Direction [degrees} */
                     velocity,                               /* Velocity [km/h] */
                     instance->metro.temperature,            /* Temperature [°C] */
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     offset,    /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,              /* # satellites */
-                    instance->metro.batteryVoltage
+                    instance->metro.batteryVoltage,
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -161,7 +162,13 @@ static void _M10_sendRaw (M10_InstanceData *instance, uint8_t *buffer, uint32_t 
 
 
 
-LPCLIB_Result M10_processBlock (M10_Handle handle, uint8_t *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result M10_processBlock (
+        M10_Handle handle,
+        uint8_t *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime)
 {
     handle->packetLength = numBits / 8 - 1; /* -1: ignore the length byte */
     if (handle->packetLength == sizeof(M10_Packet)) {
@@ -175,6 +182,8 @@ LPCLIB_Result M10_processBlock (M10_Handle handle, uint8_t *buffer, uint32_t num
                 _M10_processConfigBlock(&handle->packet.data.config, &handle->instance);
 
                 if (handle->instance) {
+                    handle->instance->rssi = rssi;
+                    handle->instance->realTime = realTime;
                     handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
 if(1){//                    if (handle->instance->logMode == M10_LOGMODE_RAW) {

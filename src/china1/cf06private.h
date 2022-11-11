@@ -31,7 +31,7 @@ typedef __PACKED(struct {
     uint8_t usedSats;
     uint8_t pdop;
     int16_t temperature;
-    uint16_t humidity;
+    int16_t humidity;
     int16_t reserved20;
     int8_t temperature_CPU;
     int16_t temperature_Usensor;
@@ -100,6 +100,8 @@ typedef struct _CF06_InstanceData {
     uint16_t frameCounter;
     float rxFrequencyMHz;
     uint32_t lastUpdated;
+    float rssi;
+    uint64_t realTime;
 
     uint32_t lastGpsTime;
     CF06_CookedGps gps;

@@ -37,10 +37,11 @@ typedef struct CF06_Context *CF06_Handle;
 LPCLIB_Result CF06_open (CF06_Handle *pHandle);
 LPCLIB_Result CF06_processBlock (
         CF06_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz);
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result CF06_resendLastPositions (CF06_Handle handle);
 LPCLIB_Result CF06_removeFromList (CF06_Handle handle, uint32_t id, float *frequency);
 

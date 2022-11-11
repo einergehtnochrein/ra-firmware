@@ -1,4 +1,4 @@
-/* Copyright (c) 2018, DF9DQ
+/* Copyright (c) 2022, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -24,26 +24,25 @@
  */
 
 
-#ifndef __BEACON_H
-#define __BEACON_H
+#ifndef __IMET54_H
+#define __IMET54_H
 
 #include "lpclib.h"
+#include "sonde.h"
 
 
-typedef struct BEACON_Context *BEACON_Handle;
+typedef struct _IMET54_Context *IMET54_Handle;
 
 
-LPCLIB_Result BEACON_open (BEACON_Handle *pHandle);
-LPCLIB_Result BEACON_processBlock (
-        BEACON_Handle handle,
+LPCLIB_Result IMET54_open (IMET54_Handle *pHandle);
+LPCLIB_Result IMET54_processBlock (
+        IMET54_Handle handle,
         void *buffer,
+        uint32_t numBits,
         float rxFrequencyHz,
-        uint8_t emergency,
         float rssi,
         uint64_t realTime);
-void BEACON_handleAudioCallback (int32_t *samples, int nSamples);
-LPCLIB_Result BEACON_resendLastPositions (BEACON_Handle handle);
-LPCLIB_Result BEACON_removeFromList (BEACON_Handle handle, uint32_t id, float *frequency);
-void BEACON_selectDebugAudio (int debugAudioChannel);
+LPCLIB_Result IMET54_resendLastPositions (IMET54_Handle handle);
+LPCLIB_Result IMET54_removeFromList (IMET54_Handle handle, uint32_t id, float *frequency);
 
 #endif

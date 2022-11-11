@@ -40,6 +40,7 @@
 #include "dfm.h"
 #include "gth3.h"
 #include "imet.h"
+#include "imet54.h"
 #include "jinyang.h"
 #include "m10.h"
 #include "m20.h"
@@ -113,7 +114,7 @@ static IPC_S2M ipc[IPC_S2M_NUM_BUFFERS];
 
 #define COMMAND_LINE_SIZE   400
 
-#define INACTIVITY_TIMEOUT  20000
+#define INACTIVITY_TIMEOUT  40000
 
 #define VBAT_FILTER_LENGTH  50
 
@@ -133,6 +134,7 @@ struct SYS_Context {
     DFM_Handle dfm;
     GTH3_Handle gth3;
     IMET_Handle imet;
+    IMET54_Handle imet54;
     JINYANG_Handle jinyang;
     M10_Handle m10;
     M20_Handle m20;
@@ -151,6 +153,8 @@ struct SYS_Context {
     float currentFrequency;
     float currentRssi;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
+    uint64_t realTime;                                  /**< Real-time as sent by host */
+    uint32_t last_os_time;
 
     float vbatFilter[VBAT_FILTER_LENGTH];               /**< Taps for VBAT filter */
     int vbatFilterIndex;                                /**< Index for writing to VBAT filter */
@@ -308,8 +312,10 @@ static const ADF7021_Config radioModeAsia1[] = {
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
-            .KI = 14,
-            .KP = 5,
+//            .KI = 14,
+//            .KP = 5,
+.KI = 11,
+.KP = 2,
             .maxRange = 20, }}},
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
         {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
@@ -342,6 +348,31 @@ static const ADF7021_Config radioModePSB3[] = {
         {.demodParams = {
             .deviation = 5000,
             .postDemodBandwidth = 1875, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeIMET54[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 4,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 3600, }}},
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
@@ -782,6 +813,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
             LPC_MAILBOX->IRQ0SET = (1u << 10); //TODO
+            break;
+
+        case SONDE_DETECTOR_IMET54:
+            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setBitRate(radio, 4800);
+            ADF7021_ioctl(radio, radioModeIMET54);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+            LPC_MAILBOX->IRQ0SET = (1u << 11); //TODO
             break;
 
         default:
@@ -1311,6 +1353,9 @@ if (cl[0] != 0) {
                 /* If host sends a time stamp, respond by sending all current settings. */
                 long timestamp = 0;
                 if (sscanf(cl, "#%*d,%ld", &timestamp) == 1) {
+                    handle->realTime = timestamp;
+                    handle->last_os_time = os_time;
+
                     /* Flush UART */
                     UART_ioctl(blePort, _uartFlushTx);
 
@@ -1353,6 +1398,7 @@ if (cl[0] != 0) {
                     DFM_resendLastPositions(handle->dfm);
                     SRSC_resendLastPositions(handle->srsc);
                     IMET_resendLastPositions(handle->imet);
+                    IMET54_resendLastPositions(handle->imet54);
                     JINYANG_resendLastPositions(handle->jinyang);
                     M10_resendLastPositions(handle->m10);
                     M20_resendLastPositions(handle->m20);
@@ -1398,6 +1444,7 @@ if (cl[0] != 0) {
                         case 6:     detector = SONDE_DETECTOR_MEISEI; break;
                         case 7:     detector = SONDE_DETECTOR_PILOT; break;
                         case 8:     detector = SONDE_DETECTOR_JINYANG; break;
+                        case 9:     detector = SONDE_DETECTOR_IMET54; break;
                         case 10:    detector = SONDE_DETECTOR_MRZ; break;
                         case 11:    detector = SONDE_DETECTOR_ASIA1; break;
                         case 12:    detector = SONDE_DETECTOR_PSB3; break;
@@ -1519,7 +1566,7 @@ if (cl[0] != 0) {
                                     handle->currentFrequency = 0;
                                     _SYS_reportRadioFrequency(handle);
                                 }
-                                osTimerStart(handle->rssiTick, 20);
+                                osTimerStart(handle->rssiTick, 40);
                             }
                             break;
 
@@ -1746,6 +1793,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     BEACON_open(&handle->beacon);
     SRSC_open(&handle->srsc);
     IMET_open(&handle->imet);
+    IMET54_open(&handle->imet54);
     JINYANG_open(&handle->jinyang);
     M10_open(&handle->m10);
     M20_open(&handle->m20);
@@ -1758,7 +1806,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     PDM_open(0, &handle->pdm);
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
-    osTimerStart(handle->rssiTick, 20);
+    osTimerStart(handle->rssiTick, 40);
 
     handle->inactivityTimeout = osTimerCreate(osTimer(inactivityTimer), osTimerOnce, (void *)SYS_TIMERMAGIC_INACTIVITY);
     osTimerStart(handle->inactivityTimeout, INACTIVITY_TIMEOUT);
@@ -1787,6 +1835,13 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
             handle->commandLine[0] = 0;
         }
 
+        /* Update estimated real time */
+        uint32_t delta_t = os_time - handle->last_os_time;
+        if (delta_t > 0) {
+            handle->realTime += delta_t;
+            handle->last_os_time += delta_t;
+        }
+
         /* Is there a new message? */
         if (handle->rtosEvent.status == osEventMail) {
             pMessage = (SYS_Message *)handle->rtosEvent.value.p;
@@ -1807,9 +1862,10 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                         SRSC_processBlock(
                                     handle->srsc,
                                     (uint8_t *)pMessage->event.parameter,
-                                    7,
                                     handle->currentFrequency,
-                                    rxOffset);
+                                    rxOffset,
+                                    SYS_getFrameRssi(handle),
+                                    handle->realTime);
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_IMET_RSB) {
                         float rxOffset = 0;
@@ -1819,17 +1875,19 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                         IMET_processBlock(
                                     handle->imet,
                                     (uint8_t *)pMessage->event.parameter,
-                                    0,  /* variable packet length */
                                     handle->currentFrequency,
-                                    rxOffset);
+                                    rxOffset,
+                                    SYS_getFrameRssi(handle),
+                                    handle->realTime);
                     }
                     else if ((SONDE_Type)pMessage->event.block == SONDE_BEACON) {
                         BEACON_processBlock(
                                     handle->beacon,
                                     (uint8_t *)pMessage->event.parameter,
-                                    15,
                                     handle->currentFrequency,
-                                    pMessage->event.channel);
+                                    pMessage->event.channel,
+                                    SYS_getFrameRssi(handle),
+                                    handle->realTime);
                     }
                     break;
                 }
@@ -1858,6 +1916,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 12: sondeType = SONDE_MRZ; break;
                                 case 13: sondeType = SONDE_GTH3_CF06AH; break;
                                 case 14: sondeType = SONDE_PSB3; break;
+                                case 15: sondeType = SONDE_IMET54; break;
                             }
 
                             /* Process buffer */
@@ -1866,7 +1925,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->m10,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime);
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1876,7 +1937,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->m20,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime);
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1886,7 +1949,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->pilot,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime);
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1896,7 +1961,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->rs41,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime);
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1906,7 +1973,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         handle->rs92,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency);
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime);
 
                                 /* Let scanner prepare for next frequency */
                                 SCANNER_notifyValidFrame(scanner);
@@ -1918,7 +1987,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,
-                                        ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
+                                        ipc[bufferIndex].rxTime,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1930,7 +2001,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,
-                                        ipc[bufferIndex].rxTime) == LPCLIB_SUCCESS) {
+                                        ipc[bufferIndex].rxTime,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1941,7 +2014,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1949,10 +2024,11 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_RSG20) {
                                 if (JINYANG_processBlock(
                                         handle->jinyang,
-                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1960,10 +2036,11 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_MRZ) {
                                 if (MRZ_processBlock(
                                         handle->mrz,
-                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1971,10 +2048,11 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_GTH3_CF06AH) {
                                 if (CHINA1_processBlock(
                                         handle->cf06,
-                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
@@ -1982,10 +2060,23 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_PSB3) {
                                 if (PSB3_processBlock(
                                         handle->psb3,
-                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_IMET54) {
+                                if (IMET54_processBlock(
+                                        handle->imet54,
+                                        ipc[bufferIndex].data8,
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }

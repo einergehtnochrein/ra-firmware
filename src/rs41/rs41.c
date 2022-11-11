@@ -164,7 +164,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         special,
-                        SYS_getFrameRssi(sys),
+                        instance->rssi,
                         offset,    /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
@@ -173,7 +173,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         );
     }
     else {
-        length = snprintf((char *)s, sizeof(s), "%"PRIu32",1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%"PRIu32",,%.1f,,%.1f,%.1f,%d,%d,%s,%.1f",
+        length = snprintf((char *)s, sizeof(s), "%"PRIu32",1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%"PRIu32",,%.1f,,%.1f,%.1f,%d,%d,%s,%.1f,,,%.1lf",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         instance->gps.usedSats,                 /* # sats in position solution */
@@ -187,12 +187,13 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         sPressure,                              /* Pressure sensor [hPa] */
                         special,
                         instance->metro.RH,
-                        SYS_getFrameRssi(sys),
+                        instance->rssi,
                         offset,                                 /* RX frequency offset [kHz] */
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
                         sFlightKillTimer,                       /* Kill timer (frame) */
-                        instance->batteryVoltage                /* Battery voltage [V] */
+                        instance->batteryVoltage,               /* Battery voltage [V] */
+                        instance->realTime / 10.0
                         );
     }
 
@@ -283,7 +284,13 @@ static void _RS41_sendRaw (RS41_InstanceData *instance, uint8_t *buffer, uint32_
 }
 
 
-LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result RS41_processBlock (
+        RS41_Handle handle,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime)
 {
     bool longFrame = false;
 
@@ -352,6 +359,8 @@ LPCLIB_Result RS41_processBlock (RS41_Handle handle, void *buffer, uint32_t numB
                 case RS41_SUBFRAME_CALIB_CONFIG:
                     _RS41_processConfigBlock((RS41_SubFrameCalibConfig *)(p + 2), &handle->instance);
                     if (handle->instance) {
+                        handle->instance->rssi = rssi;
+                        handle->instance->realTime = realTime;
                         handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
                         handle->instance->metro.numXdataInstruments = 0;
                         if (handle->instance->metro.hasO3) {

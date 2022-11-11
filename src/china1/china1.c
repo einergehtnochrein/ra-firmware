@@ -15,10 +15,11 @@
 
 LPCLIB_Result CHINA1_processBlock (
         void *handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime)
 {
     /* Determine sonde type */
     uint32_t payloadStart;
@@ -29,12 +30,12 @@ LPCLIB_Result CHINA1_processBlock (
 
     if (payloadStart == 0x00EEFFFF) {
         // GTH3
-        return GTH3_processBlock(handle, sondeType, buffer, numBits, rxFrequencyHz);
+        return GTH3_processBlock(handle, buffer, numBits, rxFrequencyHz, rssi, realTime);
     }
 
     if (payloadStart == 0x00AAAAFF) {
         // CF-06AH
-        return CF06_processBlock(handle, sondeType, buffer, numBits, rxFrequencyHz);
+        return CF06_processBlock(handle, buffer, numBits, rxFrequencyHz, rssi, realTime);
     }
 
     return LPCLIB_ERROR;

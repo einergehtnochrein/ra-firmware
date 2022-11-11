@@ -446,7 +446,7 @@ PT_THREAD(EPHEMUPDATE_thread (EPHEMUPDATE_Handle handle))
 
 //    sysContext.queue = osMailCreate(osMailQ(sysQueueDef), NULL);
 //    sysContext.rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
-//    osTimerStart(handle->actionTick, 100);
+// //    osTimerStart(handle->actionTick, 200);
 
     while (1) {
         /* Wait for an event */

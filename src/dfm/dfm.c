@@ -221,11 +221,11 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         sClimbRate,                 /* Climb rate [m/s] */
                         sTemperature,               /* Temperature [°C] */
                         sSpecial,
-                        SYS_getFrameRssi(sys)
+                        instance->rssi
                         );
     }
     else {
-        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s",
+        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s,,,%.1lf",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -236,9 +236,10 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         sVelocity,                  /* Horizontal speed [km/h] */
                         sTemperature,               /* Temperature [°C] */
                         sSpecial,
-                        SYS_getFrameRssi(sys),
+                        instance->rssi,
                         instance->gps.usedSats,
-                        sVbat                       /* Battery voltage [V] */
+                        sVbat,                      /* Battery voltage [V] */
+                        instance->realTime / 10.0
                         );
     }
 
@@ -267,7 +268,9 @@ LPCLIB_Result DFM_processBlock (
         uint8_t *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        uint32_t rxTime)
+        uint32_t rxTime,
+        float rssi,
+        uint64_t realTime)
 {
     LPCLIB_Result result = LPCLIB_ERROR;
 
@@ -296,6 +299,8 @@ LPCLIB_Result DFM_processBlock (
         }
 
         if (handle->instance) {
+            handle->instance->rssi = rssi;
+            handle->instance->realTime = realTime;
             handle->instance->platform = type;
 
             /* Log */

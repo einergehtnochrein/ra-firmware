@@ -43,7 +43,13 @@ typedef enum {
 
 LPCLIB_Result RS92_open (RS92_Handle *pHandle);
 LPCLIB_Result RS92_setLogMode (RS92_Handle handle, uint32_t id, RS92_LogMode mode);
-LPCLIB_Result RS92_processBlock (RS92_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz);
+LPCLIB_Result RS92_processBlock (
+        RS92_Handle handle,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result RS92_resendLastPositions (RS92_Handle handle);
 LPCLIB_Result RS92_removeFromList (RS92_Handle handle, uint32_t id, float *frequency);
 LPCLIB_Result RS92_setSatelliteSnrThreshold (RS92_Handle handle, float threshold);

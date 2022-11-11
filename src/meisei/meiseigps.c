@@ -34,8 +34,6 @@ LPCLIB_Result _MEISEI_processGpsFrame (
         instance->gps.observerLLA.velocity = NAN;
         instance->gps.observerLLA.direction = NAN;
         instance->gps.observerLLA.climbRate = NAN;
-
-        GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
     }
     else if (instance->model == MEISEI_MODEL_IMS100) {
         /* Check if GPS position solution is valid */
@@ -68,8 +66,6 @@ LPCLIB_Result _MEISEI_processGpsFrame (
 
             f = (int16_t)instance->gpsPacketOdd.w[1];
             instance->gps.observerLLA.climbRate = f * 0.051444f;    /* [1/10 kn] --> [m/s] */
-
-            GPS_applyGeoidHeightCorrection(&instance->gps.observerLLA);
         }
 
         /* Satellite info */

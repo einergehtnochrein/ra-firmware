@@ -41,7 +41,9 @@ LPCLIB_Result DFM_processBlock (
         uint8_t *buffer,
         uint32_t numBits,
         float rxFrequencyHz,
-        uint32_t rxTime);
+        uint32_t rxTime,
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result DFM_resendLastPositions (DFM_Handle handle);
 LPCLIB_Result DFM_removeFromList (DFM_Handle handle, uint32_t id, float *frequency);
 

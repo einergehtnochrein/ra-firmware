@@ -94,7 +94,7 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",11,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,%.1f,,%.1f,,%d,%d,,,%.1f",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",11,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,%.1f,,%.1f,,%d,%d,,,%.1f,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
@@ -107,10 +107,11 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
                     instance->metro.temperature,
                     sSpecial,
                     instance->metro.humidity,               /* Relative humidity [%] */
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     instance->gps.visibleSats,
                     instance->frameCounter / 2,
-                    instance->metro.cpuTemperature
+                    instance->metro.cpuTemperature,
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -200,9 +201,10 @@ LPCLIB_Result MEISEI_processBlock (
         SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime)
 {
-    (void)rxFrequencyHz;
     int nErrors;
     int nTotalErrors;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
@@ -262,6 +264,8 @@ LPCLIB_Result MEISEI_processBlock (
                 }
 
                 _MEISEI_processConfigFrame(&handle->configPacket, &handle->instance, rxFrequencyHz);
+                handle->instance->rssi = rssi;
+                handle->instance->realTime = realTime;
 
                 /* Store GPS data depending on frame number even/odd */
                 if ((handle->instance->frameCounter % 2) == 0) {

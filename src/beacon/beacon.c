@@ -67,13 +67,14 @@ static void _BEACON_sendKiss (BEACON_InstanceData *instance)
         special |= 2;
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,",
+    length = snprintf(s, sizeof(s), "%"PRIu32",9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,           /* Frequency [MHz] */
                     lat,
                     lon,
                     special,
-                    SYS_getFrameRssi(sys)
+                    instance->rssi,
+                    instance->realTime / 10.0
                     );
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
@@ -161,68 +162,68 @@ void _BEACON_getField (uint32_t fieldDescriptor, uint8_t *dest)
 LPCLIB_Result BEACON_processBlock (
         BEACON_Handle handle,
         void *buffer,
-        uint32_t length,
         float rxFrequencyHz,
-        uint8_t emergency)
+        uint8_t emergency,
+        float rssi,
+        uint64_t realTime)
 {
-    (void)rxFrequencyHz;
     int nErrors;
 
-    if (length == 15) {
-        memcpy(&handle->packet, buffer, sizeof(handle->packet));
+    memcpy(&handle->packet, buffer, sizeof(handle->packet));
 
-        /* Log */
-        {
-            char log[60];
-            snprintf(log, sizeof(log), "%s,9,1,%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-                        "none", //TODO
-                        handle->packet.rawData[14],
-                        handle->packet.rawData[13],
-                        handle->packet.rawData[12],
-                        handle->packet.rawData[11],
-                        handle->packet.rawData[10],
-                        handle->packet.rawData[9],
-                        handle->packet.rawData[8],
-                        handle->packet.rawData[7],
-                        handle->packet.rawData[6],
-                        handle->packet.rawData[5],
-                        handle->packet.rawData[4],
-                        handle->packet.rawData[3],
-                        handle->packet.rawData[2],
-                        handle->packet.rawData[1],
-                        handle->packet.rawData[0]);
-            SYS_send2Host(HOST_CHANNEL_INFO, log);
-        }
+    /* Log */
+    {
+        char log[60];
+        snprintf(log, sizeof(log), "%s,9,1,%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+                    "none", //TODO
+                    handle->packet.rawData[14],
+                    handle->packet.rawData[13],
+                    handle->packet.rawData[12],
+                    handle->packet.rawData[11],
+                    handle->packet.rawData[10],
+                    handle->packet.rawData[9],
+                    handle->packet.rawData[8],
+                    handle->packet.rawData[7],
+                    handle->packet.rawData[6],
+                    handle->packet.rawData[5],
+                    handle->packet.rawData[4],
+                    handle->packet.rawData[3],
+                    handle->packet.rawData[2],
+                    handle->packet.rawData[1],
+                    handle->packet.rawData[0]);
+        SYS_send2Host(HOST_CHANNEL_INFO, log);
+    }
 
-        nErrors = 0;
+    nErrors = 0;
 
-        /* Check BCH-1 */
-        if (BCH_127_106_t3_process(_BEACON_getDataBCH1, _BEACON_toggleDataBCH1, &nErrors) == LPCLIB_SUCCESS) {
-            /* Process protected data field 1 (also updates 'longMessage' flag) */
-            if (_BEACON_processConfigFrame(&handle->instance) == LPCLIB_SUCCESS) {
-                handle->instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
-                handle->instance->emergency = (emergency != 0);
-                if (handle->instance->pdf1.longMessage) {
-                    /* Check BCH-2 */
-                    if (BCH_63_51_t2_process(_BEACON_getDataBCH2, _BEACON_toggleDataBCH2, &nErrors) == LPCLIB_SUCCESS) {
-                        /* Process protected data field 2 */
-                        if (_BEACON_processPDF2(&handle->instance->pdf1, &handle->instance->pdf2) != LPCLIB_SUCCESS) {
-                            handle->instance->pdf2.valid = false;
-                        }
-                        else {
-                            handle->instance->pdf2.valid = true;
-                        }
+    /* Check BCH-1 */
+    if (BCH_127_106_t3_process(_BEACON_getDataBCH1, _BEACON_toggleDataBCH1, &nErrors) == LPCLIB_SUCCESS) {
+        /* Process protected data field 1 (also updates 'longMessage' flag) */
+        if (_BEACON_processConfigFrame(&handle->instance) == LPCLIB_SUCCESS) {
+            handle->instance->rssi = rssi;
+            handle->instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
+            handle->instance->realTime = realTime;
+            handle->instance->emergency = (emergency != 0);
+            if (handle->instance->pdf1.longMessage) {
+                /* Check BCH-2 */
+                if (BCH_63_51_t2_process(_BEACON_getDataBCH2, _BEACON_toggleDataBCH2, &nErrors) == LPCLIB_SUCCESS) {
+                    /* Process protected data field 2 */
+                    if (_BEACON_processPDF2(&handle->instance->pdf1, &handle->instance->pdf2) != LPCLIB_SUCCESS) {
+                        handle->instance->pdf2.valid = false;
+                    }
+                    else {
+                        handle->instance->pdf2.valid = true;
                     }
                 }
-                else {
-                    /* Process non-protected field following PDF-1 */
-                    ;
-                    ;
-                    ;
-                }
-
-                _BEACON_sendKiss(handle->instance);
             }
+            else {
+                /* Process non-protected field following PDF-1 */
+                ;
+                ;
+                ;
+            }
+
+            _BEACON_sendKiss(handle->instance);
         }
     }
 

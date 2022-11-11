@@ -37,10 +37,11 @@ typedef struct GTH3_Context *GTH3_Handle;
 LPCLIB_Result GTH3_open (GTH3_Handle *pHandle);
 LPCLIB_Result GTH3_processBlock (
         GTH3_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz);
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result GTH3_resendLastPositions (GTH3_Handle handle);
 LPCLIB_Result GTH3_removeFromList (GTH3_Handle handle, uint32_t id, float *frequency);
 

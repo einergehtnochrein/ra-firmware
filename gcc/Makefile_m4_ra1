@@ -24,6 +24,7 @@ C_SRCS = \
     rs92/rs92.c rs92/rs92calibconfig.c rs92/rs92gps.c rs92/rs92metrology.c \
     srsc/srsc.c srsc/srscconfig.c srsc/srscdsp.c srsc/srscgps.c \
     imet/imet.c imet/imetconfig.c imet/imetdsp.c imet/imetgps.c imet/imetmetrology.c \
+    imet/imet54.c imet/imet54config.c imet/imet54utils.c imet/imet54payload.c \
     jinyang/jinyang.c jinyang/jinyangconfig.c jinyang/jinyanggps.c \
     modem/m10.c modem/m10calibconfig.c modem/m10gps.c modem/m10metrology.c \
     modem/m20.c modem/m20calibconfig.c modem/m20payload.c \

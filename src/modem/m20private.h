@@ -93,6 +93,8 @@ typedef struct _M20_InstanceData {
     uint32_t lastUpdated;
     float rxFrequencyMHz;
     uint16_t frameCounter;
+    float rssi;
+    uint64_t realTime;
 
     M20_CookedGps gps;
     M20_CookedMetrology metro;

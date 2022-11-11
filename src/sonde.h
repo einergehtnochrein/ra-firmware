@@ -50,6 +50,7 @@ typedef enum {
     SONDE_MRZ,
     SONDE_GTH3_CF06AH,
     SONDE_PSB3,
+    SONDE_IMET54,
 } SONDE_Type;
 
 
@@ -69,6 +70,7 @@ typedef enum {
     SONDE_DECODER_CF06 = 12,
     SONDE_DECODER_GTH3 = 13,
     SONDE_DECODER_PSB3 = 14,
+    SONDE_DECODER_IMET54 = 15,
     _SONDE_DECODER_UNDEFINED_ = -1,
 } SONDE_Decoder;
 
@@ -87,6 +89,7 @@ typedef enum {
     SONDE_DETECTOR_MRZ = 10,
     SONDE_DETECTOR_ASIA1 = 11,
     SONDE_DETECTOR_PSB3 = 12,
+    SONDE_DETECTOR_IMET54 = 13,
     _SONDE_DETECTOR_UNDEFINED_ = -1,
 } SONDE_Detector;
 

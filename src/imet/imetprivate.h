@@ -119,6 +119,8 @@ typedef struct _IMET_InstanceData {
     char name[20];
     float frequency;
     float rxOffset;
+    float rssi;
+    uint64_t realTime;
 
     uint32_t lastUpdated;
 

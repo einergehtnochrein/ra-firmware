@@ -77,7 +77,7 @@ LPCLIB_Result SRSC_open (SRSC_Handle *pHandle)
 /* Send position report */
 static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 {
-    char s[140];
+    char s[160];
     char sAltitude[20];
     char sTemperature[8];
     int length = 0;
@@ -124,7 +124,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f",
+    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f,,,%.1lf",
                     instance->id,
                     f,                                  /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -137,10 +137,11 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                     instance->config.rfPwrDetect,       /* RF power detector [V] */
                     instance->metro.humidity,           /* Humidity [%] */
                     instance->gps.hdop,
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     instance->rxOffset / 1e3f,
                     instance->gps.usedSats,
-                    instance->config.batteryVoltage     /* Battery voltage [V] */
+                    instance->config.batteryVoltage,    /* Battery voltage [V] */
+                    instance->realTime / 10.0
                     );
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
@@ -177,60 +178,61 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
 LPCLIB_Result SRSC_processBlock (
         SRSC_Handle handle,
         void *buffer,
-        uint32_t length,
         float rxSetFrequencyHz,
-        float rxOffset)
+        float rxOffset,
+        float rssi,
+        uint64_t realTime)
 {
-    if (length == 7) {
-        if (_SRSC_doParityCheck(buffer, length)) {
-            memcpy(&handle->packet, buffer, sizeof(handle->packet));
+    if (_SRSC_doParityCheck(buffer, 7)) {
+        memcpy(&handle->packet, buffer, sizeof(handle->packet));
 
-            /* Log */
-            if (handle->instance->detectorState == SRSC_DETECTOR_READY) {
-                char log[40];
-                snprintf(log, sizeof(log), "%"PRIu32",8,1,%d,%08"PRIX32,
-                            handle->instance->id,
-                            handle->packet.type,
-                            handle->packet.d_bigendian);
-                SYS_send2Host(HOST_CHANNEL_INFO, log);
+        /* Log */
+        if (handle->instance->detectorState == SRSC_DETECTOR_READY) {
+            char log[40];
+            snprintf(log, sizeof(log), "%"PRIu32",8,1,%d,%08"PRIX32,
+                        handle->instance->id,
+                        handle->packet.type,
+                        handle->packet.d_bigendian);
+            SYS_send2Host(HOST_CHANNEL_INFO, log);
+        }
+
+        /* Remove obfuscation */
+        handle->packet.rawData[1] ^= handle->instance->obfuscation;
+        handle->packet.rawData[2] ^= handle->instance->obfuscation;
+        handle->packet.rawData[3] ^= handle->instance->obfuscation;
+        handle->packet.rawData[4] ^= handle->instance->obfuscation;
+
+        /* Always call config handler first to obtain an instance */
+        if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxSetFrequencyHz) == LPCLIB_SUCCESS) {
+            handle->instance->rssi = rssi;
+            handle->instance->rxOffset = rxOffset;
+            handle->instance->realTime = realTime;
+
+            if (SRSC_isGpsType(handle->packet.type)) {
+                _SRSC_processGpsFrame(&handle->packet, &handle->instance->gps);
             }
-
-            /* Remove obfuscation */
-            handle->packet.rawData[1] ^= handle->instance->obfuscation;
-            handle->packet.rawData[2] ^= handle->instance->obfuscation;
-            handle->packet.rawData[3] ^= handle->instance->obfuscation;
-            handle->packet.rawData[4] ^= handle->instance->obfuscation;
-
-            /* Always call config handler first to obtain an instance */
-            if (_SRSC_processConfigFrame(&handle->packet, &handle->instance, rxSetFrequencyHz) == LPCLIB_SUCCESS) {
-                handle->instance->rxOffset = rxOffset;
-
-                if (SRSC_isGpsType(handle->packet.type)) {
-                    _SRSC_processGpsFrame(&handle->packet, &handle->instance->gps);
-                }
-            /* Remember RX frequency (difference to nominal sonde frequency will be reported as frequency offset) */
+        /* Remember RX frequency (difference to nominal sonde frequency will be reported as frequency offset) */
 //            handle->rxFrequencyHz = rxFrequencyHz;
 
-                /* Send updated information to host. Either immediately if there is a new position,
-                 * or after a minimum interval.
-                 */
-                if ((handle->instance->gps.updateFlags == 7) ||
-                    (os_time - handle->timeOfLastReport > REPORT_INTERVAL)) {
+            /* Send updated information to host. Either immediately if there is a new position,
+                * or after a minimum interval.
+                */
+            if ((handle->instance->gps.updateFlags == 7) ||
+                (os_time - handle->timeOfLastReport > REPORT_INTERVAL)) {
 
-                    handle->timeOfLastReport = os_time;
-                    if (handle->instance->gps.updateFlags == 7) {
-                        handle->instance->gps.updateFlags = 0;
-                    }
-
-                    _SRSC_sendKiss(handle->instance);
-
-                    LPCLIB_Event event;
-                    LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
-                    event.opcode = APP_EVENT_HEARD_SONDE;
-                    event.block = SONDE_DETECTOR_C34_C50;
-                    event.parameter = (void *)((uintptr_t)lrintf(rxSetFrequencyHz));
-                    SYS_handleEvent(event);
+                handle->timeOfLastReport = os_time;
+                if (handle->instance->gps.updateFlags == 7) {
+                    handle->instance->gps.updateFlags = 0;
                 }
+
+                _SRSC_sendKiss(handle->instance);
+
+                LPCLIB_Event event;
+                LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
+                event.opcode = APP_EVENT_HEARD_SONDE;
+                event.block = SONDE_DETECTOR_C34_C50;
+                event.parameter = (void *)((uintptr_t)lrintf(rxSetFrequencyHz));
+                SYS_handleEvent(event);
             }
         }
     }

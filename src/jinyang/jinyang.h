@@ -37,10 +37,11 @@ typedef struct JINYANG_Context *JINYANG_Handle;
 LPCLIB_Result JINYANG_open (JINYANG_Handle *pHandle);
 LPCLIB_Result JINYANG_processBlock (
         JINYANG_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz);
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result JINYANG_resendLastPositions (JINYANG_Handle handle);
 LPCLIB_Result JINYANG_removeFromList (JINYANG_Handle handle, uint32_t id, float *frequency);
 

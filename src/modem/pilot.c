@@ -107,7 +107,7 @@ static void _PILOT_sendKiss (PILOT_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%ld,10,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,%.2f,%.1f,%.1f,%d",
+    length = sprintf((char *)s, "%ld,10,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,%.2f,%.1f,%.1f,%d,,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                      instance->gps.usedSats,
@@ -118,9 +118,10 @@ static void _PILOT_sendKiss (PILOT_InstanceData *instance)
                     direction,                              /* Direction [°] */
                     velocity,                               /* Horizontal speed [km/h] */
                     instance->gps.hdop,
-                    SYS_getFrameRssi(sys),
+                    instance->rssi,
                     offset,    /* RX frequency offset [kHz] */
-                    instance->gps.visibleSats               /* # satellites */
+                    instance->gps.visibleSats,              /* # satellites */
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -159,7 +160,13 @@ static void _PILOT_sendRaw (PILOT_InstanceData *instance, uint8_t *buffer, uint3
 
 
 
-LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t numBits, float rxFrequencyHz)
+LPCLIB_Result PILOT_processBlock (
+        PILOT_Handle handle,
+        void *buffer,
+        uint32_t numBits,
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime)
 {
     if (numBits == 8*sizeof(struct _PILOT_Payload)) {
         memcpy(&handle->payload, buffer, sizeof(handle->payload));
@@ -174,6 +181,8 @@ LPCLIB_Result PILOT_processBlock (PILOT_Handle handle, void *buffer, uint32_t nu
             _PILOT_processConfigBlock(&handle->payload, &handle->instance);
 
             if (handle->instance) {
+                handle->instance->rssi = rssi;
+                handle->instance->realTime = realTime;
                 handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
 
                 _PILOT_fromBigEndianGps(&handle->payload);

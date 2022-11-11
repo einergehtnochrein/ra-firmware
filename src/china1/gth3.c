@@ -87,7 +87,7 @@ static void _GTH3_sendKiss (GTH3_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",17,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",17,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,,,,,%.1lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -96,7 +96,8 @@ static void _GTH3_sendKiss (GTH3_InstanceData *instance)
                     direction,                              /* GPS direction [degrees] */
                     velocity,                               /* GPS velocity [km/h] */
                     SYS_getFrameRssi(sys),
-                    instance->frameCounter
+                    instance->frameCounter,
+                    instance->realTime / 10.0
                     );
 
     if (length > 0) {
@@ -146,12 +147,12 @@ static void _GTH3_sendRaw (GTH3_Handle handle, GTH3_Payload *payload)
 
 LPCLIB_Result GTH3_processBlock (
         GTH3_Handle handle,
-        SONDE_Type sondeType,
         void *buffer,
         uint32_t numBits,
-        float rxFrequencyHz)
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime)
 {
-    (void)sondeType;
     LPCLIB_Result result = LPCLIB_ILLEGAL_PARAMETER;
 
     if (numBits < 8*sizeof(GTH3_Packet)) {
@@ -167,6 +168,8 @@ LPCLIB_Result GTH3_processBlock (
     if (_GTH3_checkCRC((uint8_t *)&handle->packet->payload, sizeof(GTH3_Payload), handle->packet->crc_magic)) {
         _GTH3_prepare(&handle->packet->payload, &handle->instance, rxFrequencyHz);
         if (handle->instance) {
+            handle->instance->rssi = rssi;
+            handle->instance->realTime = realTime;
             _GTH3_processPayload(&handle->packet->payload, &handle->instance->gps, &handle->instance->metro);
             _GTH3_sendRaw(handle, &handle->packet->payload);
             _GTH3_sendKiss(handle->instance);
