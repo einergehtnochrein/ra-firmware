@@ -27,9 +27,9 @@ typedef uint8_t IMET54_SubFrameMainRaw[112];
 typedef __PACKED(struct {
     uint32_t serial;
     uint32_t time_milliseconds;
-    uint32_t latitude;
-    uint32_t longitude;
-    uint32_t altitude;
+    int32_t latitude;
+    int32_t longitude;
+    int32_t altitude;
     uint32_t reserved14;
     uint32_t reserved18;
     float temperature;
