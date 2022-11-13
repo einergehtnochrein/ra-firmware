@@ -35,10 +35,16 @@ LPCLIB_Result _IMET54_processPayloadMain (
         IMET54_InstanceData *instance)
 {
     LLA_Coordinate lla;
+    int32_t degrees;
+    double minutes;
 
     /* GPS */
-    lla.lat = (payload->latitude / 1e6f) * M_PI / 180.0f;
-    lla.lon = (payload->longitude / 1e6f) * M_PI / 180.0f;
+    degrees = payload->latitude / 1000000;
+    minutes = (payload->latitude - 1000000 * degrees) / 10000.0;
+    lla.lat = (degrees + minutes / 60.0) * M_PI / 180.0;
+    degrees = payload->longitude / 1000000;
+    minutes = (payload->longitude - 1000000 * degrees) / 10000.0;
+    lla.lon = (degrees + minutes / 60.0) * M_PI / 180.0;
     lla.alt = payload->altitude / 10.0f;
     lla.climbRate = NAN;
     lla.velocity = NAN;

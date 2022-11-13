@@ -1534,6 +1534,10 @@ if (cl[0] != 0) {
                                         PSB3_removeFromList(handle->psb3, id, &frequency);
                                         detector = SONDE_DETECTOR_PSB3;
                                         break;
+                                    case SONDE_DECODER_IMET54:
+                                        IMET54_removeFromList(handle->imet54, id, &frequency);
+                                        detector = SONDE_DETECTOR_IMET54;
+                                        break;
                                     default:
                                         /* ignore */
                                         break;
