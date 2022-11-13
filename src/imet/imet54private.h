@@ -42,6 +42,25 @@ typedef __PACKED(struct {
     uint32_t crc;
 }) IMET54_SubFrameMain;
 
+typedef __PACKED(struct {
+    uint32_t reserved00;
+    uint32_t reserved04;
+    uint32_t reserved08;
+    uint32_t reserved0C;
+    uint32_t reserved10;
+    uint32_t reserved14;
+    uint32_t reserved18;
+    uint32_t reserved1C;
+    uint32_t reserved20;
+    uint16_t reserved24;
+    uint16_t reserved26;
+    uint16_t reserved28;
+    float reserved2A;
+    uint16_t reserved2E;
+    uint8_t reserved30;
+    uint8_t reserved31;
+}) IMET54_Block2_Type1_6;
+
 
 typedef uint8_t IMET54_SubFrame2Raw[320];
 
@@ -125,7 +144,7 @@ typedef struct _IMET54_InstanceData {
             uint8_t reserved06;
             uint8_t reserved07;
             uint8_t reserved08;
-            uint8_t reserved09;
+            uint8_t block2Type;
             uint16_t reserved0A;
             uint8_t reserved0C;
             uint8_t reserved0D;

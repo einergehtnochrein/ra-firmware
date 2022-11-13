@@ -17,7 +17,7 @@
  *
  * 2FSK, 4800 bit/s, 2.5 kHz deviation
  * Continuous transmission (no preamble)
- * All bytes bytes are wrapped as 8N1 UART characters, which guarantees two signal edges
+ * All bytes are wrapped as 8N1 UART characters, which guarantees two signal edges
  * every 10 bit times.
  * Sync character (after UART deframing): (At least) 10x 0x00 0x55 (20 characters), followed by 4x 0x24.
  * As bits:  ..... 0 00000000 1  0 10101010 1  0 00100100 1  0 00100100 1  0 00100100 1  0 00100100 1
@@ -108,6 +108,8 @@ typedef struct _IMET54_Context {
     union {
         IMET54_SubFrame2Long frame2Long;
         IMET54_SubFrame2Short frame2Short;
+
+        IMET54_Block2_Type1_6 block2_type1_6;
     };
 } IMET54_Context;
 
