@@ -43,16 +43,11 @@ typedef __PACKED(struct {
 }) IMET54_SubFrameMain;
 
 typedef __PACKED(struct {
-    uint32_t reserved00;
-    uint32_t reserved04;
-    uint32_t reserved08;
-    uint32_t reserved0C;
-    uint32_t reserved10;
-    uint32_t reserved14;
-    uint32_t reserved18;
-    uint32_t reserved1C;
-    uint32_t reserved20;
-    uint16_t reserved24;
+    uint32_t reserved00[2];
+    uint32_t reserved08[3];
+    uint32_t reserved14[2];
+    uint32_t reserved1C[2];
+    int16_t refTemperature;                     /* Reference temperature (identical to raw temperature from LM75) */
     uint16_t reserved26;
     uint16_t reserved28;
     float reserved2A;

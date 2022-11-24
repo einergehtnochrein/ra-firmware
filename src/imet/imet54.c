@@ -95,6 +95,24 @@
  *     a4b4c4d4e4f4g4h4 a5b5c5d5e5f5g5h5 a6b6c6d6e6f6g6h6 a7b7c7d7e7f7g7h7
  *
  * Decoding process: Received data is first deinterleaved, then Hamming decoded (if applicable).
+ *
+ * Structure of main block (block 1):
+ *     Offset  Bytes  Type      Description
+ *       0       4    uint32    Serial number
+ *       4       4    uint32    GNSS time [ms]
+ *       8       4    int32     GNSS Latitude
+ *       12      4    int32     GNSS Longitude
+ *       16      4    int32     GNSS Altitude (above geoid) [1/10 m]
+ *       20      4    int32     optional: temperature of pressure sensor [1/100 °C], 0 if not installed
+ *       24      4    int32     optional: pressure  [1/100 hPa], 0 if not installed
+ *       28      4    float     Ambient temperature [°C]
+ *       32      4    float     Humidity [%], valid for temperature of humidity sensor
+ *       36      4    float     Temperature of humidity sensor [°C]
+ *       40      2    uint16    Flags
+ *       42      1    uint8     Number of satellites used in position solution
+ *       43      1    uint8     Index (0...10) of the following 'extra' fragment
+ *       44      8    uint8[8]  Fragment of 'extra' data
+ *       52      4    uint32    CRC32 of block 1 (header byte plus block 1 offset 0...51)
  */
 
 
