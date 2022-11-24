@@ -109,7 +109,7 @@ LPCLIB_Result _IMET54_prepare (
     int fragmentIndex = frameMain->fragmentIndex;
 
     if (fragmentIndex <= IMET54_EXTRA_MAX_INDEX) {
-        instance->fragmentValidFlags |= (1u << fragmentIndex);
+        instance->extraValidFlags |= (1u << fragmentIndex);
 
         memcpy(instance->extra.rawData[fragmentIndex], frameMain->fragment, sizeof(instance->extra.rawData[fragmentIndex]));
     }
@@ -121,6 +121,17 @@ LPCLIB_Result _IMET54_prepare (
     instance->lastUpdated = os_time;
 
     return result;
+}
+
+
+/* Check if the extra block contains valid data for a given purpose */
+bool _IMET54_checkValidExtra(IMET54_InstanceData *instance, uint32_t purpose)
+{
+    if (!instance) {
+        return false;
+    }
+
+    return (instance->extraValidFlags & purpose) == purpose;
 }
 
 

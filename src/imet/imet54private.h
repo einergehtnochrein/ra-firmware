@@ -30,8 +30,8 @@ typedef __PACKED(struct {
     int32_t latitude;
     int32_t longitude;
     int32_t altitude;
-    uint32_t reserved14;
-    uint32_t reserved18;
+    int32_t temperaturePSensor;
+    int32_t pressure;
     float temperature;
     float humidity;
     float temperatureRH;
@@ -43,16 +43,11 @@ typedef __PACKED(struct {
 }) IMET54_SubFrameMain;
 
 typedef __PACKED(struct {
-    uint32_t reserved00;
-    uint32_t reserved04;
-    uint32_t reserved08;
-    uint32_t reserved0C;
-    uint32_t reserved10;
-    uint32_t reserved14;
-    uint32_t reserved18;
-    uint32_t reserved1C;
-    uint32_t reserved20;
-    uint16_t reserved24;
+    uint32_t reserved00[2];
+    uint32_t reserved08[3];
+    uint32_t reserved14[2];
+    uint32_t reserved1C[2];
+    int16_t refTemperature;                     /* Reference temperature (identical to raw temperature from LM75) */
     uint16_t reserved26;
     uint16_t reserved28;
     float reserved2A;
@@ -109,6 +104,10 @@ typedef struct {
     float temperature;                          /* Temperature [°C] */
     float humidity;                             /* Relative humidity [%] */
     float temperatureRH;                        /* Temperature of humidity sensor [°C] */
+    float pressure;                             /* From optional MS5607 sensor */
+    float temperaturePSensor;                   /* From optional MS5607 sensor */
+    float temperatureInner;                     /* From LM75A on sensor boom within housing */
+    float temperatureCpu;                       /* Temperature sensor in MK22F CPU */
 } IMET54_CookedMetrology;
 
 
@@ -129,12 +128,13 @@ typedef struct _IMET54_InstanceData {
     uint32_t lastUpdated;
     float rssi;
     uint64_t realTime;
+    float batteryVoltage;
 
     uint32_t lastGpsTime;
     IMET54_CookedGps gps;
     IMET54_CookedMetrology metro;
 
-    uint32_t fragmentValidFlags;
+    uint32_t extraValidFlags;
     __PACKED(union {
         uint8_t rawData[IMET54_EXTRA_MAX_INDEX + 1][8];
         __PACKED(struct {
@@ -148,9 +148,9 @@ typedef struct _IMET54_InstanceData {
             uint16_t reserved0A;
             uint8_t reserved0C;
             uint8_t reserved0D;
-            uint16_t reserved0E;
-            uint16_t reserved10;
-            uint16_t reserved12;
+            int16_t cpuTemperature;     /* CPU temperature [1/100 °C] */
+            uint16_t batteryVoltage;    /* Battery voltage [1/100 V] */
+            int16_t lm75Temperature;    /* Internal temperature (LM75A on sensor boom) [1/100 °C] */
             __PACKED(struct {
                 uint8_t prn;            /* Bit7: 1=sat used, 0=sat not used, Bit[6:0]: PRN */
                 uint8_t system_snr;     /* Bit[7:6]: 00=GPS, 01=GLONASS, 10=Galileo, 11=Beidou, Bit[5:0]: SNR */
@@ -163,6 +163,14 @@ typedef struct _IMET54_InstanceData {
 } IMET54_InstanceData;
 
 
+
+/* Check if the extra block contains valid data for a given purpose */
+#define EXTRA_USEDSATS              0x00000400l
+#define EXTRA_TEMPINNER             0x00000004l
+#define EXTRA_TEMPCPU               0x00000002l
+#define EXTRA_VBAT                  0x00000004l
+
+bool _IMET54_checkValidExtra(IMET54_InstanceData *instance, uint32_t purpose);
 
 LPCLIB_Result _IMET54_prepare (
         IMET54_SubFrameMain *frameMain,
