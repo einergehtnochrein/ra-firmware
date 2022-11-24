@@ -1,4 +1,5 @@
 
+#include <inttypes.h>
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -107,7 +108,7 @@ static void _PILOT_sendKiss (PILOT_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%ld,10,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,%.2f,%.1f,%.1f,%d,,,,,,%.1lf",
+    length = sprintf((char *)s, "%"PRIu32",10,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,%.2f,%.1f,%.1f,%d,,,,,,%"PRIu64,
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                      instance->gps.usedSats,
@@ -121,14 +122,14 @@ static void _PILOT_sendKiss (PILOT_InstanceData *instance)
                     instance->rssi,
                     offset,    /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,              /* # satellites */
-                    instance->realTime / 10.0
+                    instance->realTime
                     );
 
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = sprintf(s, "%ld,10,0,%s",
+    length = sprintf(s, "%"PRIu32",10,0,%s",
                 instance->id,
                 instance->hashName
                 );
@@ -147,7 +148,7 @@ static void _PILOT_sendRaw (PILOT_InstanceData *instance, uint8_t *buffer, uint3
     int slen = 0;
 
 
-    slen += snprintf(&_pilot_raw[slen], sizeof(_pilot_raw) - slen, "%ld,10,1,",
+    slen += snprintf(&_pilot_raw[slen], sizeof(_pilot_raw) - slen, "%"PRIu32",10,1,",
                      instance->id
                     );
     

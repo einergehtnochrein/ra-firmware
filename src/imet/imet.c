@@ -122,7 +122,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%"PRIu32",%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%.1f,%.1f,,,%.1f,,%.1f,%.1f,%d,%d,,%.1f,,,%.1lf",
+        length = sprintf((char *)s, "%"PRIu32",%s,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%.1f,%.1f,,,%.1f,,%.1f,%.1f,%d,%d,,%.1f,,,%"PRIu64,
                         instance->id,
                         sType,
                         f,                              /* Frequency [MHz] */
@@ -140,7 +140,7 @@ static void _IMET_sendKiss (IMET_InstanceData *instance)
                         instance->gps.usedSats,
                         instance->metro.frameCounter,
                         instance->metro.batteryVoltage, /* Battery voltage [V] */
-                        instance->realTime / 10.0
+                        instance->realTime
                         );
     }
 

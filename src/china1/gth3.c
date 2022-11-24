@@ -87,7 +87,7 @@ static void _GTH3_sendKiss (GTH3_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",17,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,,,,,%.1lf",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",17,%.3f,,%.5lf,%.5lf,%.0f,,%.1f,%.1f,,,,,,,%.1f,,,%d,,,,,%"PRIu64,
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -97,7 +97,7 @@ static void _GTH3_sendKiss (GTH3_InstanceData *instance)
                     velocity,                               /* GPS velocity [km/h] */
                     SYS_getFrameRssi(sys),
                     instance->frameCounter,
-                    instance->realTime / 10.0
+                    instance->realTime
                     );
 
     if (length > 0) {

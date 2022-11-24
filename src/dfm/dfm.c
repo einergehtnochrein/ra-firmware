@@ -225,7 +225,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s,,,%.1lf",
+        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s,,,%"PRIu64,
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -239,7 +239,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         instance->rssi,
                         instance->gps.usedSats,
                         sVbat,                      /* Battery voltage [V] */
-                        instance->realTime / 10.0
+                        instance->realTime
                         );
     }
 
