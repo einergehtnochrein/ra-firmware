@@ -157,7 +157,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
         special += 1;
     }
 
-    length = sprintf((char *)s, "%"PRIu32",0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%"PRIu32",,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,,,,%.1lf",
+    length = sprintf((char *)s, "%"PRIu32",0,%.3f,%d,%.5lf,%.5lf,%s,%s,,,%s,%s,%"PRIu32",,%.1f,%.2f,%.1f,%.1f,%d,%d,%s,,,,%"PRIu64,
                     instance->id,
                     instance->rxFrequencyMHz,   /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -175,7 +175,7 @@ static void _RS92_sendKiss (RS92_InstanceData *instance)
                     instance->gps.visibleSats,
                     instance->frameCounter,     /* Current frame number */
                     sKillTimer,                 /* Kill timer (frame) */
-                    instance->realTime / 10.0
+                    instance->realTime
                     );
 
     if (length > 0) {

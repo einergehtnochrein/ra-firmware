@@ -108,7 +108,7 @@ static void _M10_sendKiss (M10_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%"PRIu32",7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,%.1f,%d,,,%.3f,,,%.1lf",
+    length = sprintf((char *)s, "%"PRIu32",7,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,,,%.1f,%.1f,%d,,,%.3f,,,%"PRIu64,
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -122,7 +122,7 @@ static void _M10_sendKiss (M10_InstanceData *instance)
                     offset,    /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,              /* # satellites */
                     instance->metro.batteryVoltage,
-                    instance->realTime / 10.0
+                    instance->realTime
                     );
 
     if (length > 0) {

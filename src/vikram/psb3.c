@@ -87,7 +87,7 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
         kmh *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",15,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,,,,%.1lf",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",15,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,,,,%"PRIu64,
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
@@ -100,7 +100,7 @@ static void _PSB3_sendKiss (PSB3_InstanceData *instance)
                     instance->metro.humidity,               /* Relative humidity [%] */
                     instance->rssi,
                     instance->frameCounter,
-                    instance->realTime / 10.0
+                    instance->realTime
                     );
 
     if (length > 0) {

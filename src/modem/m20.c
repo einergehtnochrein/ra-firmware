@@ -135,7 +135,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
     }
 
     length = snprintf((char *)s, sizeof(s),
-                "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,,,%.1f,%.1f,%.1f,%.1lf",
+                "%"PRIu32",13,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,,,%.1f,%.1f,%.1f,%"PRIu64,
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     latitude,                               /* Latitude [degrees] */
@@ -152,7 +152,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
                     instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
                     instance->metro.cpuTemperature,         /* CPU temperature [°C] */
                     instance->metro.TU,                     /* Temperature humidity sensor [°C] */
-                    instance->realTime / 10.0
+                    instance->realTime
                     );
 
     if (length > 0) {

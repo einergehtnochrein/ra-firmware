@@ -94,7 +94,7 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",11,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,%.1f,,%.1f,,%d,%d,,,%.1f,,%.1lf",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",11,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,%s,,%.1f,,%.1f,,%d,%d,,,%.1f,,%"PRIu64,
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
@@ -111,7 +111,7 @@ static void _MEISEI_sendKiss (MEISEI_InstanceData *instance)
                     instance->gps.visibleSats,
                     instance->frameCounter / 2,
                     instance->metro.cpuTemperature,
-                    instance->realTime / 10.0
+                    instance->realTime
                     );
 
     if (length > 0) {
