@@ -51,7 +51,19 @@ LPCLIB_Result _IMET54_processPayloadMain (
     lla.direction = NAN;
 
     instance->gps.observerLLA = lla;
-    instance->gps.usedSats = payload->usedSats;
+    if (_IMET54_checkValidExtra(instance, EXTRA_USEDSATS)) {
+        instance->gps.usedSats = payload->usedSats;
+    }
+
+    /* payload->pressure is zero if optional MS5607 pressure sensor not installed */
+    float pressure = NAN;
+    float temperaturePSensor = NAN;
+    if (payload->pressure != 0) {
+        pressure = payload->pressure / 100.0f;
+        temperaturePSensor = payload->temperaturePSensor / 100.0f;
+    }
+    instance->metro.pressure = pressure;
+    instance->metro.temperaturePSensor = temperaturePSensor;
 
     instance->metro.temperature = payload->temperature;
     instance->metro.temperatureRH = payload->temperatureRH;
@@ -60,6 +72,22 @@ LPCLIB_Result _IMET54_processPayloadMain (
     f = payload->humidity * f;
     f = fmaxf(f, 0.0f);
     instance->metro.humidity = fminf(f, 100.0f);
+
+    float temperatureCpu = NAN;
+    float temperatureInner = NAN;
+    float batteryVoltage = NAN;
+    if (_IMET54_checkValidExtra(instance, EXTRA_TEMPCPU)) {
+        temperatureCpu = instance->extra.cpuTemperature / 100.0f;
+    }
+    if (_IMET54_checkValidExtra(instance, EXTRA_TEMPINNER)) {
+        temperatureInner = instance->extra.lm75Temperature / 100.0f;
+    }
+    if (_IMET54_checkValidExtra(instance, EXTRA_VBAT)) {
+        batteryVoltage = instance->extra.batteryVoltage / 100.0f;
+    }
+    instance->metro.temperatureCpu = temperatureCpu;
+    instance->metro.temperatureInner = temperatureInner;
+    instance->batteryVoltage = batteryVoltage;
 
     return LPCLIB_SUCCESS;
 }
