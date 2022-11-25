@@ -135,7 +135,7 @@ LPCLIB_Result DFM_open (DFM_Handle *pHandle)
 /* Send position report */
 static void _DFM_sendKiss (DFM_InstanceData *instance)
 {
-    char s[128];
+    char s[160];
     char sAltitude[20];
     char sClimbRate[20];
     char sVelocity[8];
@@ -225,7 +225,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         );
     }
     else {
-        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s,,,%"PRIu64,
+        length = sprintf((char *)s, "%"PRIu32",2,%.3f,,%.5lf,%.5lf,%s,%s,%s,%s,%s,,%s,,,,%.1f,,%d,,,%s,,,%.2lf",
                         instance->id,
                         f,                          /* Frequency [MHz] */
                         latitude,                   /* Latitude [degrees] */
@@ -239,7 +239,7 @@ static void _DFM_sendKiss (DFM_InstanceData *instance)
                         instance->rssi,
                         instance->gps.usedSats,
                         sVbat,                      /* Battery voltage [V] */
-                        instance->realTime
+                        instance->realTime * 0.01
                         );
     }
 

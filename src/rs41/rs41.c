@@ -173,7 +173,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         );
     }
     else {
-        length = snprintf((char *)s, sizeof(s), "%"PRIu32",1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%"PRIu32",,%.1f,,%.1f,%.1f,%d,%d,%s,%.1f,,,%"PRIu64,
+        length = snprintf((char *)s, sizeof(s), "%"PRIu32",1,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%s,%"PRIu32",,%.1f,,%.1f,%.1f,%d,%d,%s,%.1f,,,%.2lf",
                         instance->id,
                         instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                         instance->gps.usedSats,                 /* # sats in position solution */
@@ -193,7 +193,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->frameCounter,                 /* Current frame number */
                         sFlightKillTimer,                       /* Kill timer (frame) */
                         instance->batteryVoltage,               /* Battery voltage [V] */
-                        instance->realTime
+                        instance->realTime * 0.01
                         );
     }
 

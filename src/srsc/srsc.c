@@ -124,7 +124,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f,,,%"PRIu64,
+    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f,,,%.2lf",
                     instance->id,
                     f,                                  /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -141,7 +141,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                     instance->rxOffset / 1e3f,
                     instance->gps.usedSats,
                     instance->config.batteryVoltage,    /* Battery voltage [V] */
-                    instance->realTime
+                    instance->realTime * 0.01
                     );
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);
