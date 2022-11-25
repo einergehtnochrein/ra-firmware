@@ -67,14 +67,14 @@ static void _BEACON_sendKiss (BEACON_InstanceData *instance)
         special |= 2;
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,,,,%"PRIu64,
+    length = snprintf(s, sizeof(s), "%"PRIu32",9,%.3f,,%.5lf,%.5lf,,,,,,,%d,,,,%.1f,,,,,,,,%.2lf",
                     instance->id,
                     instance->rxFrequencyMHz,           /* Frequency [MHz] */
                     lat,
                     lon,
                     special,
                     instance->rssi,
-                    instance->realTime
+                    instance->realTime * 0.01
                     );
     if (length > 0) {
         SYS_send2Host(HOST_CHANNEL_KISS, s);

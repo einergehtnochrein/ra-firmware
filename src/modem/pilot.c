@@ -108,7 +108,7 @@ static void _PILOT_sendKiss (PILOT_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = sprintf((char *)s, "%"PRIu32",10,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,%.2f,%.1f,%.1f,%d,,,,,,%"PRIu64,
+    length = sprintf((char *)s, "%"PRIu32",10,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,,,,,,%.2f,%.1f,%.1f,%d,,,,,,%.2lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                      instance->gps.usedSats,
@@ -122,7 +122,7 @@ static void _PILOT_sendKiss (PILOT_InstanceData *instance)
                     instance->rssi,
                     offset,    /* RX frequency offset [kHz] */
                     instance->gps.visibleSats,              /* # satellites */
-                    instance->realTime
+                    instance->realTime * 0.01
                     );
 
     if (length > 0) {

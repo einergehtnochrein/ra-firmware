@@ -88,7 +88,7 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,%d,,%.1f,,,%"PRIu64,
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",14,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,%d,,%.1f,,,%.2lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
@@ -103,7 +103,7 @@ static void _MRZ_sendKiss (MRZ_InstanceData *instance)
                     instance->rssi,
                     instance->frameCounter,
                     instance->metro.batteryVoltage,         /* Battery voltage [V] */
-                    instance->realTime
+                    instance->realTime * 0.01
                     );
 
     if (length > 0) {

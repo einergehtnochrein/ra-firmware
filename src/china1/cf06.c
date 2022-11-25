@@ -97,7 +97,7 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
         velocity *= 3.6f;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,%.1f,%.0f,,%"PRIu64,
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",16,%.3f,%d,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,%.1f,%.0f,,%.2lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,                 /* #sats in position solution */
@@ -113,7 +113,7 @@ static void _CF06_sendKiss (CF06_InstanceData *instance)
                     instance->frameCounter,
                     instance->metro.batteryVoltage,         /* Sonde battery voltage [V] */
                     instance->metro.temperature_CPU,        /* (Main board) CPU temperature [°C] */
-                    instance->realTime
+                    instance->realTime * 0.01
                     );
 
     if (length > 0) {

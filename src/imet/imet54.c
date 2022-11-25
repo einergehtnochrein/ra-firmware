@@ -164,7 +164,7 @@ static void _IMET54_sendKiss (IMET54_InstanceData *instance)
         longitude *= 180.0 / M_PI;
     }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",18,%.3f,%d,%.5lf,%.5lf,%.0f,,,,%.1f,%.1f,,,%.1f,,%.1f,,%d,%d,,%.2f,%.1f,,%"PRIu64,
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",18,%.3f,%d,%.5lf,%.5lf,%.0f,,,,%.1f,%.1f,,,%.1f,,%.1f,,%d,%d,,%.2f,%.1f,,%.2lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
@@ -179,7 +179,7 @@ static void _IMET54_sendKiss (IMET54_InstanceData *instance)
                     instance->frameCounter,
                     instance->batteryVoltage,
                     instance->metro.temperatureCpu,         /* CPU temperature [°C] */
-                    instance->realTime
+                    instance->realTime * 0.01
                     );
 
     if (length > 0) {
