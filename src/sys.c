@@ -1353,7 +1353,7 @@ if (cl[0] != 0) {
                 /* If host sends a time stamp, respond by sending all current settings. */
                 long timestamp = 0;
                 if (sscanf(cl, "#%*d,%ld", &timestamp) == 1) {
-                    handle->realTime = timestamp;
+                    handle->realTime = timestamp * 100ull;
                     handle->last_os_time = os_time;
 
                     /* Flush UART */
