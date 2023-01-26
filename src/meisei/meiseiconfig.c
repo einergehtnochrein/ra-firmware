@@ -177,10 +177,10 @@ LPCLIB_Result _MEISEI_processConfigFrame (
     if (f != 0) {
         instance->serialSonde = lrintf(f);
     }
-    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_SENSOR_BOOM)) {
+    if (_MEISEI_checkValidCalibration(instance, CALIB_IMS100_SERIAL_SENSOR_BOOM)) {
         instance->serialSensorBoom = lrintf(instance->config[4]); //TODO
     }
-    if (_MEISEI_checkValidCalibration(instance, CALIB_SERIAL_PCB)) {
+    if (_MEISEI_checkValidCalibration(instance, CALIB_IMS100_SERIAL_PCB)) {
         instance->serialPcb = lrintf(instance->config[2]); //TODO
     }
 
