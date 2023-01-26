@@ -90,6 +90,30 @@ static MEISEI_InstanceData *_MEISEI_getInstanceDataStructure (float frequencyMHz
 
 
 
+/* Convert a 32-bit field to a float number.
+ * iMS-100 sends float numbers in standard IEEE-754 format, while RS-11G uses a different format:
+ * Same fields (mantissa/Exponent/sign) as in IEEE-754 are used, but the position of sign bit
+ * and exponent is swapped. There is also an offset of two on the exponent.
+ */
+static float _MEISEI_convertFloat (MEISEI_InstanceData *instance, uint16_t field1, uint16_t field2)
+{
+    float f = 0;
+
+    if (instance->model == MEISEI_MODEL_IMS100) {
+        uint32_t u32 = (field2 << 16) | field1;
+        f = *((float *)&u32);
+    }
+    else if (instance->model == MEISEI_MODEL_RS11G) {
+        uint16_t u16 = __REV16(field2);
+        uint32_t u32 = ((u16 & (1u << 7)) << 24) | (((u16 >> 8) - 2) << 23) | ((u16 & 0x7F) << 16) | __REV16(field1);
+        f = *((float *)&u32);
+    }
+
+    return f;
+}
+
+
+
 /* Process the config/calib block. */
 LPCLIB_Result _MEISEI_processConfigFrame (
         MEISEI_Packet *packet,
@@ -132,8 +156,7 @@ LPCLIB_Result _MEISEI_processConfigFrame (
 
     /* Store calibration data */
     uint16_t fragment = instance->frameCounter % 64;
-    uint32_t u32configRaw = (packet->w[3] << 16) | packet->w[2];
-    instance->config[fragment] = *((float *)&u32configRaw);
+    instance->config[fragment] = _MEISEI_convertFloat(instance, packet->w[2], packet->w[3]);
     instance->configValidFlags |= (1ull << fragment);
 
     /* Cook some other values */
