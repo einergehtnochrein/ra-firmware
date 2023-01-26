@@ -59,7 +59,6 @@ static MEISEI_InstanceData *_MEISEI_getInstanceDataStructure (float frequencyMHz
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
         instance->rxFrequencyMHz = frequencyMHz;
-instance->model = MEISEI_MODEL_IMS100; //TODO
         instance->refFreq = NAN;
         instance->metro.temperature = NAN;
         instance->metro.rh_temperature = NAN;
@@ -115,6 +114,12 @@ LPCLIB_Result _MEISEI_processConfigFrame (
 
     /* Set time marker to be able to identify old records */
     instance->lastUpdated = os_time;
+
+    /* Sonde model */
+    instance->model = MEISEI_MODEL_IMS100;
+    if ((packet->w[7] & 0xFF) == 0xA2) {    /* NOTE: Same in even and odd packets */
+        instance->model = MEISEI_MODEL_RS11G;
+    }
 
     /* Read frame number to determine where to store the packet */
     instance->frameCounter = packet->w[0];
