@@ -63,19 +63,22 @@ static LPCLIB_Result _MEISEI_processMetrology_IMS100 (
                      */
                     if (f <= instance->config[33]) {
                         temperature = instance->config[17];
-                    } else if (f >= instance->config[44]) {
-                        temperature = instance->config[28];
                     } else {
                         /* Table has the resistance values. For linear interpolation we take the logarithm. */
-                        for (int i = 0; i < 11; i++) {
+                        int i;
+                        for (i = 0; i < 10; i++) {
                             if (f < instance->config[34 + i]) {
-                                f = (logf(f) - logf(instance->config[33 + i]))
-                                  / (logf(instance->config[34 + i]) - logf(instance->config[33 + i]));
-                                temperature = instance->config[17 + i]
-                                    - f * (instance->config[17 + i] - instance->config[18 + i]);
                                 break;
                             }
                         }
+                        /* NOTE: When the resistance is larger than the last table entry, we end up here
+                         *       with i=10. This means that we will linearly extend the last table range
+                         *       towards lower temperatures.
+                         */
+                        f = (logf(f) - logf(instance->config[33 + i]))
+                            / (logf(instance->config[34 + i]) - logf(instance->config[33 + i]));
+                        temperature = instance->config[17 + i]
+                            - f * (instance->config[17 + i] - instance->config[18 + i]);
                     }
                 }
             }
@@ -214,19 +217,22 @@ static LPCLIB_Result _MEISEI_processMetrology_RS11G (
                      */
                     if (f <= instance->config[37]) {
                         temperature = instance->config[17];
-                    } else if (f >= instance->config[47]) {
-                        temperature = instance->config[27];
                     } else {
                         /* Table has the resistance values. For linear interpolation we take the logarithm. */
-                        for (int i = 0; i < 10; i++) {
+                        int i;
+                        for (i = 0; i < 9; i++) {
                             if (f < instance->config[38 + i]) {
-                                f = (logf(f) - logf(instance->config[37 + i]))
-                                  / (logf(instance->config[38 + i]) - logf(instance->config[37 + i]));
-                                temperature = instance->config[17 + i]
-                                    - f * (instance->config[17 + i] - instance->config[18 + i]);
                                 break;
                             }
                         }
+                        /* NOTE: When the resistance is larger than the last table entry, we end up here
+                         *       with i=9. This means that we will linearly extend the last table range
+                         *       towards lower temperatures.
+                         */
+                        f = (logf(f) - logf(instance->config[37 + i]))
+                            / (logf(instance->config[38 + i]) - logf(instance->config[37 + i]));
+                        temperature = instance->config[17 + i]
+                            - f * (instance->config[17 + i] - instance->config[18 + i]);
                     }
                 }
             }
