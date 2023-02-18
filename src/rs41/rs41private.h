@@ -120,9 +120,9 @@ typedef __PACKED(struct {
  */
 
 typedef __PACKED(struct {
-    uint32_t ecefX;
-    uint32_t ecefY;
-    uint32_t ecefZ;
+    int32_t ecefX;
+    int32_t ecefY;
+    int32_t ecefZ;
     int16_t speedX;
     int16_t speedY;
     int16_t speedZ;
