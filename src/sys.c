@@ -468,15 +468,15 @@ static const ADF7021_Config radioModeWindsond[] = {
         {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
-            .enable = ENABLE,
+            .enable = DISABLE,
             .KI = 11,
             .KP = 2,
             .maxRange = 20, }}},
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
-        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
-            .deviation = 10000,
+            .deviation = 34000,
             .postDemodBandwidth = 1875, }}},
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
@@ -788,14 +788,14 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             break;
 
         case SONDE_DETECTOR_WINDSOND:
-            ADF7021_setDemodClockDivider(radio, 4);
+            ADF7021_setDemodClockDivider(radio, 2);
             ADF7021_setBitRate(radio, 2400);
             ADF7021_ioctl(radio, radioModeWindsond);
 
             _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-            LPC_MAILBOX->IRQ0SET = (1u << 5); //TODO
+            LPC_MAILBOX->IRQ0SET = (1u << 7); //TODO
             break;
 
         case SONDE_DETECTOR_RS41_RS92:
@@ -1487,6 +1487,7 @@ if (cl[0] != 0) {
                         case 10:    detector = SONDE_DETECTOR_MRZ; break;
                         case 11:    detector = SONDE_DETECTOR_ASIA1; break;
                         case 12:    detector = SONDE_DETECTOR_PSB3; break;
+                        case 13:    detector = SONDE_DETECTOR_WINDSOND; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
