@@ -30,6 +30,7 @@ C_SRCS = \
     modem/m20.c modem/m20calibconfig.c modem/m20payload.c \
     modem/pilot.c modem/pilotconfig.c modem/pilotgps.c \
     meisei/meisei.c meisei/meiseiconfig.c meisei/meiseigps.c meisei/meiseimetrology.c \
+    windsond/windsond.c windsond/windsondconfig.c \
     mrz/mrz.c mrz/mrzconfig.c mrz/mrzgps.c mrz/mrzmetrology.c \
     china1/china1.c china1/cf06.c china1/cf06config.c china1/cf06utils.c china1/cf06payload.c \
     china1/gth3.c china1/gth3config.c china1/gth3utils.c china1/gth3payload.c \
@@ -69,6 +70,7 @@ INCLUDES += \
     -I../src/semihosting \
     -I../src/srsc \
     -I../src/vikram \
+    -I../src/windsond \
     -I../libs/pdm \
     -I../libs/pt/pt-1.4 \
 
