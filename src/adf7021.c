@@ -59,6 +59,7 @@ typedef struct ADF7021_Context {
     MRT_Handle mrt;
     volatile bool timeout;
     uint8_t mrtChannel;
+    _Bool wideband;                     /* ADF7021 detected (wider IF than ADF7021-N) */
 } ADF7021_Context;
 
 
@@ -73,10 +74,6 @@ LPCLIB_Result ADF7021_write (ADF7021_Handle handle,
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
         return LPCLIB_ILLEGAL_PARAMETER;
-    }
-
-    if (reg == ADF7021_REGISTER_4) {
-        handle->ifBandwidthSelect = (command >> 30) & 3;
     }
 
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5410X
@@ -240,6 +237,8 @@ static void _ADF7021_configureDemodulator (ADF7021_Handle handle)
     uint32_t K;
     float demodClock;
     const uint8_t R4_987[4] = {0,5,4,1};
+    const uint8_t bwNarrow[4] = {0,1,2,2};
+    const uint8_t bwWide[4] = {0,0,1,2};
 
     
     demodClock = handle->referenceFrequency;
@@ -254,8 +253,10 @@ static void _ADF7021_configureDemodulator (ADF7021_Handle handle)
         K = lrintf(100e3f / handle->demodParams.deviation);
     }
 
+    /* Bandwidth code for demodulator register */
+    handle->ifBandwidthSelect = handle->wideband ? bwWide[handle->bandwidth] : bwNarrow[handle->bandwidth];
     regval = 0
-        | (handle->bandwidth << 30)
+        | (handle->ifBandwidthSelect << 30)
         | (lrintf(ceil((6433.98176f * handle->demodParams.postDemodBandwidth) / demodClock)) << 20)
         | (lrintf((demodClock * K) / 400e3f) << 10)
         | (R4_987[K % 4] << 7)
@@ -346,6 +347,20 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
         switch (pConfig->opcode) {
         case ADF7021_OPCODE_POWER_ON:
             //TODO activate CE
+
+            /* Detect chip type */
+            handle->wideband = false;
+            if (_ADF7021_read(handle, ADF7021_READBACK_SILICONREV, &regval) == LPCLIB_SUCCESS) {
+                uint32_t productCode = (regval >> 4) & 0xFFF;
+                switch (productCode) {
+                    case 0x210:     /* ADF7021 */
+                        handle->wideband = true;
+                        break;
+                    case 0x211:     /* ADF7021-N */
+                        handle->wideband = false;
+                        break;
+                }
+            }
 
             /* Force sending R0 (configure UART/SPI mode) */
             _ADF7021_setMuxout(handle, ADF7021_MUXOUT_LOGIC_ZERO, true);
@@ -650,11 +665,19 @@ static GPIO_Config _muxoutEdgeDisable[] = {
 LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
 {
     uint32_t regval;
-    const uint32_t calibrationFrequencies[4][2] = {
-        {78100, 116300},
-        {79400, 116300},
-        {78100, 119000},
-        {78100, 119000},
+    const uint32_t calibrationFrequencies[2][4][2] = {
+        {
+            {78100, 116300},
+            {79400, 116300},
+            {78100, 119000},
+            {78100, 119000},
+        },
+        {
+            {65800, 131500},
+            {65800, 131500},
+            {65800, 131500},
+            {65800, 131500},
+        },
     };
 
     if (handle == LPCLIB_INVALID_HANDLE) {
@@ -666,10 +689,11 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
     GPIO_ioctl(_muxoutEdgeEnable);
 
     /* Select fine or coarse calibration */
+    int wide = handle->wideband ? 1 : 0;
     regval = 0
             | ((mode ? 1 : 0) << 4)         /* Enable fine calibration */
-            | (lrintf(handle->referenceFrequency / (2 * calibrationFrequencies[handle->ifBandwidthSelect][0])) << 5)
-            | (lrintf(handle->referenceFrequency / (2 * calibrationFrequencies[handle->ifBandwidthSelect][1])) << 13)
+            | (lrintf(handle->referenceFrequency / (2 * calibrationFrequencies[wide][handle->ifBandwidthSelect][0])) << 5)
+            | (lrintf(handle->referenceFrequency / (2 * calibrationFrequencies[wide][handle->ifBandwidthSelect][1])) << 13)
             | (80u << 21)
             ;
     ADF7021_write(handle, ADF7021_REGISTER_6, regval);

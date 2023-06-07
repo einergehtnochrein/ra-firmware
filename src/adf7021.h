@@ -85,9 +85,10 @@ typedef enum ADF7021_DemodulatorType {
 
 /** IF bandwidth */
 typedef enum ADF7021_Bandwidth {
-    ADF7021_BANDWIDTH_9k5 = 0,
-    ADF7021_BANDWIDTH_13k5 = 1,
-    ADF7021_BANDWIDTH_18k5 = 2,
+    ADF7021_BANDWIDTH_9k = 0,
+    ADF7021_BANDWIDTH_13k = 1,
+    ADF7021_BANDWIDTH_18k = 2,
+    ADF7021_BANDWIDTH_25k = 3,
 } ADF7021_Bandwidth;
 
 
