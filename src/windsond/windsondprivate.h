@@ -52,6 +52,7 @@ typedef struct _WINDSOND_InstanceData {
     uint16_t frameCounter;
     float rssi;
     uint64_t realTime;
+    float vbat;
 
     uint64_t configValidFlags;                  /* Indicates valid fields in "config" */
     float config[64];
@@ -59,6 +60,10 @@ typedef struct _WINDSOND_InstanceData {
     int32_t latitude_reference;
     int32_t longitude_reference;
     uint32_t timestamp_reference;
+
+    float ground_pressure;
+    float ground_altitude;
+    float ref_temperature;
 
     WINDSOND_CookedGps gps;
     WINDSOND_CookedMetrology metro;

@@ -24,6 +24,89 @@ static uint32_t _readbits (const unsigned char rxbuf[], int *startpos, int n)
 }
 
 
+static void _WINDSOND_decode_extra(WINDSOND_InstanceData *instance, const unsigned char rxbuf[], int *pstartpos)
+{
+    const struct _s1_extra_cmds {
+        char *key;
+        uint32_t opcode;
+    } cmd_list[] = {
+        {.key = "id",       .opcode = 0x01},
+        {.key = "behlan",   .opcode = 0x04},
+        {.key = "role",     .opcode = 0x06},
+        {.key = "clk",      .opcode = 0x07},
+        {.key = "su",       .opcode = 0x09},
+        {.key = "pwr",      .opcode = 0x0C},
+        {.key = "fwver",    .opcode = 0x0D},
+        {.key = "mcnt",     .opcode = 0x0E},
+        {.key = "cutalt",   .opcode = 0x0F},
+        {.key = "cutpr2",   .opcode = 0x10},
+        {.key = "supmul",   .opcode = 0x11},
+        {.key = "gpa",      .opcode = 0x12},
+        {.key = "galt",     .opcode = 0x13},
+        {.key = "hw",       .opcode = 0x14},
+        {.key = "ucnt",     .opcode = 0x16},
+    };
+    const int cmd_list_size = sizeof(cmd_list) / sizeof(cmd_list[0]);
+
+    int scan = 1;
+    while (scan) {
+        /* Read next opcode and look it up */
+        uint32_t opcode = _readbits(rxbuf, pstartpos, 5);
+        /* Determine length of value field */
+        uint32_t field_length = 0;
+        uint32_t format = _readbits(rxbuf, pstartpos, 2);
+        if (format == 0) {
+            field_length = 4;
+        }
+        else if (format == 1) {
+            field_length = 8;
+            if (_readbits(rxbuf, pstartpos, 1) == 1) {
+                field_length = 12;
+            }
+        }
+        else if (format == 2) {
+            field_length = 16;
+            if (_readbits(rxbuf, pstartpos, 1) == 1) {
+                /* Parsing error */
+                field_length = 0;
+            }
+        }
+        /* Read value field */
+        uint32_t value = 0;
+        if (field_length > 0) {
+            value = _readbits(rxbuf, pstartpos, field_length);
+        }
+        else {
+            /* Parsing error */
+            break;
+        }
+        /* Check if further parameters follow */
+        scan = _readbits(rxbuf, pstartpos, 1);
+
+        for (int i = 0; i < cmd_list_size; i++) {
+            if (opcode == cmd_list[i].opcode) {
+                if (field_length > 0) {
+                    /* Process this parameter */
+                    //TODO
+                    if (opcode == 0x01) {
+                        //aprsstr_CardToStr(value, 1, pc->ser, sizeof(pc->ser));
+                    }
+                    if (opcode == 0x09) {
+                        instance->vbat = 2.56f + value * 0.01;
+                    }
+                    if (opcode == 0x12) {
+                        instance->ground_pressure = 1100.0f - value * 0.02f;
+                    }
+                    if (opcode == 0x13) {
+                        instance->ground_altitude = value;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 /* Decode frame payload */
 LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer, const uint8_t *payload, int length, float frequencyMHz)
 {
@@ -50,7 +133,7 @@ LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer,
         float direction = NAN;
         int startpos = 8;
 
-        int nbits = payload[2];
+        //TODO int nbits = payload[2];
         _Bool haveID = (payload[1] & 0xF0) == 0;
         uint8_t flags = payload[3];
 
@@ -88,7 +171,7 @@ LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer,
 
             if (_readbits(payload, &startpos, 2) == 1) {
                 if (_readbits(payload, &startpos, 1) == 1) {
-                    int tei = _readbits(payload, &startpos, 8);
+                    /* TODO int tei = */ _readbits(payload, &startpos, 8);
                 } else {
                     //????
                 }
@@ -114,11 +197,11 @@ LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer,
                     altitude = _readbits(payload, &startpos, 14);
 
                     /* Update ref_temperature for coming altitude estimates */
-#if 0
-                    if (!isnan(pc->ground_altitude) && !isnan(pc->ground_pressure)) {
-                        if (pressure < pc->ground_pressure - 8) {  //TODO...
-                            pc->ref_temperature = (0.0065f * (altitude - pc->ground_altitude))
-                                                / (1.0f - pow(pressure / pc->ground_pressure, 1.0f / 5.255f));
+#if 1
+                    if (!isnan(instance->ground_altitude) && !isnan(instance->ground_pressure)) {
+                        if (pressure < instance->ground_pressure - 8) {  //TODO...
+                            instance->ref_temperature = (0.0065f * (altitude - instance->ground_altitude))
+                                                / (1.0f - powf(pressure / instance->ground_pressure, 1.0f / 5.255f));
                         }
                     }
 #endif
@@ -130,11 +213,11 @@ LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer,
             }
 
             /* Can/should we estimate the altitude? */
-#if 0
+#if 1
             if (isnan(altitude)) {
-                if (!isnan(pc->ground_altitude) && !isnan(pc->ground_pressure) && !isnan(pc->ref_temperature)) {
-                    alt = pc->ground_altitude
-                        + ((1.0 - pow(pressure / pc->ground_pressure, 1 / 5.255)) * pc->ref_temperature) / 0.0065;
+                if (!isnan(instance->ground_altitude) && !isnan(instance->ground_pressure) && !isnan(instance->ref_temperature)) {
+                    altitude = instance->ground_altitude
+                        + ((1.0f - powf(pressure / instance->ground_pressure, 1.0f / 5.255f)) * instance->ref_temperature) / 0.0065f;
                 }
             }
 #endif
@@ -255,6 +338,11 @@ LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer,
 
             ++idx;
             }
+        }
+
+        if (haveEXTRA) {
+            /* Parse extra parameters */
+            _WINDSOND_decode_extra(instance, payload, &startpos);
         }
 
         instance->metro.temperature = temperature;
