@@ -11,6 +11,7 @@ typedef enum {
     MODE_MODEM_PILOTSONDE = 5,
     MODE_MEISEI = 6,
     MODE_JINYANG = 7,
+    MODE_WINDSOND = 8,
     MODE_MRZ = 9,
     MODE_ASIA1 = 10,    /* Various sondes (mostly Asia) with 2FSK 2400 sym/s */
     MODE_PSB3 = 11,
@@ -318,6 +319,33 @@ static const SYNC_Config configIMET54 = {
 };
 
 
+static const SYNC_Config configWindsond = {
+    .nPatterns = 2,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_WINDSOND_S1,
+            .pattern     = {0x000000005555552DLL, 0},
+            .patternMask = {0x00000000FFFFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 512,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+        },
+        {
+            .id = IPC_PACKET_TYPE_WINDSOND_S1,
+            .pattern     = {0x00000000AAAAAAD2LL, 0},
+            .patternMask = {0x00000000FFFFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 512,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = true,
+        },
+    },
+};
+
+
 void MAILBOX_IRQHandler (void)
 {
     uint32_t requests = LPC_MAILBOX->IRQ0;
@@ -350,6 +378,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 6)) {
         newMode = MODE_JINYANG;
         LPC_MAILBOX->IRQ0CLR = (1u << 6);
+    }
+    else if (requests & (1u << 7)) {
+        newMode = MODE_WINDSOND;
+        LPC_MAILBOX->IRQ0CLR = (1u << 7);
     }
     else if (requests & (1u << 8)) {
         newMode = MODE_MRZ;
@@ -420,6 +452,9 @@ int main (void)
                     break;
                 case MODE_JINYANG:
                     syncConfig = &configJinyang;
+                    break;
+                case MODE_WINDSOND:
+                    syncConfig = &configWindsond;
                     break;
                 case MODE_MRZ:
                     syncConfig = &configMrz;

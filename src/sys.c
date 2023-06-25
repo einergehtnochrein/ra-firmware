@@ -54,6 +54,7 @@
 #include "rs92.h"
 #include "srsc.h"
 #include "sys.h"
+#include "windsond.h"
 #include "config.h"
 #if (BOARD_RA == 2)
 #include "usbuser_config.h"
@@ -143,6 +144,7 @@ struct SYS_Context {
     PSB3_Handle psb3;
     SRSC_Handle srsc;
     MEISEI_Handle meisei;
+    WINDSOND_Handle windsond;
     PDM_Handle pdm;
 
     _Bool sleeping;                                     /**< Low-power mode activated */
@@ -458,6 +460,31 @@ static const ADF7021_Config radioModeMeisei[] = {
     ADF7021_CONFIG_END
 };
 
+static const ADF7021_Config radioModeWindsond[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_25k, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = DISABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 34000,
+            .postDemodBandwidth = 1875, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
 static const ADF7021_Config radioModeC34C50[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
@@ -758,6 +785,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
             LPC_MAILBOX->IRQ0SET = (1u << 5); //TODO
+            break;
+
+        case SONDE_DETECTOR_WINDSOND:
+            ADF7021_setDemodClockDivider(radio, 2);
+            ADF7021_setBitRate(radio, 2400);
+            ADF7021_ioctl(radio, radioModeWindsond);
+
+            _SYS_setRadioFrequency(handle, frequency);
+            _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+            LPC_MAILBOX->IRQ0SET = (1u << 7); //TODO
             break;
 
         case SONDE_DETECTOR_RS41_RS92:
@@ -1409,6 +1447,7 @@ if (cl[0] != 0) {
                     CF06_resendLastPositions(handle->cf06);
                     GTH3_resendLastPositions(handle->gth3);
                     PSB3_resendLastPositions(handle->psb3);
+                    WINDSOND_resendLastPositions(handle->windsond);
 
                     handle->linkEstablished = true;
                 }
@@ -1448,6 +1487,7 @@ if (cl[0] != 0) {
                         case 10:    detector = SONDE_DETECTOR_MRZ; break;
                         case 11:    detector = SONDE_DETECTOR_ASIA1; break;
                         case 12:    detector = SONDE_DETECTOR_PSB3; break;
+                        case 13:    detector = SONDE_DETECTOR_WINDSOND; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -1517,6 +1557,10 @@ if (cl[0] != 0) {
                                     case SONDE_DECODER_JINYANG:
                                         JINYANG_removeFromList(handle->jinyang, id, &frequency);
                                         detector = SONDE_DETECTOR_JINYANG;
+                                        break;
+                                    case SONDE_DECODER_WINDSOND:
+                                        WINDSOND_removeFromList(handle->windsond, id, &frequency);
+                                        detector = SONDE_DETECTOR_WINDSOND;
                                         break;
                                     case SONDE_DECODER_MRZ:
                                         MRZ_removeFromList(handle->mrz, id, &frequency);
@@ -1802,6 +1846,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     M10_open(&handle->m10);
     M20_open(&handle->m20);
     MEISEI_open(&handle->meisei);
+    WINDSOND_open(&handle->windsond);
     MRZ_open(&handle->mrz);
     PILOT_open(&handle->pilot);
     CF06_open(&handle->cf06);
@@ -1917,6 +1962,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 8:  sondeType = SONDE_MEISEI_CONFIG; break;
                                 case 9:  sondeType = SONDE_MEISEI_GPS; break;
                                 case 10: sondeType = SONDE_RSG20; break;
+                                case 11: sondeType = SONDE_WINDSOND_S1; break;
                                 case 12: sondeType = SONDE_MRZ; break;
                                 case 13: sondeType = SONDE_GTH3_CF06AH; break;
                                 case 14: sondeType = SONDE_PSB3; break;
@@ -2028,6 +2074,19 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_RSG20) {
                                 if (JINYANG_processBlock(
                                         handle->jinyang,
+                                        ipc[bufferIndex].data8,
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_WINDSOND_S1) {
+                                if (WINDSOND_processBlock(
+                                        handle->windsond,
+                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,
