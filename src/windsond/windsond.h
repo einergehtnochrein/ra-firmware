@@ -40,7 +40,9 @@ LPCLIB_Result WINDSOND_processBlock (
         SONDE_Type sondeType,
         void *buffer,
         uint32_t length,
-        float rxFrequencyHz);
+        float rxFrequencyHz,
+        float rssi,
+        uint64_t realTime);
 LPCLIB_Result WINDSOND_resendLastPositions (WINDSOND_Handle handle);
 LPCLIB_Result WINDSOND_removeFromList (WINDSOND_Handle handle, uint32_t id, float *frequency);
 

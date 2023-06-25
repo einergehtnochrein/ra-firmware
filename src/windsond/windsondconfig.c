@@ -13,7 +13,7 @@ static WINDSOND_InstanceData *instanceList;
 
 
 /* Get a new instance data structure for a new sonde */
-static WINDSOND_InstanceData *_WINDSOND_getInstanceDataStructure (float frequencyMHz)
+WINDSOND_InstanceData *_WINDSOND_getInstanceDataStructure (float frequencyMHz, uint16_t id, uint8_t sid)
 {
     WINDSOND_InstanceData *p;
     WINDSOND_InstanceData *instance;
@@ -25,8 +25,14 @@ static WINDSOND_InstanceData *_WINDSOND_getInstanceDataStructure (float frequenc
     p = instanceList;
     while (p) {
         if (p->rxFrequencyMHz == frequencyMHz) {
-            /* Found it! */
-            return p;
+            if ((id != 0) && (id == p->name_id)) {
+                /* Found it! */
+                return p;
+            }
+            if ((sid != 0) && (sid == p->name_sid)) {
+                /* Found it! */
+                return p;
+            }
         }
 
         ++numSondes;
@@ -59,6 +65,8 @@ static WINDSOND_InstanceData *_WINDSOND_getInstanceDataStructure (float frequenc
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
         instance->rxFrequencyMHz = frequencyMHz;
+        instance->name_id = id;
+        instance->name_sid = sid;
         instance->metro.temperature = NAN;
         instance->metro.cpuTemperature = NAN;
         instance->gps.observerLLA.lat = NAN;
@@ -86,39 +94,6 @@ static WINDSOND_InstanceData *_WINDSOND_getInstanceDataStructure (float frequenc
 }
 
 
-
-/* Process the config/calib block. */
-LPCLIB_Result _WINDSOND_processFrame (
-        WINDSOND_Packet *packet,
-        WINDSOND_InstanceData **instancePointer,
-        float rxFrequencyHz)
-{
-    LPCLIB_Result result = LPCLIB_SUCCESS;
-    float f;
-
-    /* Valid pointer to take the output value required */
-    if (!instancePointer) {
-        return LPCLIB_ILLEGAL_PARAMETER;
-    }
-
-    /* Allocate new calib space if new sonde! */
-    WINDSOND_InstanceData *instance = _WINDSOND_getInstanceDataStructure(rxFrequencyHz / 1e6f);
-    *instancePointer = instance;
-
-    if (!instance) {
-        return LPCLIB_ERROR;
-    }
-
-    /* Set time marker to be able to identify old records */
-    instance->lastUpdated = os_time;
-
-    /* Cook some other values */
-    instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
-
-    return result;
-}
-
-
 /* Iterate through instances */
 bool _WINDSOND_iterateInstance (WINDSOND_InstanceData **instance)
 {
@@ -141,7 +116,6 @@ bool _WINDSOND_iterateInstance (WINDSOND_InstanceData **instance)
 
     return result;
 }
-
 
 
 /* Remove an instance from the chain */

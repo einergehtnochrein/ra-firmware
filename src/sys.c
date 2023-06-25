@@ -465,7 +465,7 @@ static const ADF7021_Config radioModeWindsond[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
+        {.bandwidth = ADF7021_BANDWIDTH_25k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = DISABLE,
@@ -2089,7 +2089,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                         sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
-                                        handle->currentFrequency) == LPCLIB_SUCCESS) {
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
