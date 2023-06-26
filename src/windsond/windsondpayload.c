@@ -116,21 +116,34 @@ LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer,
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
+    LPCLIB_Result result = LPCLIB_UNDEFINED;
+    uint16_t id = 0;
+    uint8_t sid = 0;
+    float temperature = NAN;
+    float humidity = NAN;
+    float pressure = NAN;
+    float illuminance = NAN;
+    float latitude = NAN;
+    float longitude = NAN;
+    float altitude = NAN;
+    float speed_kmh = NAN;
+    float direction = NAN;
+
     uint8_t opcode = payload[1] & 0x0F;
 
-    /* METEO frame? */
+    /* FIND/ADVERTISE frame? */
+    if (opcode == 0x0A) {
+        id = payload[3] + 256 * payload[4];
+
+        WINDSOND_InstanceData *instance = _WINDSOND_getInstanceDataStructure(frequencyMHz, id, 0);
+        if (!instance) {
+            return LPCLIB_ERROR;
+        }
+        *instancePointer = instance;
+    }
+
+    /* METEO frame */
     if (opcode == 0x0C) {
-        uint16_t id = 0;
-        uint8_t sid = 0;
-        float temperature = NAN;
-        float humidity = NAN;
-        float pressure = NAN;
-        float illuminance = NAN;
-        float latitude = NAN;
-        float longitude = NAN;
-        float altitude = NAN;
-        float speed_kmh = NAN;
-        float direction = NAN;
         int startpos = 8;
 
         //TODO int nbits = payload[2];
@@ -356,8 +369,10 @@ LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer,
         instance->gps.observerLLA.velocity = speed_kmh;
         instance->gps.observerLLA.direction = direction;
         GPS_convertLLA2ECEF(&instance->gps.observerLLA, &instance->gps.observerECEF);
+
+        result = LPCLIB_SUCCESS;
     }
 
-    return LPCLIB_SUCCESS;
+    return result;
 }
 
