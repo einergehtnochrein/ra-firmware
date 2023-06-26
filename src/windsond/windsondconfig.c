@@ -5,7 +5,7 @@
 #include "windsondprivate.h"
 
 
-#define WINDSOND_MAX_SONDES         2
+#define WINDSOND_MAX_SONDES         10
 
 
 /* Points to list of instance structures */

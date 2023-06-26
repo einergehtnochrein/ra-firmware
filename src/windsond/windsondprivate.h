@@ -71,12 +71,6 @@ typedef struct _WINDSOND_InstanceData {
 
 
 
-LPCLIB_Result _MEISEI_processFrame (
-        WINDSOND_Packet *packet,
-        WINDSOND_InstanceData **instancePointer,
-        float rxFrequencyHz);
-
-
 /* Get a new instance data structure for a new sonde */
 WINDSOND_InstanceData *_WINDSOND_getInstanceDataStructure (float frequencyMHz, uint16_t id, uint8_t sid);
 
