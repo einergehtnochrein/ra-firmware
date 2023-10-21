@@ -382,7 +382,7 @@ int32_t _RS41_readS24 (const uint8_t *p24);
 #define CALIB_FLIGHTKILLTIMER       0x0000000000000004ll
 #define CALIB_BURSTKILLTIMER        0x0002000000000000ll
 #define CALIB_KILLCOUNTDOWN         0x0004000000000000ll
-#define CALIB_MODELNAME             0x0000000600000000ll
+#define CALIB_NAMES                 0x0000000600000000ll
 
 bool _RS41_checkValidCalibration(RS41_InstanceData *instance, uint64_t purpose);
 

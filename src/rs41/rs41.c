@@ -96,6 +96,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     char sBurstKillTimer[7];
     uint32_t special;
     char sModelName[10+1];
+    char sBoardName[10+1];
 
     offset = 0;
     special = 0;
@@ -202,15 +203,18 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     }
 
     sModelName[0] = 0;
-    if (_RS41_checkValidCalibration(instance, CALIB_MODELNAME)) {
+    sBoardName[0] = 0;
+    if (_RS41_checkValidCalibration(instance, CALIB_NAMES)) {
         memcpy(sModelName, instance->params.names.variant, 10);
         sModelName[10] = 0;
+        memcpy(sBoardName, instance->params.names.mainboard, 10);
+        sBoardName[10] = 0;
     }
-    length = snprintf(s, sizeof(s), "%"PRIu32",1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,,,,%d",
+    length = snprintf(s, sizeof(s), "%"PRIu32",1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,%"PRIu32",%s,,%d",
                 instance->id,
                 instance->name,
                 instance->metro.TU,
-                instance->params.names.variant,
+                sModelName,
                 instance->temperatureTx,
                 instance->temperatureRef,
                 instance->metro.dewpoint,
@@ -218,6 +222,8 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                 sBurstKillTimer,                        /* Burst kill timer (frames) */
                 killer,                                 /* Kill countdown (frames remaining) */
                 instance->gps.pdop,
+                instance->params.firmwareVersion,
+                sBoardName,
                 instance->metro.numXdataInstruments
                 );
 
