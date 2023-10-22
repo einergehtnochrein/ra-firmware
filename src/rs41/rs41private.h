@@ -311,8 +311,10 @@ typedef struct _RS41_InstanceData {
                 uint8_t mainboard[10];          /* 0x222: Name of mainboard (e.g. "RSM412") */
             }) names;
             __PACKED(struct {
-                uint8_t mainboard[9];           /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
-                uint8_t text235[12];            /* 0x235: "0000000000" */
+                uint8_t mainboard[8];           /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
+                uint8_t reserved234;            /* 0x234: */
+                uint8_t text235[10];            /* 0x235: "0000000000" */
+                uint16_t reserved23F;           /* 0x23F: */
                 uint16_t reserved241;           /* 0x241: */
                 uint8_t pressureSensor[8];      /* 0x243: Serial number of pressure sensor (e.g. "N1310487") */
                 uint16_t reserved24B;           /* 0x24B: */
@@ -380,7 +382,7 @@ int32_t _RS41_readS24 (const uint8_t *p24);
 #define CALIB_FLIGHTKILLTIMER       0x0000000000000004ll
 #define CALIB_BURSTKILLTIMER        0x0002000000000000ll
 #define CALIB_KILLCOUNTDOWN         0x0004000000000000ll
-#define CALIB_MODELNAME             0x0000000600000000ll
+#define CALIB_NAMES                 0x0000000600000000ll
 
 bool _RS41_checkValidCalibration(RS41_InstanceData *instance, uint64_t purpose);
 
