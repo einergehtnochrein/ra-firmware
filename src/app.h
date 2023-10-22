@@ -25,6 +25,7 @@
 // Resources
 #if (BOARD_RA == 2)
 #define AUDIO_ADAPTER                       TIMER2
+#define AUDIO_ADAPTER_CLOCK                 CLKPWR_CLOCK_TIMER2
 #endif
 
 

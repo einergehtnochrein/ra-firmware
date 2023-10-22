@@ -1285,7 +1285,7 @@ LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
                     SCANNER_addListenFrequency(
                             scanner,
                             frequency,
-                            (SONDE_Type)event.block);
+                            (SONDE_Detector)event.block);
                 }
                 break;
 
