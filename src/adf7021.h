@@ -255,6 +255,8 @@ LPCLIB_Result ADF7021_setBitRate (ADF7021_Handle handle, int bitRate);
 
 LPCLIB_Result ADF7021_getDemodClock (ADF7021_Handle handle, float *demodClock);
 
+/* Check for chip version */
+LPCLIB_Result ADF7021_getWideband (ADF7021_Handle handle, _Bool *isWideband);
 
 void ADF7021_handleSpiEvent (void);
 

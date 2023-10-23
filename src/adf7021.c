@@ -724,3 +724,17 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
     return LPCLIB_SUCCESS;
 }
 
+
+/* Check for chip version */
+LPCLIB_Result ADF7021_getWideband (ADF7021_Handle handle, _Bool *isWideband)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    if (isWideband) {
+        *isWideband = handle->wideband;
+    }
+
+    return LPCLIB_SUCCESS;
+}
