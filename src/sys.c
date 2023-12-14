@@ -1332,7 +1332,7 @@ LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
                     SCANNER_addListenFrequency(
                             scanner,
                             frequency,
-                            (SONDE_Type)event.block);
+                            (SONDE_Detector)event.block);
                 }
                 break;
 
@@ -1457,6 +1457,13 @@ if (cl[0] != 0) {
                     hardwareVersion = 2;        /* Ra2 */
                     if (GPIO_readBit(GPIO_DETECT_RA2FIX) == 0) {
                         hardwareVersion = 3;    /* Ra2fix */
+
+                        _Bool isWideband = false;
+                        if (ADF7021_getWideband(radio, &isWideband) == LPCLIB_SUCCESS) {
+                            if (isWideband) {
+                                hardwareVersion = 4;    /* ADF7021, not ADF7021-N */
+                            }
+                        }
                     }
 #endif
                     uint32_t bleFirmwareVersion = 0;
