@@ -47,6 +47,7 @@ float SYS_getFrameRssi (SYS_Handle handle);
 #define HOST_CHANNEL_EPHEMUPDATE    4
 #define HOST_CHANNEL_SPECTRUM       5
 #define HOST_CHANNEL_SWITCHES       7
+#define HOST_CHANNEL_AUDIO          8
 #define HOST_CHANNEL_FIRMWAREUPDATE 9
 #define HOST_CHANNEL_DEBUG          77
 

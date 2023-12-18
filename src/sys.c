@@ -45,6 +45,7 @@
 #include "m10.h"
 #include "m20.h"
 #include "meisei.h"
+#include "mon.h"
 #include "mrz.h"
 #include "pdm.h"
 #include "pilot.h"
@@ -54,6 +55,7 @@
 #include "rs92.h"
 #include "srsc.h"
 #include "sys.h"
+#include "windsond.h"
 #include "config.h"
 #if (BOARD_RA == 2)
 #include "usbuser_config.h"
@@ -143,6 +145,7 @@ struct SYS_Context {
     PSB3_Handle psb3;
     SRSC_Handle srsc;
     MEISEI_Handle meisei;
+    WINDSOND_Handle windsond;
     PDM_Handle pdm;
 
     _Bool sleeping;                                     /**< Low-power mode activated */
@@ -150,6 +153,8 @@ struct SYS_Context {
 
     SONDE_Type sondeType;
     SONDE_Detector sondeDetector;
+    _Bool monitor;
+    _Bool monitorUpdate;
     float currentFrequency;
     float currentRssi;
     float lastInPacketRssi;                             /**< Last RSSI measurement while data reception was still active */
@@ -208,7 +213,7 @@ static const ADF7021_Config radioModeVaisala[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_13k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -233,7 +238,7 @@ static const ADF7021_Config radioModeGraw[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_13k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -258,7 +263,7 @@ static const ADF7021_Config radioModeJinyang[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_13k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -283,7 +288,7 @@ static const ADF7021_Config radioModeMrz[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_13k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -308,7 +313,7 @@ static const ADF7021_Config radioModeAsia1[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_13k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -335,7 +340,7 @@ static const ADF7021_Config radioModePSB3[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -360,7 +365,7 @@ static const ADF7021_Config radioModeIMET54[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -385,7 +390,7 @@ static const ADF7021_Config radioModeModem[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -412,7 +417,7 @@ static const ADF7021_Config radioModePilot[] = {
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
 //        {.bandwidth = ADF7021_BANDWIDTH_13k5, }}, /* Old PCB variant <=9 */
-        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},   /* PCB variant 10 */
+        {.bandwidth = ADF7021_BANDWIDTH_18k, }},   /* PCB variant 10 */
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -438,7 +443,7 @@ static const ADF7021_Config radioModeMeisei[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_13k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_13k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -458,12 +463,37 @@ static const ADF7021_Config radioModeMeisei[] = {
     ADF7021_CONFIG_END
 };
 
+static const ADF7021_Config radioModeWindsond[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_25k, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = DISABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 34000,
+            .postDemodBandwidth = 1875, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
 static const ADF7021_Config radioModeC34C50[] = {
     {.opcode = ADF7021_OPCODE_POWER_ON, },
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN6, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = DISABLE, }}},
@@ -484,7 +514,7 @@ static const ADF7021_Config radioModeImet[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN5, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_18k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = DISABLE, }}},
@@ -505,7 +535,7 @@ static const ADF7021_Config radioModeBeacon[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN6, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_9k5, }},
+        {.bandwidth = ADF7021_BANDWIDTH_9k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = DISABLE, }}},
@@ -514,6 +544,27 @@ static const ADF7021_Config radioModeBeacon[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 3000, }}},
+    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
+        {.agcClockFrequency = 8e3f, }},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeMONITOR[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_AFSK_GAIN6, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_25k, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = DISABLE, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_LINEAR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .postDemodBandwidth = 7500, }}},
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
@@ -596,6 +647,8 @@ static void _SYS_reportControls (SYS_Handle handle)
     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
     snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
     SYS_send2Host(HOST_CHANNEL_GUI, s);
+    snprintf(s, sizeof(s), "9,%d", handle->monitor ? 1 : 0);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
 }
 
 
@@ -625,6 +678,7 @@ static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
     LPC_MAILBOX->IRQ0SET = (1u << 30);
     SRSC_pauseResume(handle->srsc, ENABLE);
     IMET_pauseResume(handle->imet, ENABLE);
+    MON_DSP_reset();
 
     ADF7021_setPLL(radio, frequency - 100000);
     handle->currentFrequency = frequency;
@@ -632,6 +686,7 @@ static void _SYS_setRadioFrequency (SYS_Handle handle, float frequency)
     LPC_MAILBOX->IRQ0SET = (1u << 31);
     SRSC_pauseResume(handle->srsc, DISABLE);
     IMET_pauseResume(handle->imet, DISABLE);
+    MON_DSP_reset();
 }
 
 
@@ -652,184 +707,212 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
     float demodClock;
 #endif
 
-    if ((detector != handle->sondeDetector) || (frequency != handle->currentFrequency)) {
+    if ((detector != handle->sondeDetector) || (frequency != handle->currentFrequency) || handle->monitorUpdate) {
         PDM_stop(handle->pdm);
 
         handle->sondeDetector = detector;
 
         ADF7021_calibrateIF(radio, 1);  //TODO coarse/fine
 
-        switch (detector) {
-        case SONDE_DETECTOR_C34_C50:
+        handle->monitorUpdate = false;
+        if (handle->monitor) {
             ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_ioctl(radio, radioModeC34C50);
+            ADF7021_ioctl(radio, radioModeMONITOR);
 
             _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
 #if (BOARD_RA == 1)
-            PDM_run(handle->pdm, 202, SRSC_handleAudioCallback);
+//            PDM_run(handle->pdm, 202, MON_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
             ADF7021_getDemodClock(radio, &demodClock);
-            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), SRSC_handleAudioCallback);
+            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), MON_handleAudioCallback);
 #endif
-            LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
-            break;
+        } else {
+            switch (detector) {
+            case SONDE_DETECTOR_C34_C50:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_ioctl(radio, radioModeC34C50);
 
-        case SONDE_DETECTOR_IMET:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_ioctl(radio, radioModeImet);
-
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
 #if (BOARD_RA == 1)
-            PDM_run(handle->pdm, 202, IMET_handleAudioCallback);
+                PDM_run(handle->pdm, 202, SRSC_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
-            ADF7021_getDemodClock(radio, &demodClock);
-            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), IMET_handleAudioCallback);
+                ADF7021_getDemodClock(radio, &demodClock);
+                PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), SRSC_handleAudioCallback);
 #endif
-            LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
-            break;
+                LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
+                break;
 
-        case SONDE_DETECTOR_BEACON:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_ioctl(radio, radioModeBeacon);
+            case SONDE_DETECTOR_IMET:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_ioctl(radio, radioModeImet);
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
 #if (BOARD_RA == 1)
-            PDM_run(handle->pdm, 202, BEACON_handleAudioCallback);
+                PDM_run(handle->pdm, 202, IMET_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
-            ADF7021_getDemodClock(radio, &demodClock);
-            PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), BEACON_handleAudioCallback);
+                ADF7021_getDemodClock(radio, &demodClock);
+                PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), IMET_handleAudioCallback);
 #endif
-            LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
-            break;
+                LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
+                break;
 
-        case SONDE_DETECTOR_DFM:
+            case SONDE_DETECTOR_BEACON:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_ioctl(radio, radioModeBeacon);
+
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
+
 #if (BOARD_RA == 1)
-            ADF7021_setDemodClockDivider(radio, 3);
+                PDM_run(handle->pdm, 202, BEACON_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
-            ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_getDemodClock(radio, &demodClock);
+                PDM_run(handle->pdm, lrintf(demodClock / 16000.0f), BEACON_handleAudioCallback);
 #endif
-            ADF7021_setBitRate(radio, 2500);
-            ADF7021_ioctl(radio, radioModeGraw);
+                LPC_MAILBOX->IRQ0SET = (1u << 2); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_DFM:
+#if (BOARD_RA == 1)
+                ADF7021_setDemodClockDivider(radio, 3);
+#endif
+#if (BOARD_RA == 2)
+                ADF7021_setDemodClockDivider(radio, 4);
+#endif
+                ADF7021_setBitRate(radio, 2500);
+                ADF7021_ioctl(radio, radioModeGraw);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 1); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_JINYANG:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_setBitRate(radio, 2400);
-            ADF7021_ioctl(radio, radioModeJinyang);
+                LPC_MAILBOX->IRQ0SET = (1u << 1); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_JINYANG:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setBitRate(radio, 2400);
+                ADF7021_ioctl(radio, radioModeJinyang);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 6); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_MRZ:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_setBitRate(radio, 2400);
-            ADF7021_ioctl(radio, radioModeMrz);
+                LPC_MAILBOX->IRQ0SET = (1u << 6); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_MRZ:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setBitRate(radio, 2400);
+                ADF7021_ioctl(radio, radioModeMrz);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 8); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_MEISEI:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_setBitRate(radio, 2400);
-            ADF7021_ioctl(radio, radioModeMeisei);
+                LPC_MAILBOX->IRQ0SET = (1u << 8); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_MEISEI:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setBitRate(radio, 2400);
+                ADF7021_ioctl(radio, radioModeMeisei);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 5); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_RS41_RS92:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_setBitRate(radio, 4800);
-            ADF7021_ioctl(radio, radioModeVaisala);
+                LPC_MAILBOX->IRQ0SET = (1u << 5); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_WINDSOND:
+                ADF7021_setDemodClockDivider(radio, 2);
+                ADF7021_setBitRate(radio, 2400);
+                ADF7021_ioctl(radio, radioModeWindsond);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 0); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_MODEM:
-            ADF7021_setDemodClockDivider(radio, 3);
-            ADF7021_setBitRate(radio, 9600);
-            ADF7021_ioctl(radio, radioModeModem);
+                LPC_MAILBOX->IRQ0SET = (1u << 7); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_RS41_RS92:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setBitRate(radio, 4800);
+                ADF7021_ioctl(radio, radioModeVaisala);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 3); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_PILOT:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_setBitRate(radio, 4800);
-            ADF7021_ioctl(radio, radioModePilot);
+                LPC_MAILBOX->IRQ0SET = (1u << 0); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_MODEM:
+                ADF7021_setDemodClockDivider(radio, 3);
+                ADF7021_setBitRate(radio, 9600);
+                ADF7021_ioctl(radio, radioModeModem);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 4); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_ASIA1: /* 2FSK 2.4k deviation, 2400 sym/s */
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_setBitRate(radio, 2400);
-            ADF7021_ioctl(radio, radioModeAsia1);
+                LPC_MAILBOX->IRQ0SET = (1u << 3); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_PILOT:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setBitRate(radio, 4800);
+                ADF7021_ioctl(radio, radioModePilot);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 9); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_PSB3:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_setBitRate(radio, 768);
-            ADF7021_ioctl(radio, radioModePSB3);
+                LPC_MAILBOX->IRQ0SET = (1u << 4); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_ASIA1: /* 2FSK 2.4k deviation, 2400 sym/s */
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setBitRate(radio, 2400);
+                ADF7021_ioctl(radio, radioModeAsia1);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 10); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        case SONDE_DETECTOR_IMET54:
-            ADF7021_setDemodClockDivider(radio, 4);
-            ADF7021_setBitRate(radio, 4800);
-            ADF7021_ioctl(radio, radioModeIMET54);
+                LPC_MAILBOX->IRQ0SET = (1u << 9); //TODO
+                break;
 
-            _SYS_setRadioFrequency(handle, frequency);
-            _SYS_reportRadioFrequency(handle);  /* Inform host */
+            case SONDE_DETECTOR_PSB3:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setBitRate(radio, 768);
+                ADF7021_ioctl(radio, radioModePSB3);
 
-            LPC_MAILBOX->IRQ0SET = (1u << 11); //TODO
-            break;
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
 
-        default:
-            // Disable sync detector
-            //TODO
-            break;
+                LPC_MAILBOX->IRQ0SET = (1u << 10); //TODO
+                break;
+
+            case SONDE_DETECTOR_IMET54:
+                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setBitRate(radio, 4800);
+                ADF7021_ioctl(radio, radioModeIMET54);
+
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+                LPC_MAILBOX->IRQ0SET = (1u << 11); //TODO
+                break;
+
+            default:
+                // Disable sync detector
+                //TODO
+                break;
+            }
         }
     }
 
@@ -975,6 +1058,7 @@ static void SYS_sleep (SYS_Handle handle)
     /* Restore radio mode */
     SONDE_Detector detector = handle->sondeDetector;
     handle->sondeDetector = _SONDE_DETECTOR_UNDEFINED_;
+    handle->monitor = false;
     SYS_enableDetector(handle, handle->currentFrequency, detector);
 
     /* Start M0 */
@@ -1247,7 +1331,7 @@ LPCLIB_Result SYS_handleEvent (LPCLIB_Event event)
                     SCANNER_addListenFrequency(
                             scanner,
                             frequency,
-                            (SONDE_Type)event.block);
+                            (SONDE_Detector)event.block);
                 }
                 break;
 
@@ -1353,8 +1437,13 @@ if (cl[0] != 0) {
                 /* If host sends a time stamp, respond by sending all current settings. */
                 long timestamp = 0;
                 if (sscanf(cl, "#%*d,%ld", &timestamp) == 1) {
-                    handle->realTime = timestamp;
+                    handle->realTime = timestamp * 100ull;
                     handle->last_os_time = os_time;
+
+                    /* Reset special functions */
+                    handle->monitor = false;
+                    handle->monitorUpdate = false;
+                    SCANNER_setMode(scanner, 1);
 
                     /* Flush UART */
                     UART_ioctl(blePort, _uartFlushTx);
@@ -1372,6 +1461,13 @@ if (cl[0] != 0) {
                     hardwareVersion = 2;        /* Ra2 */
                     if (GPIO_readBit(GPIO_DETECT_RA2FIX) == 0) {
                         hardwareVersion = 3;    /* Ra2fix */
+
+                        _Bool isWideband = false;
+                        if (ADF7021_getWideband(radio, &isWideband) == LPCLIB_SUCCESS) {
+                            if (isWideband) {
+                                hardwareVersion = 4;    /* ADF7021, not ADF7021-N */
+                            }
+                        }
                     }
 #endif
                     uint32_t bleFirmwareVersion = 0;
@@ -1409,6 +1505,7 @@ if (cl[0] != 0) {
                     CF06_resendLastPositions(handle->cf06);
                     GTH3_resendLastPositions(handle->gth3);
                     PSB3_resendLastPositions(handle->psb3);
+                    WINDSOND_resendLastPositions(handle->windsond);
 
                     handle->linkEstablished = true;
                 }
@@ -1448,6 +1545,7 @@ if (cl[0] != 0) {
                         case 10:    detector = SONDE_DETECTOR_MRZ; break;
                         case 11:    detector = SONDE_DETECTOR_ASIA1; break;
                         case 12:    detector = SONDE_DETECTOR_PSB3; break;
+                        case 13:    detector = SONDE_DETECTOR_WINDSOND; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -1518,6 +1616,10 @@ if (cl[0] != 0) {
                                         JINYANG_removeFromList(handle->jinyang, id, &frequency);
                                         detector = SONDE_DETECTOR_JINYANG;
                                         break;
+                                    case SONDE_DECODER_WINDSOND:
+                                        WINDSOND_removeFromList(handle->windsond, id, &frequency);
+                                        detector = SONDE_DETECTOR_WINDSOND;
+                                        break;
                                     case SONDE_DECODER_MRZ:
                                         MRZ_removeFromList(handle->mrz, id, &frequency);
                                         detector = SONDE_DETECTOR_MRZ;
@@ -1574,6 +1676,39 @@ if (cl[0] != 0) {
                             }
                             break;
 
+                        case 4:
+                        {
+                            int selector;
+                            SONDE_Detector detector;
+
+                            if (sscanf(cl, "#%*d,%*d,%d", &selector) == 1) {
+                                char s[40];
+
+                                detector = SONDE_DETECTOR_RS41_RS92;
+                                switch (selector) {
+                                    case 0:     detector = SONDE_DETECTOR_RS41_RS92; break;
+                                    case 1:     detector = SONDE_DETECTOR_DFM; break;
+                                    case 2:     detector = SONDE_DETECTOR_C34_C50; break;
+                                    case 3:     detector = SONDE_DETECTOR_IMET; break;
+                                    case 4:     detector = SONDE_DETECTOR_MODEM; break;
+                                    case 5:     detector = SONDE_DETECTOR_BEACON; break;
+                                    case 6:     detector = SONDE_DETECTOR_MEISEI; break;
+                                    case 7:     detector = SONDE_DETECTOR_PILOT; break;
+                                    case 8:     detector = SONDE_DETECTOR_JINYANG; break;
+                                    case 9:     detector = SONDE_DETECTOR_IMET54; break;
+                                    case 10:    detector = SONDE_DETECTOR_MRZ; break;
+                                    case 11:    detector = SONDE_DETECTOR_ASIA1; break;
+                                    case 12:    detector = SONDE_DETECTOR_PSB3; break;
+                                    case 13:    detector = SONDE_DETECTOR_WINDSOND; break;
+                                }
+                                SCANNER_setManualSondeDetector(scanner, detector);
+                                SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+                                snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+                                SYS_send2Host(HOST_CHANNEL_GUI, s);
+                            }
+                            break;
+                        }
+
                         case 5:
                         {
                             if (sscanf(cl, "#%*d,%*d,%d,%d", &enableValue, &extra1) == 2) {
@@ -1605,6 +1740,17 @@ if (cl[0] != 0) {
                         {
                             if (sscanf(cl, "#%*d,%*d,%f,%f", &floatExtra1, &floatExtra2) == 2) {
                                 SCANNER_setSpectrumRange(scanner, floatExtra1, floatExtra2);
+                            }
+                            break;
+                        }
+
+                        case 8:
+                        {
+                            if (sscanf(cl, "#%*d,%*d,%d", &enableValue) == 1) {
+                                handle->monitor = enableValue != 0;
+                                handle->monitorUpdate = true;
+                                SYS_enableDetector(sys, handle->currentFrequency, handle->sondeDetector);
+                                _SYS_reportControls(handle);
                             }
                             break;
                         }
@@ -1802,6 +1948,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     M10_open(&handle->m10);
     M20_open(&handle->m20);
     MEISEI_open(&handle->meisei);
+    WINDSOND_open(&handle->windsond);
     MRZ_open(&handle->mrz);
     PILOT_open(&handle->pilot);
     CF06_open(&handle->cf06);
@@ -1917,6 +2064,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 8:  sondeType = SONDE_MEISEI_CONFIG; break;
                                 case 9:  sondeType = SONDE_MEISEI_GPS; break;
                                 case 10: sondeType = SONDE_RSG20; break;
+                                case 11: sondeType = SONDE_WINDSOND_S1; break;
                                 case 12: sondeType = SONDE_MRZ; break;
                                 case 13: sondeType = SONDE_GTH3_CF06AH; break;
                                 case 14: sondeType = SONDE_PSB3; break;
@@ -2028,6 +2176,19 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_RSG20) {
                                 if (JINYANG_processBlock(
                                         handle->jinyang,
+                                        ipc[bufferIndex].data8,
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_WINDSOND_S1) {
+                                if (WINDSOND_processBlock(
+                                        handle->windsond,
+                                        sondeType,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,

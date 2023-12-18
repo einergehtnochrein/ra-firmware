@@ -314,7 +314,7 @@ void SCANNER_setManualSondeDetector (SCANNER_Handle handle, SONDE_Detector sonde
 SONDE_Detector SCANNER_getManualSondeDetector (SCANNER_Handle handle)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
-        return SONDE_UNDEFINED;
+        return SONDE_DETECTOR_RS41_RS92;
     }
 
     return handle->manualSondeDetector;

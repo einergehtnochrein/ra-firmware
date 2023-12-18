@@ -103,15 +103,16 @@ LPCLIB_Result _MEISEI_processMetrology (
 uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index);
 
 /* Check if the calibration block contains valid data for a given purpose */
-#define CALIB_SERIAL_SONDE1         0x0000000000000001ll
-#define CALIB_SERIAL_SONDE2         0x0000000000010000ll
-#define CALIB_SERIAL_SONDE3         0x0000000100000000ll
-#define CALIB_SERIAL_SONDE4         0x0001000000000000ll
-#define CALIB_SERIAL_SENSOR_BOOM    0x0000000000000010ll
-#define CALIB_SERIAL_PCB            0x0000000000000004ll
-#define CALIB_HUMIDITY              0x001E000000000000ll
-#define CALIB_MAIN_TEMPERATURE      0x01E01FFE1FFE0000ll
-#define CALIB_RH_TEMPERATURE        0x0FE0000000000000ll
+#define CALIB_SERIAL_SONDE1                 0x0000000000000001ll
+#define CALIB_SERIAL_SONDE2                 0x0000000000010000ll
+#define CALIB_SERIAL_SONDE3                 0x0000000100000000ll
+#define CALIB_SERIAL_SONDE4                 0x0001000000000000ll
+#define CALIB_IMS100_SERIAL_SENSOR_BOOM     0x0000000000000010ll
+#define CALIB_IMS100_SERIAL_PCB             0x0000000000000004ll
+#define CALIB_IMS100_MAIN_TEMPERATURE       0x01E01FFE1FFE0000ll
+#define CALIB_IMS100_RH_TEMPERATURE         0x0FE0000000000000ll
+#define CALIB_RS11G_MAIN_TEMPERATURE        0x0000FFFE0FFE0000ll
+#define CALIB_HUMIDITY                      0x001E000000000000ll
 
 bool _MEISEI_checkValidCalibration(MEISEI_InstanceData *instance, uint64_t purpose);
 

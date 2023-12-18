@@ -22,7 +22,7 @@ typedef struct {
         uint8_t rawData[50];
 
         __PACKED(struct {
-            uint8_t sync[4];        /* First byte (0xAA) uses to allow for bit synchronisation.
+            uint8_t sync[4];        /* First byte (0xAA) used to allow for bit synchronisation.
                                      * Second to fourth byte (0xAA 0xAA 0x01) used as sync sequence.
                                      */
             __PACKED(struct _PILOT_Payload {

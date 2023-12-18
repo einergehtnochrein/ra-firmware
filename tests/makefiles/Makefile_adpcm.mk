@@ -1,0 +1,19 @@
+COMPONENT_NAME=adpcm
+
+SRC_FILES = \
+  $(PROJECT_SRC_DIR)/src/monitor/monadpcm.c
+
+TEST_SRC_FILES = \
+  $(UNITTEST_SRC_DIR)/test_adpcm.cpp \
+  $(UNITTEST_ROOT)/stubs/adpcm.c
+
+UNITTEST_EXTRA_INC_PATHS += \
+  -I$(UNITTEST_ROOT)/stubs \
+  -I$(PROJECT_SRC_DIR) \
+  -I$(PROJECT_SRC_DIR)/src
+
+CPPUTEST_CPPFLAGS += -DCPPUTEST_ADPCM_TRACE=1
+
+include $(CPPUTEST_MAKFILE_INFRA)
+
+

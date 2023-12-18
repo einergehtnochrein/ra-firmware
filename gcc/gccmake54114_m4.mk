@@ -90,6 +90,7 @@ STARTUP_CFLAGS += \
 
 
 vpath %.s   ../src
+vpath %     ../src/monitor
 vpath %.cpp ../src
 vpath %.c   ../src
 vpath %     ../lpc54000/src

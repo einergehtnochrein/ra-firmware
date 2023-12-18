@@ -85,9 +85,10 @@ typedef enum ADF7021_DemodulatorType {
 
 /** IF bandwidth */
 typedef enum ADF7021_Bandwidth {
-    ADF7021_BANDWIDTH_9k5 = 0,
-    ADF7021_BANDWIDTH_13k5 = 1,
-    ADF7021_BANDWIDTH_18k5 = 2,
+    ADF7021_BANDWIDTH_9k = 0,
+    ADF7021_BANDWIDTH_13k = 1,
+    ADF7021_BANDWIDTH_18k = 2,
+    ADF7021_BANDWIDTH_25k = 3,
 } ADF7021_Bandwidth;
 
 
@@ -254,6 +255,8 @@ LPCLIB_Result ADF7021_setBitRate (ADF7021_Handle handle, int bitRate);
 
 LPCLIB_Result ADF7021_getDemodClock (ADF7021_Handle handle, float *demodClock);
 
+/* Check for chip version */
+LPCLIB_Result ADF7021_getWideband (ADF7021_Handle handle, _Bool *isWideband);
 
 void ADF7021_handleSpiEvent (void);
 

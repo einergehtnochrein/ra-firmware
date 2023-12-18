@@ -28,7 +28,7 @@ typedef enum {
 } DFM_Model;
 
 
-enum {
+typedef enum {
     DFM06_CHANNEL_CONFIG_NAME = 0,
 
     DFM09_CHANNEL_CONFIG_BATTERY_VOLTAGE = -5,

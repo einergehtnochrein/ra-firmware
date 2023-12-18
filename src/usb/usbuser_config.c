@@ -250,7 +250,7 @@ static ErrorCode_t _USBUSER_handleConfigureEvent (USBD_HANDLE_T hUsb)
         TIMER_stop(handle->audiomm.adapter);
         TIMER_write(handle->audiomm.adapter, 0);
         handle->audiomm.adapterModulus =
-            USBUSER_AUDIO_RINGBUFFER_SAMPLES_N * (CLKPWR_getBusClock(AUDIO_ADAPTER) / 16000);
+            USBUSER_AUDIO_RINGBUFFER_SAMPLES_N * (CLKPWR_getBusClock(AUDIO_ADAPTER_CLOCK) / 16000);
         TIMER_writeMatch(handle->audiomm.adapter, TIMER_MATCH0, handle->audiomm.adapterModulus - 1);
         TIMER_run(handle->audiomm.adapter);
     }

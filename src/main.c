@@ -7,6 +7,7 @@
 #include "bsp.h"
 #include "app.h"
 #include "bl652.h"
+#include "mon.h"
 #include "scanner.h"
 #include "sys.h"
 #include "ephemupdate.h"
@@ -16,6 +17,7 @@
 #endif
 
 
+MON_Handle monTask;
 SYS_Handle sys;
 SCANNER_Handle scanner;
 SONDE_Handle sonde;
@@ -71,6 +73,7 @@ int main (void)
 #if (BOARD_RA == 2)
     USBUSER_open();
 #endif
+    MON_open(&monTask);
 
     /* Prepare M0 */
     extern uint32_t M0IMAGE_start;
@@ -87,6 +90,7 @@ int main (void)
 #if (BOARD_RA == 2)
         USBUSER_worker();
 #endif
+        MON_thread(monTask);
         __WFI();
     }
 }
