@@ -63,27 +63,25 @@ static char * MON_DSP_makeString (MONDSP_Handle handle)
     }
     out[0] = 0;
 
-    int n = snprintf(out, sizeof(out), "%d,", N);
-    if (n > 0) {
-        for (int i = 0; i < N; i += 3) {
-            uint8_t c0 = handle->outbuf[handle->outbuf_rd_index];
-            handle->outbuf_rd_index = (handle->outbuf_rd_index + 1) % mod;
-            uint8_t c1 = handle->outbuf[handle->outbuf_rd_index];
-            handle->outbuf_rd_index = (handle->outbuf_rd_index + 1) % mod;
-            uint8_t c2 = handle->outbuf[handle->outbuf_rd_index];
-            handle->outbuf_rd_index = (handle->outbuf_rd_index + 1) % mod;
+    int n = 0;
+    for (int i = 0; i < N; i += 3) {
+        uint8_t c0 = handle->outbuf[handle->outbuf_rd_index];
+        handle->outbuf_rd_index = (handle->outbuf_rd_index + 1) % mod;
+        uint8_t c1 = handle->outbuf[handle->outbuf_rd_index];
+        handle->outbuf_rd_index = (handle->outbuf_rd_index + 1) % mod;
+        uint8_t c2 = handle->outbuf[handle->outbuf_rd_index];
+        handle->outbuf_rd_index = (handle->outbuf_rd_index + 1) % mod;
 
-            uint8_t e0 = (c0 >> 2) & 0x3F;
-            uint8_t e1 = ((c0 << 4) | (c1 >> 4)) & 0x3F;
-            uint8_t e2 = ((c1 << 2) | (c2 >> 6)) & 0x3F;
-            uint8_t e3 = c2 & 0x3F;
-            out[n++] = XXencode[e0];
-            out[n++] = XXencode[e1];
-            out[n++] = XXencode[e2];
-            out[n++] = XXencode[e3];
-        }
-        out[n] = 0;
+        uint8_t e0 = (c0 >> 2) & 0x3F;
+        uint8_t e1 = ((c0 << 4) | (c1 >> 4)) & 0x3F;
+        uint8_t e2 = ((c1 << 2) | (c2 >> 6)) & 0x3F;
+        uint8_t e3 = c2 & 0x3F;
+        out[n++] = base64encode[e0];
+        out[n++] = base64encode[e1];
+        out[n++] = base64encode[e2];
+        out[n++] = base64encode[e3];
     }
+    out[n] = 0;
 
     return out;
 }
