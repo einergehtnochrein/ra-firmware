@@ -49,11 +49,11 @@ static void MON_DSP_appendBits (MONDSP_Handle handle, uint8_t I)
 
 /* Return a string with a available ADPCM output samples, formatted for immediate
  * transmission via BLE and USB.
- * Data is XX encoded.
+ * Data is Base64 encoded.
  */
 static char * MON_DSP_makeString (MONDSP_Handle handle)
 {
-    const char * XXencode = "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const char * base64encode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     static char out[256];
     int mod = sizeof(handle->outbuf);
     int N = (mod + handle->outbuf_wr_index - handle->outbuf_rd_index) % mod;
