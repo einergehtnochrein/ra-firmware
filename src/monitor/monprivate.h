@@ -48,6 +48,8 @@ uint8_t ADPCM_processSample (adpcm_t *handle, int32_t sl);
 int32_t ADPCM_predictor_zero (int32_t b[6], int16_t dq[6]);
 int32_t ADPCM_predictor_pole (int32_t a[2], int32_t sr[2]);
 
+void _MON_sendAudio (const char *txData);
+
 #ifdef __cplusplus
 }
 #endif

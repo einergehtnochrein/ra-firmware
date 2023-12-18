@@ -11,7 +11,9 @@ static const float DEC_K01 = 0.545166f;
 static const float DEC_K10 = 0.2838135f;
 static const float DEC_K11 = 0.8342285f;
 
-static struct MON_Context {
+typedef struct MONDSP_Context *MONDSP_Handle;
+
+static struct MONDSP_Context {
     /* Decimator */
     struct _decim {
         int state;
@@ -26,10 +28,10 @@ static struct MON_Context {
     uint32_t outbuf_wr_index;
     uint32_t outbuf_bitcnt;
 
-} _monAudioContext;
+} _monDspContext;
 
 
-static void MON_DSP_appendBits (MON_Handle handle, uint8_t I)
+static void MON_DSP_appendBits (MONDSP_Handle handle, uint8_t I)
 {
     for (int i = 0; i < 2; i++) {
         if (I & (1 << (2 - 1 - i))) {
@@ -49,7 +51,7 @@ static void MON_DSP_appendBits (MON_Handle handle, uint8_t I)
  * transmission via BLE and USB.
  * Data is XX encoded.
  */
-static char * MON_DSP_makeString (MON_Handle handle)
+static char * MON_DSP_makeString (MONDSP_Handle handle)
 {
     const char * XXencode = "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     static char out[256];
@@ -92,7 +94,7 @@ static void MON_DSP_processAudio (const int32_t *rawAudio, int nSamples)
 {
     int n;
     float sx, sy, stemp;
-    struct MON_Context *handle = &_monAudioContext;
+    struct MONDSP_Context *handle = &_monDspContext;
 
 
     for (n = 0; n < nSamples; n++) {
@@ -131,10 +133,7 @@ static void MON_DSP_processAudio (const int32_t *rawAudio, int nSamples)
         MON_DSP_appendBits(handle, ADPCM_processSample(&handle->adpcm, sl));
     }
 
-    char *s = MON_DSP_makeString(handle);
-    if (strlen(s) > 0) {
-        SYS_send2Host(HOST_CHANNEL_AUDIO, s);
-    }
+    _MON_sendAudio(MON_DSP_makeString(handle));
 }
 
 
@@ -146,7 +145,7 @@ void MON_handleAudioCallback (int32_t *samples, int nSamples)
 
 void MON_DSP_reset (void)
 {
-    struct MON_Context *handle = &_monAudioContext;
+    struct MONDSP_Context *handle = &_monDspContext;
 
     memset(&handle->decim, 0, sizeof(handle->decim));
     ADPCM_init(&handle->adpcm);

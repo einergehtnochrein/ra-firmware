@@ -32,6 +32,7 @@ extern "C" {
 #endif
 
 #include "lpclib.h"
+#include "pt.h"
 
 typedef struct MON_Context *MON_Handle;
 
@@ -39,6 +40,7 @@ typedef struct MON_Context *MON_Handle;
 LPCLIB_Result MON_open (MON_Handle *pHandle);
 void MON_handleAudioCallback (int32_t *samples, int nSamples);
 void MON_DSP_reset (void);
+PT_THREAD(MON_thread (MON_Handle handle));
 
 #ifdef __cplusplus
 }
