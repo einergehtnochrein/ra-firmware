@@ -11,6 +11,14 @@ static const float DEC_K01 = 0.545166f;
 static const float DEC_K10 = 0.2838135f;
 static const float DEC_K11 = 0.8342285f;
 
+// Max number of samples to be Base64 encoded
+#define N_BASE64_MAX    180
+// Smallest multiple of 256 to take longest Base64 string
+#define BASE64_BUFSIZE  (((((N_BASE64_MAX + 2) / 3) * 4 + 1 + 255) / 256) * 256)
+// Number of Base64 buffers
+#define BASE64_NUM_BUF  2
+
+
 typedef struct MONDSP_Context *MONDSP_Handle;
 
 static struct MONDSP_Context {
@@ -28,6 +36,9 @@ static struct MONDSP_Context {
     uint32_t outbuf_wr_index;
     uint32_t outbuf_bitcnt;
 
+    /* Base64 encoding */
+    char b64_buf[BASE64_NUM_BUF][BASE64_BUFSIZE];
+    int b64_buf_index;
 } _monDspContext;
 
 
@@ -54,15 +65,14 @@ static void MON_DSP_appendBits (MONDSP_Handle handle, uint8_t I)
 static char * MON_DSP_makeString (MONDSP_Handle handle)
 {
     const char * base64encode = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    static char out[256];
     int mod = sizeof(handle->outbuf);
     int N = (mod + handle->outbuf_wr_index - handle->outbuf_rd_index) % mod;
     N = 3 * (N / 3);
-    if (N > 180) {  //TODO
-        N = 180;
+    if (N > N_BASE64_MAX) {
+        N = N_BASE64_MAX;
     }
-    out[0] = 0;
 
+    handle->b64_buf[handle->b64_buf_index][0] = 0;
     int n = 0;
     for (int i = 0; i < N; i += 3) {
         uint8_t c0 = handle->outbuf[handle->outbuf_rd_index];
@@ -76,14 +86,17 @@ static char * MON_DSP_makeString (MONDSP_Handle handle)
         uint8_t e1 = ((c0 << 4) | (c1 >> 4)) & 0x3F;
         uint8_t e2 = ((c1 << 2) | (c2 >> 6)) & 0x3F;
         uint8_t e3 = c2 & 0x3F;
-        out[n++] = base64encode[e0];
-        out[n++] = base64encode[e1];
-        out[n++] = base64encode[e2];
-        out[n++] = base64encode[e3];
+        handle->b64_buf[handle->b64_buf_index][n++] = base64encode[e0];
+        handle->b64_buf[handle->b64_buf_index][n++] = base64encode[e1];
+        handle->b64_buf[handle->b64_buf_index][n++] = base64encode[e2];
+        handle->b64_buf[handle->b64_buf_index][n++] = base64encode[e3];
     }
-    out[n] = 0;
+    handle->b64_buf[handle->b64_buf_index][n] = 0;
 
-    return out;
+    // Swap buffers
+    handle->b64_buf_index = (handle->b64_buf_index + 1) % BASE64_NUM_BUF;
+
+    return &handle->b64_buf[handle->b64_buf_index][0];
 }
 
 
