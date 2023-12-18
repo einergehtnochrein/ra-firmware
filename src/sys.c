@@ -721,7 +721,6 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 
             _SYS_setRadioFrequency(handle, frequency);
             _SYS_reportRadioFrequency(handle);  /* Inform host */
-            _SYS_reportControls(handle);
 
 #if (BOARD_RA == 1)
 //            PDM_run(handle->pdm, 202, MON_handleAudioCallback);
@@ -1441,6 +1440,11 @@ if (cl[0] != 0) {
                     handle->realTime = timestamp * 100ull;
                     handle->last_os_time = os_time;
 
+                    /* Reset special functions */
+                    handle->monitor = false;
+                    handle->monitorUpdate = false;
+                    SCANNER_setMode(scanner, 1);
+
                     /* Flush UART */
                     UART_ioctl(blePort, _uartFlushTx);
 
@@ -1746,6 +1750,7 @@ if (cl[0] != 0) {
                                 handle->monitor = enableValue != 0;
                                 handle->monitorUpdate = true;
                                 SYS_enableDetector(sys, handle->currentFrequency, handle->sondeDetector);
+                                _SYS_reportControls(handle);
                             }
                             break;
                         }
