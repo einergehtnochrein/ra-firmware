@@ -29,6 +29,7 @@ C_SRCS = \
     modem/m10.c modem/m10calibconfig.c modem/m10gps.c modem/m10metrology.c \
     modem/m20.c modem/m20calibconfig.c modem/m20payload.c \
     modem/pilot.c modem/pilotconfig.c modem/pilotgps.c \
+    monitor/mon.c monitor/monadpcm.c monitor/mondsp.c \
     meisei/meisei.c meisei/meiseiconfig.c meisei/meiseigps.c meisei/meiseimetrology.c \
     windsond/windsond.c windsond/windsondconfig.c windsond/windsondutils.c windsond/windsondpayload.c \
     mrz/mrz.c mrz/mrzconfig.c mrz/mrzgps.c mrz/mrzmetrology.c \
@@ -63,6 +64,7 @@ INCLUDES += \
     -I../src/jinyang \
     -I../src/meisei \
     -I../src/modem \
+    -I../src/monitor \
     -I../src/mrz \
     -I../src/reedsolomon \
     -I../src/rs41 \

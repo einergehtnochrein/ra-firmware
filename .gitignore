@@ -2,4 +2,5 @@
 *.directory
 gcc/obj_*/
 tests/build
+*~
 
