@@ -723,7 +723,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
 #if (BOARD_RA == 1)
-//            PDM_run(handle->pdm, 202, MON_handleAudioCallback);
+            PDM_run(handle->pdm, 202, MON_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
             ADF7021_getDemodClock(radio, &demodClock);
