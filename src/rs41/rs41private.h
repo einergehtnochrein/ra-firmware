@@ -311,8 +311,7 @@ typedef struct _RS41_InstanceData {
                 uint8_t mainboard[10];          /* 0x222: Name of mainboard (e.g. "RSM412") */
             }) names;
             __PACKED(struct {
-                uint8_t mainboard[8];           /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
-                uint8_t reserved234;            /* 0x234: */
+                uint8_t mainboard[9];           /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
                 uint8_t text235[10];            /* 0x235: "0000000000" */
                 uint16_t reserved23F;           /* 0x23F: */
                 uint16_t reserved241;           /* 0x241: */
