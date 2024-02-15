@@ -54,6 +54,7 @@ struct BL652_Context {
         int att_mtu;
         int att_data_length;
         int max_packet_length;
+        bool hasPowerScript;
     } response;
 } _bl652Context;
 
@@ -71,6 +72,10 @@ static void _BL652_processRx (BL652_Handle handle)
             switch (code) {
                 case 0:
                     handle->response.success = true;
+                    break;
+
+                case 6:
+                    handle->response.hasPowerScript = strstr(s, SMARTBASIC_SCRIPT) != NULL;
                     break;
 
                 case 10:
@@ -131,6 +136,11 @@ LPCLIB_Result BL652_setMode (BL652_Handle handle, int mode)
             GPIO_writeBit(handle->gpioNAUTORUN, 1);
             break;
 
+        case BL652_MODE_RUN:
+            GPIO_writeBit(handle->gpioSIO02, 0);
+            GPIO_writeBit(handle->gpioNAUTORUN, 0);
+            break;
+
         case BL652_MODE_VSP_COMMAND:
             GPIO_writeBit(handle->gpioSIO02, 1);
             GPIO_writeBit(handle->gpioNAUTORUN, 0);
@@ -146,12 +156,6 @@ LPCLIB_Result BL652_setMode (BL652_Handle handle, int mode)
     GPIO_writeBit(handle->gpioNRESET, 1);
     osDelay(500);
     GPIO_writeBit(handle->gpioSIO02, 0);
-#if (BOARD_RA == 2)
-    /* NOTE:
-     * Setting AUTORUN=0 leads to problems on Ra1 where SIO02 is tied to VDD.
-     */
-    GPIO_writeBit(handle->gpioNAUTORUN, 0);
-#endif
 
     return LPCLIB_SUCCESS;
 }
@@ -239,14 +243,15 @@ LPCLIB_Result BL652_findBaudrate (BL652_Handle handle)
 #define BL652_REQ_FIRMWARE_VERSION          "AT I 3\r"
 #define BL652_REQ_MAC_ADDRESS               "AT I 4\r"
 #define BL652_REQ_GET_DEVICE_NAME           "AT+CFGEX 117 ?\r"
-#define BL652_REQ_SET_DEVICE_NAME           "AT+CFGEX 117 \""
+#define BL652_REQ_SET_DEVICE_NAME           "AT+CFGEX 117 %s\r"
 #define BL652_ADVERT_INTERVAL               1000
 #define BL652_REQ_GET_ADVERT_INTERVAL       "AT+CFG 113 ?\r"
-#define BL652_REQ_SET_ADVERT_INTERVAL(x)    "AT+CFG 113 " #x "\r"
-#define BL652_REQ_SET_ADVERT_INTERVAL2(x)   "AT+CFG 102 " #x "\r"
+#define BL652_REQ_SET_ADVERT_INTERVAL       "AT+CFG 113 %d\r"
 #define BL652_REQ_GET_ATT_MTU               "AT+CFG 211 ?\r"
 #define BL652_REQ_GET_ATT_DATA_LENGTH       "AT+CFG 212 ?\r"
 #define BL652_REQ_GET_MAX_PACKET_LENGTH     "AT+CFG 216 ?\r"
+#define BL652_REQ_GET_DIRECTORY             "AT+DIR\r"
+#define BL652_REQ_RUN_SCRIPT                "AT+RUN \"%s\"\r"
 
 
 LPCLIB_Result BL652_readParameters (BL652_Handle handle)
@@ -310,6 +315,18 @@ LPCLIB_Result BL652_readParameters (BL652_Handle handle)
             }
         }
 
+        /* Check if a smartBASIC script named $autorun$ is loaded.
+         * We support this (for selected versions) from firmware 28.9.5.0 onwards.
+         */
+        if (handle->response.firmwareVersion >= BL652_FIRMWARE_VERSION(28,9,5,0)) {
+            handle->cfg_response_ptr = NULL;
+            UART_write(handle->uart, BL652_REQ_GET_DIRECTORY, strlen(BL652_REQ_GET_DIRECTORY));
+            for (delay = 0; delay < 10; delay++) {
+                osDelay(10);
+                _BL652_processRx(handle);
+            }
+        }
+
         return LPCLIB_SUCCESS;
     }
 
@@ -320,7 +337,7 @@ LPCLIB_Result BL652_readParameters (BL652_Handle handle)
 
 LPCLIB_Result BL652_updateParameters (BL652_Handle handle)
 {
-    char name[80];
+    char value[80];
 
     /* Update device name?
      * Were we able to read it from the module? (If not we can't update)
@@ -328,23 +345,18 @@ LPCLIB_Result BL652_updateParameters (BL652_Handle handle)
      * Is the actual device name different from the requested one? (If so, do the update)
      */
     if (strlen(handle->response.deviceName) > 0) {
-        strncpy(name, config_g->nameBluetooth, sizeof(name));
-        if (strlen(name) > 0) {
-            if (strcmp(name, handle->response.deviceName) != 0) {
-                UART_write(handle->uart, BL652_REQ_SET_DEVICE_NAME, strlen(BL652_REQ_SET_DEVICE_NAME));
-                UART_write(handle->uart, name, strlen(name));
-                UART_write(handle->uart, "\"\r", 2);
+        if (strlen(config_g->nameBluetooth) > 0) {
+            if (strcmp(config_g->nameBluetooth, handle->response.deviceName) != 0) {
+                snprintf(value, sizeof(value), BL652_REQ_SET_DEVICE_NAME, config_g->nameBluetooth);
+                UART_write(handle->uart, value, strlen(value));
                 osDelay(100);
             }
         }
     }
 
-    if (handle->response.advertInterval != 1000) {
-        UART_write(handle->uart, BL652_REQ_SET_ADVERT_INTERVAL(BL652_ADVERT_INTERVAL),
-                                 strlen(BL652_REQ_SET_ADVERT_INTERVAL(BL652_ADVERT_INTERVAL)));
-        osDelay(100);
-        UART_write(handle->uart, BL652_REQ_SET_ADVERT_INTERVAL2(BL652_ADVERT_INTERVAL),
-                                 strlen(BL652_REQ_SET_ADVERT_INTERVAL2(BL652_ADVERT_INTERVAL)));
+    if (handle->response.advertInterval != BL652_ADVERT_INTERVAL) {
+        snprintf(value, sizeof(value), BL652_REQ_SET_ADVERT_INTERVAL, BL652_ADVERT_INTERVAL);
+        UART_write(handle->uart, value, strlen(value));
         osDelay(100);
     }
 
@@ -363,6 +375,42 @@ LPCLIB_Result BL652_getFirmwareVersion (BL652_Handle handle, uint32_t *pFirmware
     }
 
     *pFirmwareVersion = handle->response.firmwareVersion;
+
+    return LPCLIB_SUCCESS;
+}
+
+
+LPCLIB_Result BL652_hasPowerScript (BL652_Handle handle, _Bool *pHasPowerScript)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    if (pHasPowerScript == NULL) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    *pHasPowerScript = handle->response.hasPowerScript;
+
+    return LPCLIB_SUCCESS;
+}
+
+
+/* Run the script with the given name. BL652 must be in command mode. */
+LPCLIB_Result BL652_runScript (BL652_Handle handle, const char *name)
+{
+    int delay;
+    char s[80];
+
+    BL652_setMode(handle, BL652_MODE_COMMAND);
+    _BL652_initResponse(handle);
+
+    snprintf(s, sizeof(s), BL652_REQ_RUN_SCRIPT, name);
+    UART_write(handle->uart, s, strlen(s));
+    for (delay = 0; delay < 10; delay++) {
+        osDelay(10);
+        _BL652_processRx(handle);
+    }
 
     return LPCLIB_SUCCESS;
 }

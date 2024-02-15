@@ -53,7 +53,14 @@ int main (void)
             }
         }
 
-        BL652_setMode(ble, BL652_MODE_VSP_BRIDGE);
+        _Bool hasPowerScript = false;
+        BL652_hasPowerScript(ble, &hasPowerScript);
+        if (hasPowerScript) {
+            BL652_setMode(ble, BL652_MODE_COMMAND);
+            BL652_runScript(ble, SMARTBASIC_SCRIPT);
+        } else {
+            BL652_setMode(ble, BL652_MODE_VSP_BRIDGE);
+        }
     }
 
 #if (BOARD_RA == 1)

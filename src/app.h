@@ -37,6 +37,11 @@
 //    Regulator U7.EN connected to test pad TP6
 #define PATCHLEVEL          1
 
+
+// Name of the smartBASIC script inside BL652.
+// If this script exists, it will be started to replace the built-in VSP handler.
+#define SMARTBASIC_SCRIPT                   "ra_power"
+
 extern EPHEMUPDATE_Handle euTask;
 extern SCANNER_Handle scanner;
 extern SYS_Handle sys;
