@@ -172,6 +172,7 @@ void SystemInit (void)
     NVIC_EnableIRQ(MRT_IRQn);
 #endif
 #if (BOARD_RA == 2)
+    NVIC_EnableIRQ(PIN_INT0_IRQn);
     NVIC_EnableIRQ(PIN_INT2_IRQn);
     NVIC_EnableIRQ(MAILBOX_IRQn);
     NVIC_EnableIRQ(UART3_IRQn);

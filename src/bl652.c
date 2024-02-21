@@ -403,7 +403,6 @@ LPCLIB_Result BL652_runScript (BL652_Handle handle, const char *name)
     char s[80];
 
     BL652_setMode(handle, BL652_MODE_COMMAND);
-    _BL652_initResponse(handle);
 
     snprintf(s, sizeof(s), BL652_REQ_RUN_SCRIPT, name);
     UART_write(handle->uart, s, strlen(s));
