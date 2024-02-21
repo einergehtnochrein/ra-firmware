@@ -8,6 +8,8 @@
 #define GPIO_ADF7021_CE_fix                 GPIO_0_1
 #define GPIO_ADF7021_SLE                    GPIO_1_3
 #define GPIO_BLE_AUTORUN                    GPIO_0_8
+#define GPIO_BLE_EXTRA1                     GPIO_0_10
+#define GPIO_BLE_EXTRA2                     GPIO_0_11
 #define GPIO_BLE_MODESEL                    GPIO_0_2
 #define GPIO_BLE_RESET                      GPIO_1_12
 #define GPIO_BLE_RXD                        GPIO_0_12
