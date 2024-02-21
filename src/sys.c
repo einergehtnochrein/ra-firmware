@@ -588,6 +588,7 @@ static const UART_Config _uartFlushTx[] = {
 #if (BOARD_RA == 2)
 static LPCLIB_Result _SYS_handleBleLinkDown (LPCLIB_Event event) {
     SYS_Message *pMessage;
+    (void)event;
 
     pMessage = osMailAlloc(sysContext.queue, 0);
     if (pMessage == NULL) {
