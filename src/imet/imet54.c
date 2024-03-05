@@ -199,13 +199,28 @@ static void _IMET54_sendKiss (IMET54_InstanceData *instance)
     }
 }
 
-#if 0
-static void _IMET54_sendRaw (IMET54_Handle handle, IMET54_Packet *p1)
+
+//TODO is this the max size?
+static char _imet54_rawCompressed[(sizeof(IMET54_Packet)*4)/3+42];    /* (sizeof(IMET54_Packet)*4)/3: Max UUENCODE length, 42: some overhead... */
+
+static void _IMET54_sendRaw (IMET54_Handle handle)
 {
-(void)handle;
-(void)p1;
+    const uint32_t length = sizeof(IMET54_SubFrameMain) + sizeof(IMET54_SubFrame2Long);
+    char *s = _imet54_rawCompressed;
+    int slen = 0;
+
+    slen += snprintf(&s[slen], sizeof(_imet54_rawCompressed) - slen, "%"PRIu32",18,1,%"PRIu32",%d,",
+                     handle->instance->id,
+                     length,
+                     0
+                    );
+
+    slen += _IMET54_uuencode(&s[slen], sizeof(_imet54_rawCompressed) - slen,
+            (uint8_t *)&handle->frameMain, sizeof(handle->frameMain),
+            (uint8_t *)&handle->frame2Long, sizeof(handle->frame2Long));
+
+    SYS_send2Host(HOST_CHANNEL_INFO, s);
 }
-#endif
 
 
 LPCLIB_Result IMET54_processBlock (
@@ -236,6 +251,7 @@ LPCLIB_Result IMET54_processBlock (
                     &header, 1,
                     (uint8_t *)&handle->frameMain, sizeof(handle->frameMain) - 4,
                     handle->frameMain.crc)) {
+
                 _IMET54_prepare(&handle->frameMain, &handle->instance, rxFrequencyHz);
                 if (handle->instance) {
                     handle->instance->rssi = rssi;
@@ -274,6 +290,7 @@ LPCLIB_Result IMET54_processBlock (
 
                         /* Send position report */
                         _IMET54_sendKiss(handle->instance);
+                        _IMET54_sendRaw(handle);
                     }
                 }
             }

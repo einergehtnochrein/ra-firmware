@@ -197,6 +197,15 @@ _Bool _IMET54_checkCRC (
         uint8_t *buffer2, int length2,
         uint32_t receivedCRC);
 
+/* Produce UU encoded string from two binary blocks */
+int _IMET54_uuencode (
+    char *buf,
+    int bufLength,
+    const uint8_t *block1,
+    int length1,
+    const uint8_t *block2,
+    int length2);
+
 /* Process the payload */
 LPCLIB_Result _IMET54_processPayloadMain (
         const IMET54_SubFrameMain *payload,
