@@ -53,7 +53,21 @@ int main (void)
             }
         }
 
-        BL652_setMode(ble, BL652_MODE_VSP_BRIDGE);
+        _Bool hasPowerScript = false;
+        BL652_hasPowerScript(ble, &hasPowerScript);
+        if (hasPowerScript) {
+            BL652_setMode(ble, BL652_MODE_COMMAND);
+            BL652_runScript(ble, SMARTBASIC_SCRIPT);
+            // TODO
+            /* The smartBASIC script cannot read the device name.
+             * Instead it waits for us to provide the name via UART before starting VSP.
+             */
+            static char message[80];
+            snprintf(message, sizeof(message), "1,%s", config_g->nameBluetooth);
+            SYS_send2Host(HOST_CHANNEL_SMARTBASIC, message);
+        } else {
+            BL652_setMode(ble, BL652_MODE_VSP_BRIDGE);
+        }
     }
 
 #if (BOARD_RA == 1)
@@ -165,6 +179,7 @@ void SystemInit (void)
     NVIC_EnableIRQ(MRT_IRQn);
 #endif
 #if (BOARD_RA == 2)
+    NVIC_EnableIRQ(PIN_INT0_IRQn);
     NVIC_EnableIRQ(PIN_INT2_IRQn);
     NVIC_EnableIRQ(MAILBOX_IRQn);
     NVIC_EnableIRQ(UART3_IRQn);

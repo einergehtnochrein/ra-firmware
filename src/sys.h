@@ -50,6 +50,7 @@ float SYS_getFrameRssi (SYS_Handle handle);
 #define HOST_CHANNEL_AUDIO          8
 #define HOST_CHANNEL_FIRMWAREUPDATE 9
 #define HOST_CHANNEL_DEBUG          77
+#define HOST_CHANNEL_SMARTBASIC     81
 
 LPCLIB_Result SYS_send2Host (int channel, const char *message);
 LPCLIB_Result SYS_sendBreak (int durationMilliseconds);

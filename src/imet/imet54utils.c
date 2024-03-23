@@ -107,3 +107,58 @@ _Bool _IMET54_checkCRC (
 
     return result;
 }
+
+
+int _IMET54_uuencode (
+    char *buf,
+    int bufLength,
+    const uint8_t *block1,
+    int length1,
+    const uint8_t *block2,
+    int length2)
+{
+    const uint32_t N = ((length1 + length2 + 1) / 3) * 3;
+    uint32_t n;
+    uint8_t uu[4+1];
+    uint8_t raw[3];
+    int i;
+    int j;
+    int nWritten = 0;
+
+    i = 0;
+    for (n = 0; n < N; n += 3) {
+        uu[0] = uu[1] = uu[2] = uu[3] = uu[4] = 0;
+
+        for (j = 0; j < 3; j++) {
+            if (i < length1) {
+                raw[j] = *block1++;
+            } else {
+                if (i < length1 + length2) {
+                    raw[j] = *block2++;
+                } else {
+                    raw[j] = 0;
+                }
+            }
+        }
+
+        uu[0] = raw[0] & 0x3F;
+        uu[1] = ((raw[1] << 2) & 0x3C) | ((raw[0] >> 6) & 0x03);
+        uu[2] = ((raw[2] << 4) & 0x30) | ((raw[1] >> 4) & 0x0F);
+        uu[3] = (raw[2] >> 2) & 0x3F;
+
+        for (j = 0; j < 4; j++) {
+            uu[j] ^= 0x20;
+            if (uu[j] <= 0x20) {
+                uu[j] |= 0x40;
+            }
+            /* Deviation from UUENCODE: Avoid comma, replace by space */
+            if (uu[j] == ',') {
+                uu[j] = ' ';
+            }
+        }
+
+        nWritten += snprintf(&buf[nWritten], bufLength - nWritten, "%s", uu);
+    }
+
+    return nWritten;
+}

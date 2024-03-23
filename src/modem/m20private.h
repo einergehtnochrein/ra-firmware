@@ -52,11 +52,20 @@ typedef __PACKED(struct {
     uint16_t boardTemperature;      // 3E LE, NTC sensor for board temperature (ADC_IN12, PC2)
     uint8_t reserved40;             // 40 from EEPROM 024 [23:16]
     __PACKED(union {
-        uint8_t reserved41;         // 41 from EEPROM 024 [31:24]
-        char xdata;                 // 41 Placeholder for the begin of the XDATA block
+        __PACKED(struct {
+            uint8_t reserved41;     // 41 from EEPROM 024 [31:24]
+            uint8_t version;        // 42 program/packet version number?
+            uint16_t crc;           // 43
+        }) tail_normal;
+        __PACKED(struct {
+            char xdata;             // 41 Placeholder for the begin of the XDATA block
+        }) tail_xdata5;
+        __PACKED(struct {
+            uint8_t reserved41;     // 41 from EEPROM 024 [31:24]
+            uint8_t version;        // 42 program/packet version number?
+            char xdata;             // 43 Placeholder for the begin of the XDATA block
+        }) tail_xdata;
     });
-    uint8_t version;                // 42 program/packet version number?
-    uint16_t crc;                   // 43
 }) M20_Packet;
 
 
@@ -95,6 +104,8 @@ typedef struct _M20_InstanceData {
     uint16_t frameCounter;
     float rssi;
     uint64_t realTime;
+    uint8_t firmwareVersion;
+    uint8_t xdataLength;
 
     M20_CookedGps gps;
     M20_CookedMetrology metro;

@@ -250,8 +250,8 @@ typedef struct _RS41_InstanceData {
                                                           threshold for some time (10s ?)
                                                 */
             uint8_t nfcDetectorThreshold;       /* 0x01C: NFC detector threshold [25mV] (Default: 0x05 = 125mV) */
-            uint8_t reserved01D;                /* 0x01D: ?? (Init value = 0xB4) */
-            uint8_t reserved01E;                /* 0x01E: ?? (Init value = 0x3C) */
+            uint8_t reserved01D;                /* 0x01D: ?? (Init value = 180), some time constant [s] */
+            uint8_t reserved01E;                /* 0x01E: ?? (Init value = 60), some time constant [s] */
             uint16_t reserved01F;
             int8_t refTemperatureTarget;        /* 0x021: Reference target temperature [°C] */
             uint8_t lowBatCapacityThreshold;    /* 0x022: Threshold [Wmin] for low battery capacity detection */
@@ -265,7 +265,7 @@ typedef struct _RS41_InstanceData {
             uint16_t freshBatteryCapacity;      /* 0x02E: Capacity of battery [mWh] at startup. Default: 9089 mWh
                                                  *        Updated by sonde on shutdown.
                                                  */
-            uint16_t reserved030;               /* 0x030: */
+            uint16_t factor1000;                /* 0x030: Factor to convert from watt to milliwatt (always 1000...) */
             uint8_t allowXdata;                 /* 0x032: 0=no XDATA capability, 1=XDATA option enabled */
             uint16_t ubloxHwVersionHigh;        /* 0x033: First 4 digits of ublox hardware version */
             uint16_t ubloxHwVersionLow;         /* 0x035: Last 4 digits of ublox hardware version
@@ -311,8 +311,7 @@ typedef struct _RS41_InstanceData {
                 uint8_t mainboard[10];          /* 0x222: Name of mainboard (e.g. "RSM412") */
             }) names;
             __PACKED(struct {
-                uint8_t mainboard[8];           /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
-                uint8_t reserved234;            /* 0x234: */
+                uint8_t mainboard[9];           /* 0x22C: Serial number of mainboard (e.g. "L1123553") */
                 uint8_t text235[10];            /* 0x235: "0000000000" */
                 uint16_t reserved23F;           /* 0x23F: */
                 uint16_t reserved241;           /* 0x241: */

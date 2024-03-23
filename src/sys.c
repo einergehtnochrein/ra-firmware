@@ -90,6 +90,7 @@ enum {
 enum {
     SYS_TIMERMAGIC_RSSI,
     SYS_TIMERMAGIC_INACTIVITY,
+    SYS_TIMERMAGIC_STARTUP_DELAY,
 };
 
 
@@ -114,11 +115,12 @@ static IPC_S2M ipc[IPC_S2M_NUM_BUFFERS];
 
 
 
-#define COMMAND_LINE_SIZE   400
+#define COMMAND_LINE_SIZE           400
 
-#define INACTIVITY_TIMEOUT  40000
+#define STARTUP_POWERCONTROL_DELAY  60000
+#define INACTIVITY_TIMEOUT          40000
 
-#define VBAT_FILTER_LENGTH  50
+#define VBAT_FILTER_LENGTH          50
 
 
 struct SYS_Context {
@@ -128,6 +130,7 @@ struct SYS_Context {
     osEvent rtosEvent;
     osTimerId rssiTick;
     osTimerId inactivityTimeout;
+    osTimerId startupPowerControlTimeout;
 
     RS41_Handle rs41;
     RS92_Handle rs92;
@@ -172,6 +175,8 @@ struct SYS_Context {
     bool blePortSetBreak;                               /* Set/clear UART break on BLE port */
     int blePortBreakTime;                               /* Duration of break signalling on BLE port */
     bool linkEstablished;                               /* Set when host has connected */
+
+    bool hasPowerScript;                                /* smartBASIC script loaded to BL652 */
 } sysContext;
 
 
@@ -580,6 +585,57 @@ static const UART_Config _uartFlushTx[] = {
 };
 
 
+#if (BOARD_RA == 2)
+static LPCLIB_Result _SYS_handleBleLinkDown (LPCLIB_Event event) {
+    SYS_Message *pMessage;
+    (void)event;
+
+    pMessage = osMailAlloc(sysContext.queue, 0);
+    if (pMessage == NULL) {
+        return LPCLIB_OUT_OF_MEMORY;
+    }
+
+    pMessage->opcode = SYS_OPCODE_EVENT;
+    pMessage->event.opcode = APP_EVENT_SUSPEND;
+    osMailPut(sysContext.queue, pMessage);
+
+    return LPCLIB_SUCCESS;
+}
+
+static const GPIO_Config bleLinkDownHandlerEnable[] = {
+    {.opcode = GPIO_OPCODE_CONFIGURE_PIN_INTERRUPT,
+        {.pinInterrupt = {
+            .pin = GPIO_BLE_EXTRA1,
+            .enable = LPCLIB_YES,
+            .mode = GPIO_INT_LOW_LEVEL_ONCE,
+            .interruptLine = GPIO_PIN_INT_0,
+            .callback = _SYS_handleBleLinkDown
+            }}},
+
+    GPIO_CONFIG_END
+};
+
+/* Handler for delayed link power control.
+ * Called by a one-shot timer after reset. This is to make sure we have some time
+ * to take control by a debugger!
+ * Note that after reset (e.g. changing batteries) the receiver remains active
+ * for one minute before beginning to react to BL652 link indication via BLE_EXTRA1.
+ */
+static void _SYS_handleStartupTimer (void const *pArgument)
+{
+    if (sysContext.queue == NULL) {
+        return;
+    }
+
+    switch ((int)pArgument) {
+        case SYS_TIMERMAGIC_STARTUP_DELAY:
+            GPIO_ioctl(bleLinkDownHandlerEnable);
+            break;
+    }
+}
+#endif
+
+
 
 //TODO need a mailbox driver
 void MAILBOX_IRQHandler (void)
@@ -723,7 +779,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
             _SYS_reportRadioFrequency(handle);  /* Inform host */
 
 #if (BOARD_RA == 1)
-//            PDM_run(handle->pdm, 202, MON_handleAudioCallback);
+            PDM_run(handle->pdm, 202, MON_handleAudioCallback);
 #endif
 #if (BOARD_RA == 2)
             ADF7021_getDemodClock(radio, &demodClock);
@@ -1065,6 +1121,11 @@ static void SYS_sleep (SYS_Handle handle)
     LPC_SYSCON->CPSTACK = ((volatile uint32_t *)&M0IMAGE_start)[0];
     LPC_SYSCON->CPBOOT = ((volatile uint32_t *)&M0IMAGE_start)[1];
     LPC_SYSCON->CPUCTRL = ((LPC_SYSCON->CPUCTRL | 0xC0C40000) | (1 << 3)) & ~(1 << 5);
+
+#if (BOARD_RA == 2)
+    /* Install handler for link-down signal from Bluetooth module */
+    GPIO_ioctl(bleLinkDownHandlerEnable);
+#endif
 }
 
 
@@ -1406,12 +1467,20 @@ void SYS_installCallback (struct SYS_ConfigCallback configCallback)
 osMailQDef(sysQueueDef, SYS_QUEUE_LENGTH, SYS_Message);
 osTimerDef(rssiTimer, _SYS_osalCallback);
 osTimerDef(inactivityTimer, _SYS_osalCallback);
+#if (BOARD_RA == 2)
+osTimerDef(startupPowerControlTimer, _SYS_handleStartupTimer);
+#endif
 
 
 LPCLIB_Result SYS_open (SYS_Handle *pHandle)
 {
-    *pHandle = &sysContext;
-    sysContext.sondeType = SONDE_UNDEFINED;
+    SYS_Handle handle = &sysContext;
+
+    *pHandle = handle;
+    handle->sondeType = SONDE_UNDEFINED;
+
+    handle->hasPowerScript = false;
+    BL652_hasPowerScript(ble, &handle->hasPowerScript);
 
     return LPCLIB_SUCCESS;
 }
@@ -1959,8 +2028,21 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
     osTimerStart(handle->rssiTick, 40);
 
+    /* Detector for Bluetooth link status.
+     * With a script in the BL652, disconnection is signalled by the module via the
+     * BLE_EXTRA1 line going low. With no such script, receiving no data from the
+     * host for some time is treated as a disconnect event.
+     */
     handle->inactivityTimeout = osTimerCreate(osTimer(inactivityTimer), osTimerOnce, (void *)SYS_TIMERMAGIC_INACTIVITY);
+#if (BOARD_RA == 1)
     osTimerStart(handle->inactivityTimeout, INACTIVITY_TIMEOUT);
+#else
+    handle->startupPowerControlTimeout = osTimerCreate(osTimer(startupPowerControlTimer), osTimerOnce, (void *)SYS_TIMERMAGIC_STARTUP_DELAY);
+    osTimerStart(handle->startupPowerControlTimeout, STARTUP_POWERCONTROL_DELAY);
+    if (!handle->hasPowerScript) {
+        osTimerStart(handle->inactivityTimeout, INACTIVITY_TIMEOUT);
+    }
+#endif
 
     while (1) {
         /* Wait for an event */
@@ -1980,7 +2062,9 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
 
         /* Message via Bluetooth? */
         if (strlen(handle->commandLine) > 0) {
-            osTimerStart(handle->inactivityTimeout, INACTIVITY_TIMEOUT);
+            if (!handle->hasPowerScript) {
+                osTimerStart(handle->inactivityTimeout, INACTIVITY_TIMEOUT);
+            }
 
             _SYS_handleBleCommand(handle);
             handle->commandLine[0] = 0;

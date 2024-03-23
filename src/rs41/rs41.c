@@ -161,7 +161,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
     }
 
     if (instance->encrypted) {
-        length = snprintf((char *)s, sizeof(s), "%"PRIu32",1,%.3f,,,,,,,,,,%"PRIu32",,,,%.1f,%.1f,%d,%d,%s,%.1f",
+        length = snprintf((char *)s, sizeof(s), "%"PRIu32",1,%.3f,,,,,,,,,,%"PRIu32",,,,%.1f,%.1f,%d,%d,%s,%.1f,,,%.2lf",
                         instance->id,
                         instance->rxFrequencyMHz,               /* RX frequency [MHz] */
                         special,
@@ -170,7 +170,8 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                         instance->gps.visibleSats,              /* # satellites */
                         instance->frameCounter,                 /* Current frame number */
                         sFlightKillTimer,                       /* Flight kill timer (frames) */
-                        instance->batteryVoltage                /* Battery voltage [V] */
+                        instance->batteryVoltage,               /* Battery voltage [V] */
+                        instance->realTime * 0.01
                         );
     }
     else {
