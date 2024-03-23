@@ -313,7 +313,7 @@ LPCLIB_Result M20_processBlock (
                 256 * buffer[1 + handle->packetLength - 2] + buffer[1 + handle->packetLength - 1];
         outercrc = _M20_checkCRC(
                     (uint8_t *)&handle->packet,
-                    sizeof(handle->packet),
+                    handle->packetLength,
                     receivedOuterCrc);
         if (outercrc) {
             innercrc = true;    // Firmware 6 transmits an invalid inner CRC (always 0)!
@@ -348,8 +348,24 @@ if(1){//            if (handle->instance->logMode == M20_LOGMODE_RAW) {
                                         &handle->instance->gps,
                                         &handle->instance->metro);
 
-                    /* XDATA */
-                    _M20_processXdata(&handle->packet.xdata, handle->packet.xdataLength, handle->instance);
+                    if (outercrc) {
+                        /* Determine XDATA field length and firmware version. In old firmware versions
+                         * the version field may be hidden by XDATA. In such a case assume the
+                         * firmware version is 5.
+                         */
+                        handle->instance->xdataLength = handle->packet.xdataLength;
+                        handle->instance->firmwareVersion = handle->packet.tail_normal.version;
+                        if (handle->packetLength != sizeof(M20_Packet) + handle->instance->xdataLength) {
+                            handle->instance->firmwareVersion = 5;
+                        }
+
+                        /* XDATA (position in packet depends on firmware version) */
+                        if (handle->instance->firmwareVersion <= 5) {
+                            _M20_processXdata(&handle->packet.tail_xdata5.xdata, handle->packet.xdataLength, handle->instance);
+                        } else {
+                            _M20_processXdata(&handle->packet.tail_xdata.xdata, handle->packet.xdataLength, handle->instance);
+                        }
+                    }
                 }
 
                 _M20_sendKiss(handle->instance);
