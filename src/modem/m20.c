@@ -15,6 +15,103 @@
 #include "gps.h"
 
 
+/*
+ * M10/M20 frame parameters
+ *
+ * 2FSK, 9600 sym/s Biphase-Mark encoded, 4800 bit/s, 5.5 kHz deviation
+ * Burst transmission
+ * Sync word: 11111001 10100100 00101011 10110001 (F9 A4 2B B1)
+ *
+ * Packet length: 4 sync bytes + 44 data bytes = 48 bytes (--> 384 bits, frame duration = one second)
+ * Packet structure (all bytes received MSB first):
+ *
+ * +-------------------------+------------+--------+---------+---------+
+ * | Symbol Sync 1100,,,1100 | Frame Sync | Length | Payload | CRC     |
+ * | 310 symbols (~32ms)     | 16 symbols | 8 bits |         | 16 bits |
+ * +-------------------------+------------+--------+---------+---------+
+ *                                        \------- CRC ------/
+ *
+ * (The symbol sync sequence 11001100... of Biphase-M symbols decodes as a constant zero bit sequence.)
+ *
+ * The frame sync sequence is  10 10 01 10 01 00 11 00, which is an invalid Biphase-M sequence, and
+ * therefore will never appear at any other position in the frame!
+ */
+
+/*
+ * XDATA
+ *
+ * If XDATA is present in a frame, it is appended to the end of the frame, but before the 16-bit CRC.
+ * A 1-byte field in the payload indicates the length of the XDATA field.
+ *
+ * M20 firmware versions up to version V5 have a bug, where the XDATA field starts two bytes too
+ * early, overwriting the last two bytes of the regular frame. Unfortunately, one of these lost
+ * bytes indicates the firmware version, and so this field cannot be used to detect the presence
+ * of the bug. We must use the XDATA length field and the overall payload length field instead:
+ * If the total length is two bytes smaller than expected for the indicated XDATA length, the
+ * firmware is buggy.
+ *
+ * Frame structure with XDATA present:
+ *
+ *                        Firmware up to V5                          Firmware from V6
+ *                     +--------------------+                     +--------------------+
+ *        Length       |       67 + n       +        Length       |       69 + n       +
+ *                     +--------------------+                     +--------------------+
+ *
+ *        Payload      +--------------------+        Payload      +--------------------+
+ *        Offset 0     |        0x20        +        Offset 0     |        0x20        +
+ *                     +--------------------+                     +--------------------+
+ *                     |                    |                     |                    |
+ *                              ....
+ *                     |                    |                     |                    |
+ *                     +--------------------+                     +--------------------+
+ *        Offset 42    |  XDATA length (n)  |        Offset 42    |  XDATA length (n)  |
+ *                     +--------------------+                     +--------------------+
+ *                     |                    |                     |                    |
+ *                              ....
+ *                     |                    |                     |                    |
+ *                     +--------------------+                     +--------------------+
+ *        Offset 65    |   XDATA byte #1    |        Offset 65    |                    |
+ *                     +--------------------+                     +--------------------+
+ *                     |                    |        Offset 66    |  Firmware version  |
+ *                              ....                              +--------------------+
+ *                     |                    |        Offset 67    |   XDATA byte #1    |
+ *                     +--------------------+                     +--------------------+
+ *      Offset 65+n-1  |   XDATA byte #n    |                     |                    |
+ *                     +--------------------+                               ...
+ *      Offset 65+n    |      CRC MSB       |                     |                    |
+ *                     +--------------------+                     +--------------------+
+ *      Offset 65+n+1  |      CRC LSB       |      Offset 67+n-1  |   XDATA byte #n    |
+ *                     +--------------------+                     +--------------------+
+ *                                                 Offset 67+n    |      CRC MSB       |
+ *                                                                +--------------------+
+ *                                                 Offset 67+n+1  |      CRC LSB       |
+ *                                                                +--------------------+
+ */
+
+/*
+ * 16-bit checksum calculation:
+ *
+ * Each data byte contributing to the checksum is bit-rotated one position to the right before
+ * processing it MSB first. A data byte b7.b6.b5.b4.b3.b2.b1.b0 is processed in this bit order:
+ * b0.b7.b6.b5.b4.b3.b2.b1
+ *
+ * CRC calculation is done with a Fibonacci-style LFSR, unlike the poupular CRC algorithms which
+ * use Galois-style LFSR's without exception. Another peculiarity is the use of a feedback polynomial
+ * of grade 15, not grade 16 as you could expect for a 16-bit CRC:  x^15 + x^6 + x^4 + x^2 + 1
+ *
+ *           +--+   +--+           +--+   +--+   +--+   +--+   +--+   +--+   +--+       /~\
+ *  OUT <----|15|-+-|14|--- ... ---| 6|-+-| 5|---| 4|-+-| 3|---| 2|-+-| 1|---| 0|<------|+|<----- IN
+ *           +--+ | +--+           +--+ | +--+   +--+ | +--+   +--+ | +--+   +--+       \_/
+ *                |                     |             |             |                    ^
+ *                |                     v             v             v                    |
+ *                |                    /~\           /~\           /~\                   |
+ *                \------------------->|+|---------->|+|---------->|+|-------------------/
+ *                                     \_/           \_/           \_/
+ *
+ */
+
+
+
 /** Context */
 typedef struct M20_Context {
     uint32_t packetLength;
