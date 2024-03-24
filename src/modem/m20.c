@@ -20,7 +20,6 @@
  *
  * 2FSK, 9600 sym/s Biphase-Mark encoded, 4800 bit/s, 5.5 kHz deviation
  * Burst transmission
- * Sync word: 11111001 10100100 00101011 10110001 (F9 A4 2B B1)
  *
  * Packet length: 4 sync bytes + 44 data bytes = 48 bytes (--> 384 bits, frame duration = one second)
  * Packet structure (all bytes received MSB first):
