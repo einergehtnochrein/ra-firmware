@@ -21,7 +21,8 @@
  * 2FSK, 9600 sym/s Biphase-Mark encoded, 4800 bit/s, 5.5 kHz deviation
  * Burst transmission
  *
- * Packet length: 4 sync bytes + 44 data bytes = 48 bytes (--> 384 bits, frame duration = one second)
+ * Packet length: 326 sync symbols + (1+67+2) bytes = 1446 symbols (~150ms)
+ * XDATA content adds to the packet length.
  * Packet structure (all bytes received MSB first):
  *
  * +-------------------------+------------+--------+---------+---------+
