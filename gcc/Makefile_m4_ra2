@@ -16,7 +16,7 @@ CFLAGS += \
     -DFIRMWARE_NAME=\"$(subst $(GIT_NEAREST_TAG)-,,$(GIT_FULL_VERSION))\"
 
 C_SRCS = \
-    main.c bspra2.c config.c \
+    main.c bspra2.c config.c bootloader.c \
     adf7021.c sys.c scanner.c ephemupdate.c \
     usb/usb_audio.c usb/usb_serial.c usb/usbuser_config.c \
     bl652.c \

@@ -23,6 +23,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,7 @@
 #include "app.h"
 #include "beacon.h"
 #include "bl652.h"
+#include "bootloader.h"
 #include "cf06.h"
 #include "china1.h"
 #include "dfm.h"
@@ -1542,13 +1544,15 @@ if (cl[0] != 0) {
                     uint32_t bleFirmwareVersion = 0;
                     BL652_getFirmwareVersion(ble, &bleFirmwareVersion);
 
-                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d,%ld",
+                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d,%"PRIu32",%d,%d",
                             FIRMWARE_VERSION_MAJOR,
                             hardwareVersion,
                             FIRMWARE_VERSION_MINOR,
                             FIRMWARE_NAME,
                             config_g->serialNumber,
-                            bleFirmwareVersion
+                            bleFirmwareVersion,
+                            handle->hasPowerScript ? 1 : 0,
+                            BOOTLOADER_getVersion()
                             );
                     SYS_send2Host(HOST_CHANNEL_PING, s);
 
