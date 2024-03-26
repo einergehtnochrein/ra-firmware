@@ -57,9 +57,11 @@ int main (void)
         BL652_hasPowerScript(ble, &hasPowerScript);
         if (hasPowerScript) {
             BL652_setMode(ble, BL652_MODE_COMMAND);
-            BL652_runScript(ble, SMARTBASIC_SCRIPT);
-            // TODO
-            /* The smartBASIC script cannot read the device name.
+            char *scriptName;
+            BL652_getPowerScriptName(ble, &scriptName);
+            BL652_runScript(ble, scriptName);
+
+            /* NOTE: The smartBASIC script cannot read the device name.
              * Instead it waits for us to provide the name via UART before starting VSP.
              */
             static char message[80];

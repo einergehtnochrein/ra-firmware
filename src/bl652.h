@@ -27,6 +27,7 @@ LPCLIB_Result BL652_updateParameters (BL652_Handle handle);
 LPCLIB_Result BL652_setMode (BL652_Handle handle, int mode);
 LPCLIB_Result BL652_getFirmwareVersion (BL652_Handle handle, uint32_t *pFirmwareVersion);
 LPCLIB_Result BL652_hasPowerScript (BL652_Handle handle, _Bool *pHasPowerScript);
+LPCLIB_Result BL652_getPowerScriptName (BL652_Handle handle, char **pPowerScriptName);
 LPCLIB_Result BL652_runScript (BL652_Handle handle, const char *name);
 
 #endif
