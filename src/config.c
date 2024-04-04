@@ -7,7 +7,7 @@
 #include "config.h"
 
 static const Config_t _factorySettingsDefault = {
-    .version = 2,
+    .version = 4,
     .baudrate = 115200.0f,
 
 #if (BOARD_RA == 1)
@@ -26,6 +26,7 @@ static const Config_t _factorySettingsDefault = {
     .referenceFrequency = 12.8e6,
     .rssiCorrectionLnaOn = -13.0f,
     .rssiCorrectionLnaOff = 16.0f,
+    .vbatTrim = 1.0f,
 
     .nameBluetooth = "",
     .usbVendorString = L"leckasemmel.de/ra",
@@ -99,5 +100,17 @@ double CONFIG_getReferenceFrequency (void)
 
     /* If invalid, default to old (inaccurate) float version. */
     return valid ? ref : config_g->referenceFrequencyFloat;
+}
+
+
+float CONFIG_getVbatTrim (void)
+{
+    float trim = config_g->vbatTrim;
+    bool valid = config_g->version >= 4;    /* Minimum config version */
+    valid = valid && (trim != 0);           /* Checks for all zeros */
+    valid = valid && !isnan(trim);          /* Checks for NaN (includes all ones) */
+
+    /* If invalid, default to trim=1 */
+    return valid ? trim : 1.0f;
 }
 

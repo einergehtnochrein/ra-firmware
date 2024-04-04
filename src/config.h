@@ -20,7 +20,10 @@ __PACKED(struct _Config_t {
     float referenceFrequencyFloat;
     float rssiCorrectionLnaOn;
     float rssiCorrectionLnaOff;
-    float __reserved018__[25];
+    float vbatTrim;                     /* VBAT measurement correction factor. <4>
+                                         * Default: 1.0f
+                                         */
+    float __reserved01C__[24];
     uint32_t baudrate;
 
     /* 0128  0x080 */
@@ -51,6 +54,7 @@ void CONFIG_open (void);
 
 /* Access functions (should replace direct structure access */
 float CONFIG_getGeoidHeight (void);
+float CONFIG_getVbatTrim (void);
 double CONFIG_getReferenceFrequency (void);
 
 #endif

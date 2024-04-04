@@ -1287,7 +1287,7 @@ static float _SYS_measureVbat (SYS_Handle handle)
     GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 1);
 #endif
 
-    return vbat;
+    return vbat * CONFIG_getVbatTrim();
 }
 
 
