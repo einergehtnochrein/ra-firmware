@@ -141,7 +141,7 @@ void BSP_init (void)
     /* Install IRQ handler */
     FLEXCOMM_installHandler(FLEXCOMM7, (FLEXCOMM_IRQHandler_t)ADF7021_handleSpiEvent);
     ADF7021_open(LPC_SPI7, 2, GPIO_1_2, mrt, &radio);
-    radioConfig[0].referenceFrequency = config_g->referenceFrequency;
+    radioConfig[0].referenceFrequency = CONFIG_getReferenceFrequency();
     ADF7021_ioctl(radio, radioConfig);
 }
 

@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -10,6 +11,7 @@ static const Config_t _factorySettingsDefault = {
     .baudrate = 115200.0f,
 
 #if (BOARD_RA == 1)
+    .referenceFrequencyFloat = 13.0e6f,
     .referenceFrequency = 13.0e6,
     .rssiCorrectionLnaOn = -16.0,
     .rssiCorrectionLnaOff = 13.0,
@@ -20,9 +22,10 @@ static const Config_t _factorySettingsDefault = {
     .usbPID = 0x05DC,
     .usbVERSION = 0x0100,
 
+    .referenceFrequencyFloat = 12.8e6f,
     .referenceFrequency = 12.8e6,
-    .rssiCorrectionLnaOn = -13.0,
-    .rssiCorrectionLnaOff = 16.0,
+    .rssiCorrectionLnaOn = -13.0f,
+    .rssiCorrectionLnaOff = 16.0f,
 
     .nameBluetooth = "",
     .usbVendorString = L"leckasemmel.de/ra",
@@ -84,5 +87,17 @@ float CONFIG_getGeoidHeight (void)
 {
     //TODO
     return -49.0f;
+}
+
+
+double CONFIG_getReferenceFrequency (void)
+{
+    double ref = config_g->referenceFrequency;
+    bool valid = config_g->version >= 4;    /* Minimum config version */
+    valid = valid && (ref != 0);            /* Checks for all zeros */
+    valid = valid && !isnan(ref);           /* Checks for NaN (includes all ones) */
+
+    /* If invalid, default to old (inaccurate) float version. */
+    return valid ? ref : config_g->referenceFrequencyFloat;
 }
 

@@ -47,8 +47,8 @@ typedef struct ADF7021_Context {
     int demodClockDivider;
     struct ADF7021_ConfigDemodulatorParams demodParams;
     ADF7021_DemodulatorType demodType;
-    float referenceFrequency;
-    float frequency;
+    double referenceFrequency;
+    double frequency;
     int bitRate;
     uint32_t ifBandwidthSelect;
     float agcClockFrequency;            /* Default is 8 kHz */
@@ -172,7 +172,7 @@ static void _ADF7021_updateRegister0 (ADF7021_Handle handle)
             | (handle->muxout << 29)
             | (1u << 28)                    /* UART/SPI mode */
             | (1u << 27)                    /* RX */
-            | ((lrintf((handle->frequency * 32768.0f) / handle->referenceFrequency) & 0x007FFFFF) << 4)
+            | ((lrint((handle->frequency * 32768.0) / handle->referenceFrequency) & 0x007FFFFF) << 4)
             ;
     ADF7021_write(handle, ADF7021_REGISTER_N, regval);
 }
@@ -194,12 +194,12 @@ static void _ADF7021_setMuxout (ADF7021_Handle handle, ADF7021_Muxout muxout, bo
 /* Set up clocks */
 static void _ADF7021_setClocks (ADF7021_Handle handle)
 {
-    uint32_t bbos_clk_divide = lrintf(log2f(handle->referenceFrequency / 1.5e6f) - 2.0f);
-    uint32_t seq_clk_divide = lrintf(handle->referenceFrequency / 100e3f);
-    uint32_t agc_clk_divide = lrintf(handle->referenceFrequency / (seq_clk_divide * handle->agcClockFrequency));
+    uint32_t bbos_clk_divide = lrintf(log2f((float)handle->referenceFrequency / 1.5e6f) - 2.0f);
+    uint32_t seq_clk_divide = lrintf((float)handle->referenceFrequency / 100e3f);
+    uint32_t agc_clk_divide = lrintf((float)handle->referenceFrequency / (seq_clk_divide * handle->agcClockFrequency));
     uint32_t cdr_clk_divide = 1;
     if ((handle->demodClockDivider > 0) && (handle->bitRate > 0) && !(handle->interfaceMode & (1u << 16))) {
-        cdr_clk_divide = lrintf(handle->referenceFrequency / (handle->demodClockDivider * 32 * handle->bitRate));
+        cdr_clk_divide = lrintf((float)handle->referenceFrequency / (handle->demodClockDivider * 32 * handle->bitRate));
     }
     uint32_t regval = 0
             | (agc_clk_divide << 26)
@@ -219,7 +219,7 @@ static void _ADF7021_configureInterface (ADF7021_Handle handle)
 
     regval = 0
         | ((handle->interfaceMode << 4) & (0xF << 21))
-        | (lrintf((4.0f * 65536.0f * handle->demodClockDivider * 100e3f) / handle->referenceFrequency) << 5)
+        | (lrintf((4.0f * 65536.0f * handle->demodClockDivider * 100e3f) / (float)handle->referenceFrequency) << 5)
         | ((handle->interfaceMode >> 12) & (1u << 4))
         ;
     ADF7021_write(handle, ADF7021_REGISTER_14, regval);
@@ -392,7 +392,7 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
             if (pConfig->afc.enable) {
                 regval = 0
                     | (1u << 4)
-                    | (lrintf(8.388608e9f / handle->referenceFrequency) << 5)
+                    | (lrintf(8.388608e9f / (float)handle->referenceFrequency) << 5)
                     | (pConfig->afc.KI << 17)
                     | (pConfig->afc.KP << 21)
                     | (pConfig->afc.maxRange << 24)
@@ -474,7 +474,7 @@ static LPCLIB_Result _ADF7021_accessTimeoutCallback (LPCLIB_Event event)
 
 
 /* Set PLL frequency */
-LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency)
+LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, double frequency)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
         return LPCLIB_ILLEGAL_PARAMETER;
@@ -692,8 +692,8 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
     int wide = handle->wideband ? 1 : 0;
     regval = 0
             | ((mode ? 1 : 0) << 4)         /* Enable fine calibration */
-            | (lrintf(handle->referenceFrequency / (2 * calibrationFrequencies[wide][handle->ifBandwidthSelect][0])) << 5)
-            | (lrintf(handle->referenceFrequency / (2 * calibrationFrequencies[wide][handle->ifBandwidthSelect][1])) << 13)
+            | (lrintf((float)handle->referenceFrequency / (2 * calibrationFrequencies[wide][handle->ifBandwidthSelect][0])) << 5)
+            | (lrintf((float)handle->referenceFrequency / (2 * calibrationFrequencies[wide][handle->ifBandwidthSelect][1])) << 13)
             | (80u << 21)
             ;
     ADF7021_write(handle, ADF7021_REGISTER_6, regval);
@@ -704,7 +704,7 @@ LPCLIB_Result ADF7021_calibrateIF (ADF7021_Handle handle, int mode)
     handle->muxoutEvent = false;
     regval = 0
             | (1u << 4)                     /* Do calibration */
-            | (lrintf(handle->referenceFrequency / 50e3f) << 5)   /* --> 50 kHz */
+            | (lrintf((float)handle->referenceFrequency / 50e3f) << 5)   /* --> 50 kHz */
             //TODO configure image rejection
             ;
     ADF7021_write(handle, ADF7021_REGISTER_5, regval);
