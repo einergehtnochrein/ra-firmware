@@ -233,8 +233,6 @@ static const ADF7021_Config radioModeVaisala[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 3600, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -258,8 +256,6 @@ static const ADF7021_Config radioModeGraw[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -283,8 +279,6 @@ static const ADF7021_Config radioModeJinyang[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -308,8 +302,6 @@ static const ADF7021_Config radioModeMrz[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -335,8 +327,6 @@ static const ADF7021_Config radioModeAsia1[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -360,8 +350,6 @@ static const ADF7021_Config radioModePSB3[] = {
         {.demodParams = {
             .deviation = 5000,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -385,8 +373,6 @@ static const ADF7021_Config radioModeIMET54[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 3600, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -411,8 +397,6 @@ static const ADF7021_Config radioModeModem[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 7200, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -438,8 +422,6 @@ static const ADF7021_Config radioModePilot[] = {
 //            .deviation = 2400,    /* Old PCB variant <=9 */
             .deviation = 6200,      /* PCB variant 10 */
             .postDemodBandwidth = 3600, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -463,8 +445,6 @@ static const ADF7021_Config radioModeMeisei[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1800, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -488,8 +468,6 @@ static const ADF7021_Config radioModeWindsond[] = {
         {.demodParams = {
             .deviation = 34000,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -509,8 +487,6 @@ static const ADF7021_Config radioModeC34C50[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 7500, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -530,8 +506,6 @@ static const ADF7021_Config radioModeImet[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 3500, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -551,8 +525,6 @@ static const ADF7021_Config radioModeBeacon[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 3000, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -572,8 +544,6 @@ static const ADF7021_Config radioModeMONITOR[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 7500, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END

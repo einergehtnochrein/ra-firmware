@@ -51,7 +51,7 @@ typedef struct ADF7021_Context {
     double frequency;
     int bitRate;
     uint32_t ifBandwidthSelect;
-    float agcClockFrequency;            /* Default is 8 kHz */
+    float agcClockFrequency;            /* Default is 8 kHz (ADF7021-N) or 10 kHz (ADF7021) */
 
     uint8_t currentFG;                  /* Last known state of filter gain (Reg9 FG1,FG2) */
     uint8_t currentLG;                  /* Last known state of LNA gain (Reg9 LG1,LG2) */
@@ -355,9 +355,11 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
                 switch (productCode) {
                     case 0x210:     /* ADF7021 */
                         handle->wideband = true;
+                        handle->agcClockFrequency = 10e3f;
                         break;
                     case 0x211:     /* ADF7021-N */
                         handle->wideband = false;
+                        handle->agcClockFrequency = 8e3f;
                         break;
                 }
             }
