@@ -48,6 +48,7 @@ typedef struct ADF7021_Context {
     struct ADF7021_ConfigDemodulatorParams demodParams;
     ADF7021_DemodulatorType demodType;
     double referenceFrequency;
+    uint32_t refDivider;                /* XTAL to phase detector frequency divider (1...7) */
     double frequency;
     int bitRate;
     uint32_t ifBandwidthSelect;
@@ -168,11 +169,12 @@ static LPCLIB_Result _ADF7021_read (ADF7021_Handle handle, ADF7021_Readback read
 /* Update register 0 (MUXOUT and PLL divider settings) */
 static void _ADF7021_updateRegister0 (ADF7021_Handle handle)
 {
+    uint32_t divider = lrint((handle->frequency * 32768.0) / (handle->referenceFrequency / handle->refDivider));
     uint32_t regval = 0
             | (handle->muxout << 29)
             | (1u << 28)                    /* UART/SPI mode */
             | (1u << 27)                    /* RX */
-            | ((lrint((handle->frequency * 32768.0) / handle->referenceFrequency) & 0x007FFFFF) << 4)
+            | ((divider & 0x007FFFFF) << 4)
             ;
     ADF7021_write(handle, ADF7021_REGISTER_N, regval);
 }
@@ -296,6 +298,7 @@ LPCLIB_Result ADF7021_open (
     handle->demodClockDivider = 4;
     handle->agcClockFrequency = 8e3f;
     handle->mrt = mrt;
+    handle->refDivider = 1;
 
     spi->CFG = 0
             | (1u << 2)                     /* Master */
@@ -367,18 +370,20 @@ LPCLIB_Result ADF7021_ioctl (ADF7021_Handle handle, const ADF7021_Config *pConfi
             /* Force sending R0 (configure UART/SPI mode) */
             _ADF7021_setMuxout(handle, ADF7021_MUXOUT_LOGIC_ZERO, true);
 
-            ADF7021_write(handle, ADF7021_REGISTER_1, 0
-                            | (1u << 25)        /* External L */
-                            | (8u << 19)        /* VCO bias = 2.00 mA */
-                            | (1u << 17)        /* VCO on */
-                            | (1u << 12)        /* XOSC on */
-                            | (0u << 7)         /* CLKOUT off */
-                            | (1u << 4)         /* R = 1 */
-                            );
+            regval = 0
+                | (1u << 25)        /* External L */
+                | (8u << 19)        /* VCO bias = 2.00 mA */
+                | (1u << 17)        /* VCO on */
+                | (1u << 12)        /* XOSC on */
+                | (0u << 7)         /* CLKOUT off */
+                | (handle->refDivider << 4) /* R */
+                ;
+            ADF7021_write(handle, ADF7021_REGISTER_1, regval);
             break;
 
         case ADF7021_OPCODE_SET_REFERENCE:
             handle->referenceFrequency = pConfig->referenceFrequency;
+            handle->refDivider = (handle->referenceFrequency > 15e6) ? 2 : 1;
             break;
 
         case ADF7021_OPCODE_SET_INTERFACE_MODE:
