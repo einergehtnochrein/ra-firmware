@@ -744,7 +744,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 
         handle->monitorUpdate = false;
         if (handle->monitor) {
-            ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(0));
             ADF7021_ioctl(radio, radioModeMONITOR);
 
             _SYS_setRadioFrequency(handle, frequency);
@@ -760,7 +760,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
         } else {
             switch (detector) {
             case SONDE_DETECTOR_C34_C50:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(0));
                 ADF7021_ioctl(radio, radioModeC34C50);
 
                 _SYS_setRadioFrequency(handle, frequency);
@@ -777,7 +777,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_IMET:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(0));
                 ADF7021_ioctl(radio, radioModeImet);
 
                 _SYS_setRadioFrequency(handle, frequency);
@@ -794,7 +794,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_BEACON:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(0));
                 ADF7021_ioctl(radio, radioModeBeacon);
 
                 _SYS_setRadioFrequency(handle, frequency);
@@ -811,12 +811,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_DFM:
-#if (BOARD_RA == 1)
-                ADF7021_setDemodClockDivider(radio, 3);
-#endif
-#if (BOARD_RA == 2)
-                ADF7021_setDemodClockDivider(radio, 4);
-#endif
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2500));
                 ADF7021_setBitRate(radio, 2500);
                 ADF7021_ioctl(radio, radioModeGraw);
 
@@ -827,7 +822,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_JINYANG:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeJinyang);
 
@@ -838,7 +833,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_MRZ:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeMrz);
 
@@ -849,7 +844,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_MEISEI:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeMeisei);
 
@@ -860,7 +855,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_WINDSOND:
-                ADF7021_setDemodClockDivider(radio, 2);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeWindsond);
 
@@ -871,7 +866,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_RS41_RS92:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(4800));
                 ADF7021_setBitRate(radio, 4800);
                 ADF7021_ioctl(radio, radioModeVaisala);
 
@@ -882,7 +877,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_MODEM:
-                ADF7021_setDemodClockDivider(radio, 3);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(9600));
                 ADF7021_setBitRate(radio, 9600);
                 ADF7021_ioctl(radio, radioModeModem);
 
@@ -893,7 +888,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_PILOT:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(4800));
                 ADF7021_setBitRate(radio, 4800);
                 ADF7021_ioctl(radio, radioModePilot);
 
@@ -904,7 +899,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_ASIA1: /* 2FSK 2.4k deviation, 2400 sym/s */
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeAsia1);
 
@@ -915,7 +910,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_PSB3:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(768));
                 ADF7021_setBitRate(radio, 768);
                 ADF7021_ioctl(radio, radioModePSB3);
 
@@ -926,7 +921,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_IMET54:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(4800));
                 ADF7021_setBitRate(radio, 4800);
                 ADF7021_ioctl(radio, radioModeIMET54);
 

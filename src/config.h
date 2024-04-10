@@ -36,7 +36,21 @@ __PACKED(struct _Config_t {
     uint16_t att_mtu;
     uint16_t att_data_length;
     uint16_t max_packet_length;
-    uint8_t __reserved200__[494];
+    /* 0518  0x206 */
+    __PACKED(union {
+        uint8_t __reserved206__[122];
+        __PACKED(struct {
+            uint16_t numDividers;
+            __PACKED(struct {
+                uint16_t baudrate;
+                uint16_t divider;
+            }) dividers[14];
+        }) demodClock;                  /* <5> */
+    });
+    uint8_t __reserved280__[128];
+
+    /* 0768  0x300 */
+    uint8_t __reserved300__[244];
 
     /* 1012  0x3F4 */
     double referenceFrequency;          /* 'double' version of referenceFrequencyFloat. The old
@@ -55,6 +69,7 @@ void CONFIG_open (void);
 /* Access functions (should replace direct structure access */
 float CONFIG_getGeoidHeight (void);
 float CONFIG_getVbatTrim (void);
+uint16_t CONFIG_getDemodClockDivider (uint16_t baudrate);
 double CONFIG_getReferenceFrequency (void);
 
 #endif

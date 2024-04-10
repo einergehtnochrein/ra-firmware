@@ -31,6 +31,13 @@ static const Config_t _factorySettingsDefault = {
     .nameBluetooth = "",
     .usbVendorString = L"leckasemmel.de/ra",
     .usbProductString = L"Sondengott Ra",
+
+    .demodClock.numDividers = 0,
+    .demodClock.dividers = {
+        {.baudrate = 0, .divider = 4},
+        {.baudrate = 1200, .divider = 3},
+        {.baudrate = 9600, .divider = 3},
+    },
 #endif
 };
 
@@ -88,6 +95,40 @@ float CONFIG_getGeoidHeight (void)
 {
     //TODO
     return -49.0f;
+}
+
+
+uint16_t CONFIG_getDemodClockDivider (uint16_t baudrate)
+{
+    uint16_t div = 4;   /* 4 is most common divider */
+
+    /* Check if config blob contains valid entries for the ADF7021 demod clock dividers */
+    uint16_t numDividers = config_g->demodClock.numDividers;
+    bool valid = config_g->version >= 5;    /* Minimum config version */
+    valid = valid && (numDividers != 0);    /* Checks for all zeros */
+    valid = valid && (numDividers != 0xFFFF);   /* Checks for all ones */
+
+    if (valid) {
+        /* Assume first entry is default (ignore first entry's baudrate) */
+        div = config_g->demodClock.dividers[0].divider;
+        for (uint16_t i = 1; i < numDividers; i++) {
+            if (baudrate == config_g->demodClock.dividers[i].baudrate) {
+                div = config_g->demodClock.dividers[i].divider;
+            }
+        }
+    } else {
+        /* Invalid. Use defaults valid for both 13.0 MHz (Ra1) and 12.8 MHz (Ra2). */
+        if ((baudrate == 1200) || (baudrate == 9600)) {
+            div = 3;
+        }
+#if (BOARD_RA == 1)
+        else if (baudrate == 2500) {
+            div = 3;
+        }
+#endif
+    }
+
+    return div;
 }
 
 
