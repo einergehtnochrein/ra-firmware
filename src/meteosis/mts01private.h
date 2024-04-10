@@ -42,7 +42,6 @@ typedef struct {
 typedef struct _MTS01_InstanceData {
     struct _MTS01_InstanceData *next;
     uint32_t id;
-    uint32_t serialNumber;
     char name[20];
     uint16_t frameCounter;
     float rxFrequencyMHz;
@@ -72,8 +71,6 @@ void _MTS01_deleteInstance (MTS01_InstanceData *instance);
 _Bool _MTS01_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
 
 /* Process the payload */
-LPCLIB_Result _MTS01_processPayload (
-        const MTS01_Packet *payload,
-        MTS01_InstanceData *instance);
+LPCLIB_Result _MTS01_processPayload (MTS01_Packet* payload, MTS01_InstanceData* instance);
 
 #endif

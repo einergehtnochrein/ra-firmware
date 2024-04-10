@@ -12,7 +12,7 @@
 
 
 LPCLIB_Result _MTS01_processPayload (
-        const MTS01_Packet *payload,
+        MTS01_Packet *payload,
         MTS01_InstanceData *instance)
 {
     LPCLIB_Result result = LPCLIB_ERROR;
@@ -26,7 +26,7 @@ LPCLIB_Result _MTS01_processPayload (
     lla.climbRate = NAN;
 
     /* The first few comma-separated ASCII fields are present in all frames */
-    const char *p = &payload->rawData.dat8[0];
+    char *p = &payload->rawData.dat8[0];
 
     double latitude = 0;
     double longitude = 0;
@@ -37,7 +37,8 @@ LPCLIB_Result _MTS01_processPayload (
     /* Process up to 18 fields */
     while (token && (nFields < 18)) {
         switch (nFields++) {
-            case 0: instance->serialNumber = atol(token);
+            case 0: strncpy(instance->name, token, sizeof(instance->name));
+                    instance->name[sizeof(instance->name) - 1] = 0;
                     break;
             case 2: instance->frameCounter = atol(token);
                     break;
