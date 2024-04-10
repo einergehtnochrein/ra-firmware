@@ -23,6 +23,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,7 @@
 #include "app.h"
 #include "beacon.h"
 #include "bl652.h"
+#include "bootloader.h"
 #include "cf06.h"
 #include "china1.h"
 #include "dfm.h"
@@ -47,6 +49,7 @@
 #include "meisei.h"
 #include "mon.h"
 #include "mrz.h"
+#include "mts01.h"
 #include "pdm.h"
 #include "pilot.h"
 #include "psb3.h"
@@ -149,6 +152,7 @@ struct SYS_Context {
     SRSC_Handle srsc;
     MEISEI_Handle meisei;
     WINDSOND_Handle windsond;
+    MTS01_Handle mts01;
     PDM_Handle pdm;
 
     _Bool sleeping;                                     /**< Low-power mode activated */
@@ -231,8 +235,6 @@ static const ADF7021_Config radioModeVaisala[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 3600, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -256,8 +258,6 @@ static const ADF7021_Config radioModeGraw[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -281,8 +281,6 @@ static const ADF7021_Config radioModeJinyang[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -306,8 +304,6 @@ static const ADF7021_Config radioModeMrz[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -333,8 +329,6 @@ static const ADF7021_Config radioModeAsia1[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -358,8 +352,6 @@ static const ADF7021_Config radioModePSB3[] = {
         {.demodParams = {
             .deviation = 5000,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -383,8 +375,6 @@ static const ADF7021_Config radioModeIMET54[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 3600, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -409,8 +399,6 @@ static const ADF7021_Config radioModeModem[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 7200, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -436,8 +424,6 @@ static const ADF7021_Config radioModePilot[] = {
 //            .deviation = 2400,    /* Old PCB variant <=9 */
             .deviation = 6200,      /* PCB variant 10 */
             .postDemodBandwidth = 3600, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -461,8 +447,40 @@ static const ADF7021_Config radioModeMeisei[] = {
         {.demodParams = {
             .deviation = 2400,
             .postDemodBandwidth = 1800, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeMTS01[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 5000,      //TODO
+            .postDemodBandwidth = 938, }}}, //TODO
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
+    /* Hardware sync detect is used to freeze the detector threshold
+     * for the duration of the packet
+     */
+    {.opcode = ADF7021_OPCODE_SET_SYNCWORD,
+        {.sync = {
+            .pattern = 0xB42B80,
+            .enable = ENABLE,
+            .maxErrors = 0,
+            .packetLength = 130, }}},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -486,8 +504,6 @@ static const ADF7021_Config radioModeWindsond[] = {
         {.demodParams = {
             .deviation = 34000,
             .postDemodBandwidth = 1875, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -507,8 +523,6 @@ static const ADF7021_Config radioModeC34C50[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 7500, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -528,8 +542,6 @@ static const ADF7021_Config radioModeImet[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 3500, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -549,8 +561,6 @@ static const ADF7021_Config radioModeBeacon[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 3000, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -570,8 +580,6 @@ static const ADF7021_Config radioModeMONITOR[] = {
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
             .postDemodBandwidth = 7500, }}},
-    {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
-        {.agcClockFrequency = 8e3f, }},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -772,7 +780,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
 
         handle->monitorUpdate = false;
         if (handle->monitor) {
-            ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(0));
             ADF7021_ioctl(radio, radioModeMONITOR);
 
             _SYS_setRadioFrequency(handle, frequency);
@@ -788,7 +796,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
         } else {
             switch (detector) {
             case SONDE_DETECTOR_C34_C50:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(0));
                 ADF7021_ioctl(radio, radioModeC34C50);
 
                 _SYS_setRadioFrequency(handle, frequency);
@@ -805,7 +813,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_IMET:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(0));
                 ADF7021_ioctl(radio, radioModeImet);
 
                 _SYS_setRadioFrequency(handle, frequency);
@@ -822,7 +830,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_BEACON:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(0));
                 ADF7021_ioctl(radio, radioModeBeacon);
 
                 _SYS_setRadioFrequency(handle, frequency);
@@ -839,12 +847,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_DFM:
-#if (BOARD_RA == 1)
-                ADF7021_setDemodClockDivider(radio, 3);
-#endif
-#if (BOARD_RA == 2)
-                ADF7021_setDemodClockDivider(radio, 4);
-#endif
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2500));
                 ADF7021_setBitRate(radio, 2500);
                 ADF7021_ioctl(radio, radioModeGraw);
 
@@ -855,7 +858,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_JINYANG:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeJinyang);
 
@@ -866,7 +869,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_MRZ:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeMrz);
 
@@ -877,7 +880,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_MEISEI:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeMeisei);
 
@@ -888,7 +891,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_WINDSOND:
-                ADF7021_setDemodClockDivider(radio, 2);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeWindsond);
 
@@ -899,7 +902,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_RS41_RS92:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(4800));
                 ADF7021_setBitRate(radio, 4800);
                 ADF7021_ioctl(radio, radioModeVaisala);
 
@@ -910,7 +913,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_MODEM:
-                ADF7021_setDemodClockDivider(radio, 3);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(9600));
                 ADF7021_setBitRate(radio, 9600);
                 ADF7021_ioctl(radio, radioModeModem);
 
@@ -921,7 +924,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_PILOT:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(4800));
                 ADF7021_setBitRate(radio, 4800);
                 ADF7021_ioctl(radio, radioModePilot);
 
@@ -932,7 +935,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_ASIA1: /* 2FSK 2.4k deviation, 2400 sym/s */
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(2400));
                 ADF7021_setBitRate(radio, 2400);
                 ADF7021_ioctl(radio, radioModeAsia1);
 
@@ -943,7 +946,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_PSB3:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(768));
                 ADF7021_setBitRate(radio, 768);
                 ADF7021_ioctl(radio, radioModePSB3);
 
@@ -954,7 +957,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_IMET54:
-                ADF7021_setDemodClockDivider(radio, 4);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(4800));
                 ADF7021_setBitRate(radio, 4800);
                 ADF7021_ioctl(radio, radioModeIMET54);
 
@@ -962,6 +965,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 _SYS_reportRadioFrequency(handle);  /* Inform host */
 
                 LPC_MAILBOX->IRQ0SET = (1u << 11); //TODO
+                break;
+
+            case SONDE_DETECTOR_MTS01:
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(1200));
+                ADF7021_setBitRate(radio, 1200);
+                ADF7021_ioctl(radio, radioModeMTS01);
+
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+                LPC_MAILBOX->IRQ0SET = (1u << 12); //TODO
                 break;
 
             default:
@@ -1285,7 +1299,7 @@ static float _SYS_measureVbat (SYS_Handle handle)
     GPIO_writeBit(GPIO_VBAT_ADC_ENABLE, 1);
 #endif
 
-    return vbat;
+    return vbat * CONFIG_getVbatTrim();
 }
 
 
@@ -1542,13 +1556,15 @@ if (cl[0] != 0) {
                     uint32_t bleFirmwareVersion = 0;
                     BL652_getFirmwareVersion(ble, &bleFirmwareVersion);
 
-                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d,%ld",
+                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d,%"PRIu32",%d,%d",
                             FIRMWARE_VERSION_MAJOR,
                             hardwareVersion,
                             FIRMWARE_VERSION_MINOR,
                             FIRMWARE_NAME,
                             config_g->serialNumber,
-                            bleFirmwareVersion
+                            bleFirmwareVersion,
+                            handle->hasPowerScript ? 1 : 0,
+                            BOOTLOADER_getVersion()
                             );
                     SYS_send2Host(HOST_CHANNEL_PING, s);
 
@@ -1575,6 +1591,7 @@ if (cl[0] != 0) {
                     GTH3_resendLastPositions(handle->gth3);
                     PSB3_resendLastPositions(handle->psb3);
                     WINDSOND_resendLastPositions(handle->windsond);
+                    MTS01_resendLastPositions(handle->mts01);
 
                     handle->linkEstablished = true;
                 }
@@ -1615,6 +1632,7 @@ if (cl[0] != 0) {
                         case 11:    detector = SONDE_DETECTOR_ASIA1; break;
                         case 12:    detector = SONDE_DETECTOR_PSB3; break;
                         case 13:    detector = SONDE_DETECTOR_WINDSOND; break;
+                        case 14:    detector = SONDE_DETECTOR_MTS01; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -1709,6 +1727,10 @@ if (cl[0] != 0) {
                                         IMET54_removeFromList(handle->imet54, id, &frequency);
                                         detector = SONDE_DETECTOR_IMET54;
                                         break;
+                                    case SONDE_DECODER_MTS01:
+                                        MTS01_removeFromList(handle->mts01, id, &frequency);
+                                        detector = SONDE_DETECTOR_MTS01;
+                                        break;
                                     default:
                                         /* ignore */
                                         break;
@@ -1769,6 +1791,7 @@ if (cl[0] != 0) {
                                     case 11:    detector = SONDE_DETECTOR_ASIA1; break;
                                     case 12:    detector = SONDE_DETECTOR_PSB3; break;
                                     case 13:    detector = SONDE_DETECTOR_WINDSOND; break;
+                                    case 14:    detector = SONDE_DETECTOR_MTS01; break;
                                 }
                                 SCANNER_setManualSondeDetector(scanner, detector);
                                 SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -2023,6 +2046,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     CF06_open(&handle->cf06);
     GTH3_open(&handle->gth3);
     PSB3_open(&handle->psb3);
+    MTS01_open(&handle->mts01);
     PDM_open(0, &handle->pdm);
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
@@ -2153,6 +2177,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 13: sondeType = SONDE_GTH3_CF06AH; break;
                                 case 14: sondeType = SONDE_PSB3; break;
                                 case 15: sondeType = SONDE_IMET54; break;
+                                case 16: sondeType = SONDE_MTS01; break;
                             }
 
                             /* Process buffer */
@@ -2321,6 +2346,18 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_IMET54) {
                                 if (IMET54_processBlock(
                                         handle->imet54,
+                                        ipc[bufferIndex].data8,
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_MTS01) {
+                                if (MTS01_processBlock(
+                                        handle->mts01,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,

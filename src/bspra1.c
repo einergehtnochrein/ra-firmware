@@ -3,6 +3,7 @@
 
 #include "lpclib.h"
 #include "bsp.h"
+#include "config.h"
 
 
 #if defined(__GNUC__)
@@ -56,11 +57,9 @@ static const UART_Config blePortConfig[] = {
 };
 
 
-
-
-const ADF7021_Config radioConfig[] = {
+static ADF7021_Config radioConfig[] = {
     {.opcode = ADF7021_OPCODE_SET_REFERENCE,
-        {.referenceFrequency = 13e6f, }},
+        {.referenceFrequency = 0, }},   /* Will be set at run-time from global config */
 
     ADF7021_CONFIG_END
 };
@@ -108,6 +107,7 @@ void BSP_init (void)
 
     CLKPWR_enableClock(CLKPWR_CLOCKSWITCH_SPI1);
     ADF7021_open(LPC_SPI1, 0, GPIO_0_23, mrt, &radio);
+    radioConfig[0].referenceFrequency = CONFIG_getReferenceFrequency();
     ADF7021_ioctl(radio, radioConfig);
 }
 

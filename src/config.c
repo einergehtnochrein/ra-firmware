@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -6,10 +7,11 @@
 #include "config.h"
 
 static const Config_t _factorySettingsDefault = {
-    .version = 2,
+    .version = 4,
     .baudrate = 115200.0f,
 
 #if (BOARD_RA == 1)
+    .referenceFrequencyFloat = 13.0e6f,
     .referenceFrequency = 13.0e6,
     .rssiCorrectionLnaOn = -16.0,
     .rssiCorrectionLnaOff = 13.0,
@@ -20,13 +22,22 @@ static const Config_t _factorySettingsDefault = {
     .usbPID = 0x05DC,
     .usbVERSION = 0x0100,
 
+    .referenceFrequencyFloat = 12.8e6f,
     .referenceFrequency = 12.8e6,
-    .rssiCorrectionLnaOn = -13.0,
-    .rssiCorrectionLnaOff = 16.0,
+    .rssiCorrectionLnaOn = -13.0f,
+    .rssiCorrectionLnaOff = 16.0f,
+    .vbatTrim = 1.0f,
 
     .nameBluetooth = "",
     .usbVendorString = L"leckasemmel.de/ra",
     .usbProductString = L"Sondengott Ra",
+
+    .demodClock.numDividers = 0,
+    .demodClock.dividers = {
+        {.baudrate = 0, .divider = 4},
+        {.baudrate = 1200, .divider = 3},
+        {.baudrate = 9600, .divider = 3},
+    },
 #endif
 };
 
@@ -84,5 +95,63 @@ float CONFIG_getGeoidHeight (void)
 {
     //TODO
     return -49.0f;
+}
+
+
+uint16_t CONFIG_getDemodClockDivider (uint16_t baudrate)
+{
+    uint16_t div = 4;   /* 4 is most common divider */
+
+    /* Check if config blob contains valid entries for the ADF7021 demod clock dividers */
+    uint16_t numDividers = config_g->demodClock.numDividers;
+    bool valid = config_g->version >= 5;    /* Minimum config version */
+    valid = valid && (numDividers != 0);    /* Checks for all zeros */
+    valid = valid && (numDividers != 0xFFFF);   /* Checks for all ones */
+
+    if (valid) {
+        /* Assume first entry is default (ignore first entry's baudrate) */
+        div = config_g->demodClock.dividers[0].divider;
+        for (uint16_t i = 1; i < numDividers; i++) {
+            if (baudrate == config_g->demodClock.dividers[i].baudrate) {
+                div = config_g->demodClock.dividers[i].divider;
+            }
+        }
+    } else {
+        /* Invalid. Use defaults valid for both 13.0 MHz (Ra1) and 12.8 MHz (Ra2). */
+        if ((baudrate == 1200) || (baudrate == 9600)) {
+            div = 3;
+        }
+#if (BOARD_RA == 1)
+        else if (baudrate == 2500) {
+            div = 3;
+        }
+#endif
+    }
+
+    return div;
+}
+
+
+double CONFIG_getReferenceFrequency (void)
+{
+    double ref = config_g->referenceFrequency;
+    bool valid = config_g->version >= 4;    /* Minimum config version */
+    valid = valid && (ref != 0);            /* Checks for all zeros */
+    valid = valid && !isnan(ref);           /* Checks for NaN (includes all ones) */
+
+    /* If invalid, default to old (inaccurate) float version. */
+    return valid ? ref : config_g->referenceFrequencyFloat;
+}
+
+
+float CONFIG_getVbatTrim (void)
+{
+    float trim = config_g->vbatTrim;
+    bool valid = config_g->version >= 4;    /* Minimum config version */
+    valid = valid && (trim != 0);           /* Checks for all zeros */
+    valid = valid && !isnan(trim);          /* Checks for NaN (includes all ones) */
+
+    /* If invalid, default to trim=1 */
+    return valid ? trim : 1.0f;
 }
 

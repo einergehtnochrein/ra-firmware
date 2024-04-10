@@ -16,7 +16,7 @@ CFLAGS += \
     -DFIRMWARE_NAME=\"$(subst $(GIT_NEAREST_TAG)-,,$(GIT_FULL_VERSION))\"
 
 C_SRCS = \
-    main.c bspra2.c config.c \
+    main.c bspra2.c config.c bootloader.c \
     adf7021.c sys.c scanner.c ephemupdate.c \
     usb/usb_audio.c usb/usb_serial.c usb/usbuser_config.c \
     bl652.c \
@@ -42,6 +42,7 @@ C_SRCS = \
     china1/china1.c china1/cf06.c china1/cf06config.c china1/cf06utils.c china1/cf06payload.c \
     china1/gth3.c china1/gth3config.c china1/gth3utils.c china1/gth3payload.c \
     vikram/psb3.c vikram/psb3config.c vikram/psb3utils.c vikram/psb3payload.c \
+    meteosis/mts01.c meteosis/mts01config.c meteosis/mts01utils.c meteosis/mts01payload.c \
     \
     semihosting/syscalls.c semihosting/t32term.c semihosting/t32term_memory.c
 
@@ -69,6 +70,7 @@ INCLUDES += \
     -I../src/imet \
     -I../src/jinyang \
     -I../src/meisei \
+    -I../src/meteosis \
     -I../src/modem \
     -I../src/monitor \
     -I../src/mrz \

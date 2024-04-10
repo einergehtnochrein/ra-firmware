@@ -55,6 +55,7 @@ struct BL652_Context {
         int att_data_length;
         int max_packet_length;
         bool hasPowerScript;
+        char scriptName[80];
     } response;
 } _bl652Context;
 
@@ -75,7 +76,17 @@ static void _BL652_processRx (BL652_Handle handle)
                     break;
 
                 case 6:
-                    handle->response.hasPowerScript = strstr(s, SMARTBASIC_SCRIPT) != NULL;
+                    if (strtok(s, "\t")) {
+                        char *scriptName = strtok(NULL, s);
+                        if (strstr(scriptName, SMARTBASIC_SCRIPT)) {
+                            handle->response.hasPowerScript = true;
+                            int maxlen = sizeof(handle->response.scriptName);
+                            strncpy(handle->response.scriptName,
+                                    strtok(scriptName, "\r"),
+                                    maxlen);
+                            handle->response.scriptName[maxlen - 1] = 0;
+                        }
+                    }
                     break;
 
                 case 10:
@@ -391,6 +402,22 @@ LPCLIB_Result BL652_hasPowerScript (BL652_Handle handle, _Bool *pHasPowerScript)
     }
 
     *pHasPowerScript = handle->response.hasPowerScript;
+
+    return LPCLIB_SUCCESS;
+}
+
+
+LPCLIB_Result BL652_getPowerScriptName (BL652_Handle handle, char **pPowerScriptName)
+{
+    if (handle == LPCLIB_INVALID_HANDLE) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    if (pPowerScriptName == NULL) {
+        return LPCLIB_ILLEGAL_PARAMETER;
+    }
+
+    *pPowerScriptName = handle->response.scriptName;
 
     return LPCLIB_SUCCESS;
 }

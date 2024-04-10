@@ -145,7 +145,7 @@ struct ADF7021_ConfigSyncWord {
 typedef struct ADF7021_Config {
     ADF7021_Opcode opcode;                  /**< Config action opcode */
     union {
-        float referenceFrequency;
+        double referenceFrequency;
         ADF7021_InterfaceMode interfaceMode;
         ADF7021_Bandwidth bandwidth;
         struct ADF7021_ConfigAFC afc;
@@ -225,7 +225,7 @@ LPCLIB_Result ADF7021_write (ADF7021_Handle handle,
  *  \param[in] handle Device handle.
  *  \param[in] frequency PLL frequency in Hz
  */
-LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, float frequency);
+LPCLIB_Result ADF7021_setPLL (ADF7021_Handle handle, double frequency);
 
 
 /** Read RSSI
