@@ -16,6 +16,7 @@ typedef enum {
     MODE_ASIA1 = 10,    /* Various sondes (mostly Asia) with 2FSK 2400 sym/s */
     MODE_PSB3 = 11,
     MODE_IMET54 = 12,
+    MODE_MTS01 = 13,
 } SYNC_Mode;
 
 
@@ -346,6 +347,23 @@ static const SYNC_Config configWindsond = {
 };
 
 
+static const SYNC_Config configMTS01 = {
+    .nPatterns = 1,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_METEOSIS_MTS01,
+            .pattern     = {0x0000000000B42B80LL, 0},
+            .patternMask = {0x0000000000FFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 8*(128+2),
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+        },
+    },
+};
+
+
 void MAILBOX_IRQHandler (void)
 {
     uint32_t requests = LPC_MAILBOX->IRQ0;
@@ -398,6 +416,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 11)) {
         newMode = MODE_IMET54;
         LPC_MAILBOX->IRQ0CLR = (1u << 11);
+    }
+    else if (requests & (1u << 12)) {
+        newMode = MODE_MTS01;
+        LPC_MAILBOX->IRQ0CLR = (1u << 12);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -467,6 +489,9 @@ int main (void)
                     break;
                 case MODE_IMET54:
                     syncConfig = &configIMET54;
+                    break;
+                case MODE_MTS01:
+                    syncConfig = &configMTS01;
                     break;
                 case MODE_AFSK:
                 default:
