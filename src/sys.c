@@ -968,8 +968,8 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 break;
 
             case SONDE_DETECTOR_MTS01:
-                ADF7021_setDemodClockDivider(radio, 4);
-                ADF7021_setBitRate(radio, 1202);
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(1200));
+                ADF7021_setBitRate(radio, 1200);
                 ADF7021_ioctl(radio, radioModeMTS01);
 
                 _SYS_setRadioFrequency(handle, frequency);
