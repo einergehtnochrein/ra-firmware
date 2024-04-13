@@ -2,6 +2,9 @@
 #ifndef __MEISEIPRIVATE_H
 #define __MEISEIPRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <math.h>
 #include <stdlib.h>
@@ -122,4 +125,7 @@ bool _MEISEI_iterateInstance (MEISEI_InstanceData **instance);
 /* Remove an instance from the chain */
 void _MEISEI_deleteInstance (MEISEI_InstanceData *instance);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
