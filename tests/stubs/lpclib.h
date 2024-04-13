@@ -6,6 +6,7 @@
 #include "lpc54xxx_libconfig.h"
 
 extern int __CLZ(uint32_t x);
+extern uint32_t __RBIT(uint32_t x);
 
 #endif
 
