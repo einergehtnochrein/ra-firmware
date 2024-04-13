@@ -103,7 +103,8 @@ LPCLIB_Result _MEISEI_processGpsFrame (
         MEISEI_InstanceData *instance);
 LPCLIB_Result _MEISEI_processMetrology (
         MEISEI_InstanceData *instance);
-uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index);
+void _MEISEI_extractDataFromCodewords (const MEISEI_RawPacket *rawPacket, MEISEI_Packet *packet);
+
 
 /* Check if the calibration block contains valid data for a given purpose */
 #define CALIB_SERIAL_SONDE1                 0x0000000000000001ll
@@ -124,6 +125,9 @@ bool _MEISEI_iterateInstance (MEISEI_InstanceData **instance);
 
 /* Remove an instance from the chain */
 void _MEISEI_deleteInstance (MEISEI_InstanceData *instance);
+
+/* BCH error correction */
+LPCLIB_Result _MEISEI_checkBCH (MEISEI_RawPacket *raw, int *pNumErrors);
 
 #ifdef __cplusplus
 }
