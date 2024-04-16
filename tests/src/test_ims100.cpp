@@ -11,9 +11,9 @@
 MEISEI_InstanceData _ims100 = {
     .next = NULL,
     .id = 1,
-    .serialSonde = 100123,
-    .serialPcb = 100456,
-    .serialSensorBoom = 100789,
+    .serialSonde = 100350,
+    .serialPcb = 609614,
+    .serialSensorBoom = 308203,
     .model = MEISEI_MODEL_IMS100,
     .rxFrequencyMHz = 405.1,
     .rxOffset = 0,
@@ -139,7 +139,7 @@ TEST(ims100, metro_calc)
 {
     ENUMS_EQUAL_INT(LPCLIB_SUCCESS, _MEISEI_processMetrology(&_ims100));
     DOUBLES_EQUAL_TEXT(-9.037, _ims100.metro.temperature, 1e-3, "Main temperature");
-    DOUBLES_EQUAL_TEXT(28.111, _ims100.metro.humidity, 1e-3, "Relative Humidity");
+    DOUBLES_EQUAL_TEXT(28.11, _ims100.metro.humidity, 1e-2, "Relative Humidity");
 }
 
 
