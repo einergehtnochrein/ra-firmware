@@ -2,6 +2,9 @@
 #ifndef __M20PRIVATE_H
 #define __M20PRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <math.h>
 #include <stdlib.h>
@@ -133,4 +136,7 @@ bool _M20_iterateInstance (M20_InstanceData **instance);
 /* Remove an instance from the chain */
 void _M20_deleteInstance (M20_InstanceData *instance);
 
+#ifdef __cplusplus
+}
+#endif
 #endif
