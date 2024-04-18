@@ -39,6 +39,7 @@ LPCLIB_Result _MTS01_processPayload (
 
     double latitude = 0;
     double longitude = 0;
+    int usedSats = 0;
     int nFields = 0;
     float temperature = NAN;
 
@@ -65,6 +66,15 @@ LPCLIB_Result _MTS01_processPayload (
             case 7:
                 lla.alt = atol(token);
                 break;
+            case 8:
+                lla.direction = atof(token) * ((float)M_PI / 180.0f);
+                break;
+            case 9:
+                lla.velocity = atof(token);
+                break;
+            case 10:
+                usedSats = atol(token);
+                break;
             case 11:
                 temperature = _MTS01_getTemperature(atof(token));
                 break;
@@ -75,7 +85,7 @@ LPCLIB_Result _MTS01_processPayload (
     }
 
     instance->gps.observerLLA = lla;
-    instance->gps.usedSats = 0;
+    instance->gps.usedSats = usedSats;
     instance->gps.pdop = 0;
     instance->metro.temperature = temperature;
 
