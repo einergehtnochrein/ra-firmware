@@ -41,7 +41,9 @@ LPCLIB_Result _MTS01_processPayload (
     double longitude = 0;
     int usedSats = 0;
     int nFields = 0;
+    float innerTemperature = NAN;
     float temperature = NAN;
+    float humidity = NAN;
 
     /* Read the first field */
     char *token = strtok(p, ",");
@@ -78,6 +80,9 @@ LPCLIB_Result _MTS01_processPayload (
             case 11:
                 temperature = _MTS01_getTemperature(atof(token));
                 break;
+            case 17:
+                innerTemperature = atof(token);
+                break;
         }
 
         /* Read the next field */
@@ -87,7 +92,9 @@ LPCLIB_Result _MTS01_processPayload (
     instance->gps.observerLLA = lla;
     instance->gps.usedSats = usedSats;
     instance->gps.pdop = 0;
+    instance->metro.innerTemperature = innerTemperature;
     instance->metro.temperature = temperature;
+    instance->metro.humidity = humidity;
 
     if (nFields >= 18) {
         result = LPCLIB_SUCCESS;
