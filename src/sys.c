@@ -457,7 +457,7 @@ static const ADF7021_Config radioModeMTS01[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
+        {.bandwidth = ADF7021_BANDWIDTH_9k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -468,7 +468,13 @@ static const ADF7021_Config radioModeMTS01[] = {
         {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
-            .deviation = 5000,      //TODO
+            /* NOTE: MTS-01 deviation is 700 Hz. For 1200 baud we set a DEMOD_CLK of 12,8/3 MHz
+             * in ADF7021, which would require DISCRIMINATOR_BW to go beyond 660.
+             * The driver limits this, but decoding seems to fail.
+             * However, if we set deviation to 1700 here, DISCRIMINATOR_BW will be 629, and
+             * it appears to work. Not clear what happens here, it's a bug...
+             */
+            .deviation = 1700,
             .postDemodBandwidth = 938, }}}, //TODO
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
