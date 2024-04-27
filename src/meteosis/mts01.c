@@ -19,7 +19,8 @@
  * One burst every two seconds.
  * Sync word: 10110100 00101011 10000000 (B4 2B 80)
  *
- * Packet length: 3 sync bytes + 128 data bytes + 2 CRC bytes = 133 bytes (--> 1064 bits, frame duration = 887 ms)
+ * Packet length: 64 bit preamble (1010...) + 3 sync bytes + 128 data bytes + 2 CRC bytes
+ * (--> 1128 bits, frame duration = 940 ms)
  * Packet structure (all bytes received MSB first):
  *
  * +-----------+-------+

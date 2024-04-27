@@ -14,6 +14,7 @@
 /* Convert raw temperature measurement (resistance) to temperature [°C]
  * MTS-01 sends no calibration values, so we use the standard NTC equation with
  * average parameters (B=3000, R0=15) obtained from previous flights.
+ * See: https://github.com/rs1729/RS/blob/master/demod/mod/mts01mod.c
  */
 static float _MTS01_getTemperature (float raw) {
     return 1.0f / (logf(raw / 15.0f) / 3000.0f + 1.0f / 273.15f) - 273.15f;
