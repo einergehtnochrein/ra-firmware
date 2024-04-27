@@ -211,7 +211,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
         memcpy(sBoardName, instance->params.names.mainboard, 10);
         sBoardName[10] = 0;
     }
-    length = snprintf(s, sizeof(s), "%"PRIu32",1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,%"PRIu32",%s,,%d",
+    length = snprintf(s, sizeof(s), "%"PRIu32",1,0,%s,%.1f,%s,%.0f,%.0f,%.1f,%d,%s,%d,%.1f,%"PRIu32",%s,%d,%d",
                 instance->id,
                 instance->name,
                 instance->metro.TU,
@@ -225,6 +225,7 @@ static void _RS41_sendKiss (RS41_InstanceData *instance)
                 instance->gps.pdop,
                 instance->params.firmwareVersion,
                 sBoardName,
+                instance->gps.jammer,
                 instance->metro.numXdataInstruments
                 );
 
@@ -407,7 +408,10 @@ LPCLIB_Result RS41_processBlock (
                     }
                     break;
                 case RS41_SUBFRAME_GPS_RAW:
-                    _RS41_processGpsRawBlock((RS41_SubFrameGpsRaw *)(p + 2), &handle->rawGps);
+                    _RS41_processGpsRawBlock(
+                            (RS41_SubFrameGpsRaw *)(p + 2),
+                            &handle->rawGps,
+                            &handle->instance->gps);
                     break;
                 case RS41_SUBFRAME_CRYPT78:
                 case RS41_SUBFRAME_CRYPT80:

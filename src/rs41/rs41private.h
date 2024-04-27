@@ -195,6 +195,7 @@ typedef struct {
     uint8_t visibleSats;
     uint8_t usedSats;
     uint8_t sAcc;
+    uint8_t jammer;
     float estimatedPressure;
 } RS41_CookedGps;
 
@@ -421,7 +422,8 @@ LPCLIB_Result _RS41_processGpsInfoBlock (
  */
 LPCLIB_Result _RS41_processGpsRawBlock (
         const RS41_SubFrameGpsRaw *p,
-        RS41_RawGps *raw);
+        RS41_RawGps *raw,
+        RS41_CookedGps *cookedGps);
 
 /* Check CRC of a sub-block */
 _Bool _RS41_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
