@@ -19,7 +19,8 @@
  * One burst every two seconds.
  * Sync word: 10110100 00101011 10000000 (B4 2B 80)
  *
- * Packet length: 3 sync bytes + 128 data bytes + 2 CRC bytes = 133 bytes (--> 1064 bits, frame duration = 887 ms)
+ * Packet length: 64 bit preamble (1010...) + 3 sync bytes + 128 data bytes + 2 CRC bytes
+ * (--> 1128 bits, frame duration = 940 ms)
  * Packet structure (all bytes received MSB first):
  *
  * +-----------+-------+
@@ -71,14 +72,26 @@ static void _MTS01_sendKiss (MTS01_InstanceData *instance)
     if (!isnan(longitude)) {
         longitude *= 180.0 / M_PI;
     }
+    float direction = instance->gps.observerLLA.direction;
+    if (!isnan(direction)) {
+        direction *= 180.0 / M_PI;
+    }
+    float velocity = instance->gps.observerLLA.velocity;
+    if (!isnan(velocity)) {
+        velocity *= 3.6f;
+    }
 
-    length = snprintf((char *)s, sizeof(s), "%"PRIu32",22,%.3f,%d,%.5lf,%.5lf,%.0f,,,,,,,,,,%.1f,,,%d,,,,,%.2lf",
+    length = snprintf((char *)s, sizeof(s), "%"PRIu32",22,%.3f,%d,%.5lf,%.5lf,%.0f,,%.1f,%.1f,%.1f,,,,%.1f,,%.1f,,,%d,,,,,%.2lf",
                     instance->id,
                     instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
                     instance->gps.usedSats,
                     latitude,                               /* Latitude [degrees] */
                     longitude,                              /* Longitude [degrees] */
                     instance->gps.observerLLA.alt,          /* Altitude [m] */
+                    direction,                              /* Direction [°] */
+                    velocity,                               /* [km/h] */
+                    instance->metro.temperature,
+                    instance->metro.humidity,               /* Relative humidity [%] */
                     instance->rssi,
                     instance->frameCounter,
                     instance->realTime * 0.01
@@ -88,9 +101,10 @@ static void _MTS01_sendKiss (MTS01_InstanceData *instance)
         SYS_send2Host(HOST_CHANNEL_KISS, s);
     }
 
-    length = snprintf(s, sizeof(s), "%"PRIu32",22,0,%s",
+    length = snprintf(s, sizeof(s), "%"PRIu32",22,0,%s,%.1f",
                 instance->id,
-                instance->name
+                instance->name,
+                instance->metro.innerTemperature
                 );
 
     if (length > 0) {
