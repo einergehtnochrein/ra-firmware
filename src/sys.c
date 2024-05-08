@@ -44,6 +44,7 @@
 #include "imet.h"
 #include "imet54.h"
 #include "jinyang.h"
+#include "lms6.h"
 #include "m10.h"
 #include "m20.h"
 #include "meisei.h"
@@ -144,6 +145,7 @@ struct SYS_Context {
     IMET_Handle imet;
     IMET54_Handle imet54;
     JINYANG_Handle jinyang;
+    LMS6_Handle lms6;
     M10_Handle m10;
     M20_Handle m20;
     MRZ_Handle mrz;
@@ -487,6 +489,29 @@ static const ADF7021_Config radioModeMTS01[] = {
             .enable = ENABLE,
             .maxErrors = 0,
             .packetLength = 130, }}},
+    {.opcode = ADF7021_OPCODE_CONFIGURE, },
+
+    ADF7021_CONFIG_END
+};
+
+static const ADF7021_Config radioModeLMS6[] = {
+    {.opcode = ADF7021_OPCODE_POWER_ON, },
+    {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
+        {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
+    {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
+        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
+    {.opcode = ADF7021_OPCODE_SET_AFC,
+        {.afc = {
+            .enable = ENABLE,
+            .KI = 11,
+            .KP = 2,
+            .maxRange = 20, }}},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR,
+        {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
+    {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
+        {.demodParams = {
+            .deviation = 2400,
+            .postDemodBandwidth = 3600, }}},
     {.opcode = ADF7021_OPCODE_CONFIGURE, },
 
     ADF7021_CONFIG_END
@@ -1004,6 +1029,17 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 _SYS_reportRadioFrequency(handle);  /* Inform host */
 
                 LPC_MAILBOX->IRQ0SET = (1u << 12); //TODO
+                break;
+
+            case SONDE_DETECTOR_LMS6:
+                ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(4800));
+                ADF7021_setBitRate(radio, 4800);
+                ADF7021_ioctl(radio, radioModeLMS6);
+
+                _SYS_setRadioFrequency(handle, frequency);
+                _SYS_reportRadioFrequency(handle);  /* Inform host */
+
+                LPC_MAILBOX->IRQ0SET = (1u << 13); //TODO
                 break;
 
             default:
@@ -1624,6 +1660,7 @@ if (cl[0] != 0) {
                     PSB3_resendLastPositions(handle->psb3);
                     WINDSOND_resendLastPositions(handle->windsond);
                     MTS01_resendLastPositions(handle->mts01);
+                    LMS6_resendLastPositions(handle->lms6);
 
                     handle->linkEstablished = true;
                 }
@@ -1665,6 +1702,7 @@ if (cl[0] != 0) {
                         case 12:    detector = SONDE_DETECTOR_PSB3; break;
                         case 13:    detector = SONDE_DETECTOR_WINDSOND; break;
                         case 14:    detector = SONDE_DETECTOR_MTS01; break;
+                        case 15:    detector = SONDE_DETECTOR_LMS6; break;
                     }
                     SCANNER_setManualSondeDetector(scanner, detector);
                     SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -1767,6 +1805,10 @@ if (cl[0] != 0) {
                                         MTS01_removeFromList(handle->mts01, id, &frequency);
                                         detector = SONDE_DETECTOR_MTS01;
                                         break;
+                                    case SONDE_DECODER_LMS6:
+                                        LMS6_removeFromList(handle->lms6, id, &frequency);
+                                        detector = SONDE_DETECTOR_LMS6;
+                                        break;
                                     default:
                                         /* ignore */
                                         break;
@@ -1829,6 +1871,7 @@ if (cl[0] != 0) {
                                     case 12:    detector = SONDE_DETECTOR_PSB3; break;
                                     case 13:    detector = SONDE_DETECTOR_WINDSOND; break;
                                     case 14:    detector = SONDE_DETECTOR_MTS01; break;
+                                    case 15:    detector = SONDE_DETECTOR_LMS6; break;
                                 }
                                 SCANNER_setManualSondeDetector(scanner, detector);
                                 SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
@@ -2084,6 +2127,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     GTH3_open(&handle->gth3);
     PSB3_open(&handle->psb3);
     MTS01_open(&handle->mts01);
+    LMS6_open(&handle->lms6);
     PDM_open(0, &handle->pdm);
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
@@ -2215,6 +2259,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 14: sondeType = SONDE_PSB3; break;
                                 case 15: sondeType = SONDE_IMET54; break;
                                 case 16: sondeType = SONDE_MTS01; break;
+                                case 17: sondeType = SONDE_LMS6; break;
                             }
 
                             /* Process buffer */
@@ -2395,6 +2440,18 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                             else if (sondeType == SONDE_MTS01) {
                                 if (MTS01_processBlock(
                                         handle->mts01,
+                                        ipc[bufferIndex].data8,
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime) == LPCLIB_SUCCESS) {
+                                    /* Frame complete. Let scanner prepare for next frequency */
+                                    SCANNER_notifyValidFrame(scanner);
+                                }
+                            }
+                            else if (sondeType == SONDE_LMS6) {
+                                if (LMS6_processBlock(
+                                        handle->lms6,
                                         ipc[bufferIndex].data8,
                                         ipc[bufferIndex].numBits,
                                         handle->currentFrequency,
