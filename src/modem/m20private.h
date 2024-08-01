@@ -52,7 +52,10 @@ typedef __PACKED(struct {
     uint8_t reserved3B;             // 3B constant 0
     uint8_t flags;                  // 3C Status flags
     uint8_t heaterPower;            // 3D Power in heater is: P=((heaterPower+145)/10.0) mW
-    uint16_t boardTemperature;      // 3E LE, NTC sensor for board temperature (ADC_IN12, PC2)
+    __PACKED(union {
+        uint16_t boardTemperature;  // 3E LE, NTC sensor for board temperature (ADC_IN12, PC2) (FW V5)
+        uint16_t flags2;            // 3E 16 bits flags (FW >= 6)
+    });
     uint8_t reserved40;             // 40 from EEPROM 024 [23:16]
     __PACKED(union {
         __PACKED(struct {

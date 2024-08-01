@@ -259,7 +259,7 @@ static void _M20_sendKiss (M20_InstanceData *instance)
                 instance->id,
                 instance->hashName,
                 instance->metro.TU,                         /* Temperature humidity sensor [°C] */
-                instance->metro.boardTemperature
+                (instance->firmwareVersion == 5) ? instance->metro.boardTemperature : NAN
                 );
 
     if (length > 0) {
