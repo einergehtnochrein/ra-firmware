@@ -707,18 +707,40 @@ static void _SYS_reportVbat (SYS_Handle handle)
 }
 
 
+static void _SYS_reportScanMode (SYS_Handle handle)
+{
+    (void)handle;
+    char s[20];
+    snprintf(s, sizeof(s), "2,%d", SCANNER_getMode(scanner));
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
+static void _SYS_reportDetector (SYS_Handle handle)
+{
+    (void)handle;
+    char s[20];
+    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
+static void _SYS_reportMonitor (SYS_Handle handle)
+{
+    char s[20];
+    snprintf(s, sizeof(s), "9,%d", handle->monitor ? 1 : 0);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
 static void _SYS_reportControls (SYS_Handle handle)
 {
     (void)handle;
 
-    char s[20];
-    snprintf(s, sizeof(s), "2,%d", SCANNER_getMode(scanner));
-    SYS_send2Host(HOST_CHANNEL_GUI, s);
-    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
-    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
-    SYS_send2Host(HOST_CHANNEL_GUI, s);
-    snprintf(s, sizeof(s), "9,%d", handle->monitor ? 1 : 0);
-    SYS_send2Host(HOST_CHANNEL_GUI, s);
+    _SYS_reportScanMode(handle);
+    _SYS_reportDetector(handle);
+    _SYS_reportMonitor(handle);
 }
 
 
@@ -1774,6 +1796,7 @@ if (cl[0] != 0) {
                                     _SYS_reportRadioFrequency(handle);
                                 }
                                 osTimerStart(handle->rssiTick, 40);
+                                _SYS_reportScanMode(handle);
                             }
                             break;
 
