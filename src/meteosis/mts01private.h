@@ -27,6 +27,7 @@ typedef union {
 typedef struct {
     float temperature;                          /* Temperature [°C] */
     float humidity;                             /* Relative humidity [%] */
+    float innerTemperature;                     /* Temperature inside sonde [°C] */
 } MTS01_CookedMetrology;
 
 

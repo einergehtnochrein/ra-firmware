@@ -2,6 +2,9 @@
 #ifndef __DFMPRIVATE_H
 #define __DFMPRIVATE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <math.h>
 #include <stdlib.h>
@@ -216,4 +219,7 @@ LPCLIB_Result _DFM_processMetrologyBlock (
         const DFM_SubFrameConfig *rawConfig,
         DFM_InstanceData *instance);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

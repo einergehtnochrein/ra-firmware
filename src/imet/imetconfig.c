@@ -106,3 +106,24 @@ bool _IMET_iterateInstance (IMET_InstanceData **instance)
     return result;
 }
 
+
+/* Remove an instance from the chain */
+void _IMET_deleteInstance (IMET_InstanceData *instance)
+{
+    if ((instance == NULL) || (instanceList == NULL)) {
+        /* Nothing to do */
+        return;
+    }
+
+    IMET_InstanceData **parent = &instanceList;
+    IMET_InstanceData *p = NULL;
+    while (_IMET_iterateInstance(&p)) {
+        if (p == instance) {                /* Found */
+            *parent = p->next;              /* Remove from chain */
+            free(instance);                 /* Free allocated memory */
+            break;
+        }
+
+        parent = &p->next;
+    }
+}

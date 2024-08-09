@@ -457,7 +457,7 @@ static const ADF7021_Config radioModeMTS01[] = {
     {.opcode = ADF7021_OPCODE_SET_INTERFACE_MODE,
         {.interfaceMode = ADF7021_INTERFACEMODE_FSK, }},
     {.opcode = ADF7021_OPCODE_SET_BANDWIDTH,
-        {.bandwidth = ADF7021_BANDWIDTH_18k, }},
+        {.bandwidth = ADF7021_BANDWIDTH_9k, }},
     {.opcode = ADF7021_OPCODE_SET_AFC,
         {.afc = {
             .enable = ENABLE,
@@ -468,7 +468,13 @@ static const ADF7021_Config radioModeMTS01[] = {
         {.demodType = ADF7021_DEMODULATORTYPE_2FSK_CORR, }},
     {.opcode = ADF7021_OPCODE_SET_DEMODULATOR_PARAMS,
         {.demodParams = {
-            .deviation = 5000,      //TODO
+            /* NOTE: MTS-01 deviation is 700 Hz. For 1200 baud we set a DEMOD_CLK of 12,8/3 MHz
+             * in ADF7021, which would require DISCRIMINATOR_BW to go beyond 660.
+             * The driver limits this, but decoding seems to fail.
+             * However, if we set deviation to 1700 here, DISCRIMINATOR_BW will be 629, and
+             * it appears to work. Not clear what happens here, it's a bug...
+             */
+            .deviation = 1700,
             .postDemodBandwidth = 938, }}}, //TODO
     {.opcode = ADF7021_OPCODE_SET_AGC_CLOCK,
         {.agcClockFrequency = 8e3f, }},
@@ -701,18 +707,40 @@ static void _SYS_reportVbat (SYS_Handle handle)
 }
 
 
+static void _SYS_reportScanMode (SYS_Handle handle)
+{
+    (void)handle;
+    char s[20];
+    snprintf(s, sizeof(s), "2,%d", SCANNER_getMode(scanner));
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
+static void _SYS_reportDetector (SYS_Handle handle)
+{
+    (void)handle;
+    char s[20];
+    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
+    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
+static void _SYS_reportMonitor (SYS_Handle handle)
+{
+    char s[20];
+    snprintf(s, sizeof(s), "9,%d", handle->monitor ? 1 : 0);
+    SYS_send2Host(HOST_CHANNEL_GUI, s);
+}
+
+
 static void _SYS_reportControls (SYS_Handle handle)
 {
     (void)handle;
 
-    char s[20];
-    snprintf(s, sizeof(s), "2,%d", SCANNER_getMode(scanner));
-    SYS_send2Host(HOST_CHANNEL_GUI, s);
-    SONDE_Detector sondeDetector = SCANNER_getManualSondeDetector(scanner);
-    snprintf(s, sizeof(s), "5,%d", (int)sondeDetector);
-    SYS_send2Host(HOST_CHANNEL_GUI, s);
-    snprintf(s, sizeof(s), "9,%d", handle->monitor ? 1 : 0);
-    SYS_send2Host(HOST_CHANNEL_GUI, s);
+    _SYS_reportScanMode(handle);
+    _SYS_reportDetector(handle);
+    _SYS_reportMonitor(handle);
 }
 
 
@@ -1723,6 +1751,10 @@ if (cl[0] != 0) {
                                         PSB3_removeFromList(handle->psb3, id, &frequency);
                                         detector = SONDE_DETECTOR_PSB3;
                                         break;
+                                    case SONDE_DECODER_IMET:
+                                        IMET_removeFromList(handle->imet, id, &frequency);
+                                        detector = SONDE_DETECTOR_IMET;
+                                        break;
                                     case SONDE_DECODER_IMET54:
                                         IMET54_removeFromList(handle->imet54, id, &frequency);
                                         detector = SONDE_DETECTOR_IMET54;
@@ -1764,6 +1796,7 @@ if (cl[0] != 0) {
                                     _SYS_reportRadioFrequency(handle);
                                 }
                                 osTimerStart(handle->rssiTick, 40);
+                                _SYS_reportScanMode(handle);
                             }
                             break;
 

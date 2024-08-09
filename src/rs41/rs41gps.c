@@ -82,13 +82,18 @@ LPCLIB_Result _RS41_processGpsInfoBlock (
 
 LPCLIB_Result _RS41_processGpsRawBlock (
         const RS41_SubFrameGpsRaw *p,
-        RS41_RawGps *raw)
+        RS41_RawGps *raw,
+        RS41_CookedGps *cookedGps)
 {
     int i;
 
     for (i = 0; i < 12; i++) {
         raw->sats[i].pseudorange =  (double)p->minPrMes + p->sats[i].deltaPrMes / 256.0;
         raw->sats[i].doppler = (int32_t)(_RS41_readS24(p->sats[i].doMes) << 8) / 256;
+    }
+
+    if (p->mon_jam != 0xFF) {
+        cookedGps->jammer = p->mon_jam >> 4;
     }
 
     return LPCLIB_SUCCESS;

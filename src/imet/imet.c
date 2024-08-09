@@ -285,3 +285,29 @@ LPCLIB_Result IMET_pauseResume (IMET_Handle handle, bool pause)
     return LPCLIB_SUCCESS;
 }
 
+
+/* Remove entries from heard list */
+LPCLIB_Result IMET_removeFromList (IMET_Handle handle, uint32_t id, float *frequency)
+{
+    (void)handle;
+
+    IMET_InstanceData *instance = NULL;
+    while (_IMET_iterateInstance(&instance)) {
+        if (instance->id == id) {
+            /* Remove reference from context if this is the current sonde */
+            if (instance == handle->instance) {
+                handle->instance = NULL;
+            }
+
+            /* Let caller know about sonde frequency */
+            *frequency = instance->frequency * 1e6f;
+
+            /* Remove sonde */
+            _IMET_deleteInstance(instance);
+            break;
+        }
+    }
+
+    return LPCLIB_SUCCESS;
+}
+

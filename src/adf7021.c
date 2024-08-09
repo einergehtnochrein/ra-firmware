@@ -257,10 +257,14 @@ static void _ADF7021_configureDemodulator (ADF7021_Handle handle)
 
     /* Bandwidth code for demodulator register */
     handle->ifBandwidthSelect = handle->wideband ? bwWide[handle->bandwidth] : bwNarrow[handle->bandwidth];
+    uint32_t discriminator_bw = lrintf((demodClock * K) / 400e3f);
+    if (discriminator_bw > 660) {
+        discriminator_bw = 660;
+    }
     regval = 0
         | (handle->ifBandwidthSelect << 30)
         | (lrintf(ceil((6433.98176f * handle->demodParams.postDemodBandwidth) / demodClock)) << 20)
-        | (lrintf((demodClock * K) / 400e3f) << 10)
+        | (discriminator_bw << 10)
         | (R4_987[K % 4] << 7)
         | (handle->demodType << 4)
         ;

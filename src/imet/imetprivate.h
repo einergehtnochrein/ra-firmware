@@ -151,6 +151,9 @@ IMET_InstanceData *_IMET_getInstanceDataStructure (float frequency);
 /* Iterate through instances */
 bool _IMET_iterateInstance (IMET_InstanceData **instance);
 
+/* Remove an instance from the chain */
+void _IMET_deleteInstance (IMET_InstanceData *instance);
+
 /* Process a GPS block.
  */
 LPCLIB_Result _IMET_processGpsFrame (

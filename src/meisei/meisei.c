@@ -157,45 +157,6 @@ static void _MEISEI_sendRaw (MEISEI_Handle handle, MEISEI_Packet *p1, MEISEI_Pac
 }
 
 
-/* Index: 0...11 */
-uint16_t _MEISEI_getPayloadHalfWord (const uint64_t *fields, int index)
-{
-    uint32_t x = 0;
-    if (index % 2) {
-        x = (fields[index / 2] & 0x00000001FFFE0000LL) >> 1;
-    }
-    else {
-        x = (fields[index / 2] & 0x000000000000FFFFLL) << 16;
-    };
-
-    return __RBIT(x);
-}
-
-
-
-static int _MEISEI_getDataBCH (int index)
-{
-    MEISEI_Handle handle = &_meisei;
-
-    if ((handle->pBCH != NULL) && (index < 12+34)) {
-        return (*handle->pBCH >> (46 - 1 - index)) & 1;
-    }
-    else {
-        return 0;
-    }
-}
-
-static void _MEISEI_toggleDataBCH (int index)
-{
-    MEISEI_Handle handle = &_meisei;
-
-    if ((handle->pBCH != NULL) && (index < 12+34)) {
-        *handle->pBCH ^= 1ull << (46 - 1 - index);
-    }
-}
-
-
-
 LPCLIB_Result MEISEI_processBlock (
         MEISEI_Handle handle,
         SONDE_Type sondeType,
@@ -232,36 +193,17 @@ LPCLIB_Result MEISEI_processBlock (
 
         /* First frame */
         /* Do BCH check for all six codewords */
-
-        result = LPCLIB_SUCCESS;
-        int i;
-        for (i = 0; i < 6; i++) {
-            handle->pBCH = &handle->rawGpsPacket.fields[i];
-            result = BCH_63_51_t2_process(_MEISEI_getDataBCH, _MEISEI_toggleDataBCH, &nErrors);
+        if (_MEISEI_checkBCH(&handle->rawGpsPacket, &nTotalErrors) == LPCLIB_SUCCESS) {
+            result = _MEISEI_checkBCH(&handle->rawConfigPacket, &nErrors);
             nTotalErrors += nErrors;
-            if (result != LPCLIB_SUCCESS) {
-                break;
-            }
-        }
-        if (result == LPCLIB_SUCCESS) {
-            for (i = 0; i < 6; i++) {
-                handle->pBCH = &handle->rawConfigPacket.fields[i];
-                result = BCH_63_51_t2_process(_MEISEI_getDataBCH, _MEISEI_toggleDataBCH, &nErrors);
-                nTotalErrors += nErrors;
-                if (result != LPCLIB_SUCCESS) {
-                    break;
-                }
-            }
 
             /* There is no CRC to help with undetectable frame errors.
              * Set an arbitrary upper limit for the number of corrected errors. Packets with a
              * larger number of errors are rejected, although all BCH codewords appear error-free.
              */
             if ((result == LPCLIB_SUCCESS) && (nTotalErrors < 5)) {
-                for (i = 0; i < 12; i++) {
-                    handle->configPacket.w[i] = _MEISEI_getPayloadHalfWord(handle->rawConfigPacket.fields, i);
-                    handle->gpsPacket.w[i] = _MEISEI_getPayloadHalfWord(handle->rawGpsPacket.fields, i);
-                }
+                _MEISEI_extractDataFromCodewords(&handle->rawConfigPacket, &handle->configPacket);
+                _MEISEI_extractDataFromCodewords(&handle->rawGpsPacket, &handle->gpsPacket);
 
                 _MEISEI_processConfigFrame(&handle->configPacket, &handle->instance, rxFrequencyHz);
                 handle->instance->rssi = rssi;
