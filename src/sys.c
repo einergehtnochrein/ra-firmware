@@ -1584,7 +1584,7 @@ if (cl[0] != 0) {
                     uint32_t bleFirmwareVersion = 0;
                     BL652_getFirmwareVersion(ble, &bleFirmwareVersion);
 
-                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d,%"PRIu32",%d,%d",
+                    snprintf(s, sizeof(s), "1,%d,%d,%d,%s,%d,%"PRIu32",%d,%d,%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32,
                             FIRMWARE_VERSION_MAJOR,
                             hardwareVersion,
                             FIRMWARE_VERSION_MINOR,
@@ -1592,7 +1592,11 @@ if (cl[0] != 0) {
                             config_g->serialNumber,
                             bleFirmwareVersion,
                             handle->hasPowerScript ? 1 : 0,
-                            BOOTLOADER_getVersion()
+                            BOOTLOADER_getVersion(),
+                            ((uint32_t *)0)[0],
+                            ((uint32_t *)0)[1],
+                            ((uint32_t *)0)[2],
+                            ((uint32_t *)0)[3]
                             );
                     SYS_send2Host(HOST_CHANNEL_PING, s);
 
