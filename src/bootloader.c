@@ -31,6 +31,7 @@
 
 const uint32_t SIGNATURE_RA2_V2a[] = {0x2000FFD0,0x00002C59,0x00002C95,0x00002C99};
 const uint32_t SIGNATURE_RA2_V2b[] = {0x2000FFD0,0x00002FCD,0x00003009,0x0000300D};
+const uint32_t SIGNATURE_RA2_V2c[] = {0x2000FFD0,0x00002FA9,0x00002FE5,0x00002FE9};
 const uint32_t SIGNATURE_RA2_V4a[] = {0x2000FFD0,0x0000324D,0x00003289,0x0000328D};
 const uint32_t SIGNATURE_RA2_V4b[] = {0x2000FFD0,0x0000418D,0x000041C9,0x000041CD};
 
@@ -54,6 +55,9 @@ int BOOTLOADER_getVersion (void)
             version = 2;
         }
         if (memcmp((void *)0, SIGNATURE_RA2_V2b, sizeof(SIGNATURE_RA2_V2b)) == 0) {
+            version = 2;
+        }
+        if (memcmp((void *)0, SIGNATURE_RA2_V2c, sizeof(SIGNATURE_RA2_V2c)) == 0) {
             version = 2;
         }
         if (memcmp((void *)0, SIGNATURE_RA2_V4a, sizeof(SIGNATURE_RA2_V4a)) == 0) {
