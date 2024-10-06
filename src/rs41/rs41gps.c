@@ -60,7 +60,7 @@ LPCLIB_Result _RS41_processGpsInfoBlock (
     int i;
     uint8_t nSats = 0;
 
-    cookedGps->gpstime = SECONDS_BETWEEN_UNIX_GPS + (rawGps->gpsWeek * GPS_SECONDS_PER_WEEK) + (rawGps->timeOfWeek / 1000.0);
+    cookedGps->gpstime = (rawGps->gpsWeek * GPS_SECONDS_PER_WEEK) + (rawGps->timeOfWeek / 1000.0);
 
     for (i = 0; i < 12; i++) {
         raw->sats[i].prn = rawGps->sats[i].prn;
