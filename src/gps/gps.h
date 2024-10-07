@@ -29,7 +29,6 @@
 
 #include "lpclib.h"
 
-
 #define GPS_SECONDS_PER_WEEK                            604800ul
 #define GPS_GRAVITATIONAL_CONSTANT                      3.986004418e14
 #define GPS_SPEED_OF_LIGHT                              2.99792458e8
