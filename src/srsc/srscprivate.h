@@ -138,13 +138,8 @@ typedef struct {
     double gpstime;
     LLA_Coordinate observerLLA;
     float climbRate;
-    struct {
-        uint16_t year;
-        uint8_t month;
-        uint8_t day;
-        uint8_t hour;
-        uint8_t minute;
-    } utc;
+    int32_t gpsDate;                            /* yymmdd (or -1 if invalid) */
+    int32_t gpsTime;                            /* hhmmss (or -1 if invalid) */
 
     uint8_t usedSats;                           /* # used sats */
     uint32_t usedSatsMask;                      /* Identifies sats used for position solution
