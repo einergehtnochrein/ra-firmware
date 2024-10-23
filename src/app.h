@@ -7,7 +7,7 @@
 #include "sys.h"
 
 #define FIRMWARE_VERSION_MAJOR              56
-#define FIRMWARE_VERSION_MINOR              3
+#define FIRMWARE_VERSION_MINOR              4
 #if !defined(FIRMWARE_NAME)
 #  define FIRMWARE_NAME                     ""
 #endif
