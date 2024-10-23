@@ -86,8 +86,11 @@ LPCLIB_Result _CF06_checkReedSolomonOuter (uint8_t rawFrame[], int *pNumErrors)
         }
     }
 
+    /* Make sure the correct Galois field is used */
+    REEDSOLOMON_makeGaloisField(0x11D);
+
     /* Reed-Solomon error correction for outer frame */
-    result = REEDSOLOMON_process(6, 1, _CF06_getDataAddressOuter, &numErrorsOuter);
+    result = REEDSOLOMON_process(6, 1, 1, 1, _CF06_getDataAddressOuter, &numErrorsOuter);
 
     if (pNumErrors) {
         *pNumErrors = numErrorsOuter;
@@ -121,7 +124,7 @@ LPCLIB_Result _CF06_checkReedSolomonInner (uint8_t rawFrame[], int *pNumErrors)
 
 
     /* Reed-Solomon error correction for inner frame */
-    result = REEDSOLOMON_process(6, 1, _CF06_getDataAddressInner, &numErrorsInner);
+    result = REEDSOLOMON_process(6, 1, 1, 1, _CF06_getDataAddressInner, &numErrorsInner);
 
     if (pNumErrors) {
         *pNumErrors = numErrorsInner;

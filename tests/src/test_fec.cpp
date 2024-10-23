@@ -123,12 +123,15 @@ TEST(fec, reedsolomon_rs41)
     int numErrors;
     int i;
 
+    /* Prepare Galois field */
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_makeGaloisField(0x11D));
+
     /* Begin with a correct codeword. Should be accepted, and no errors detected.
      * Actually a RS41 frame consists of two interleaved codewords, so do two tests!
      */
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort1, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, 1, 1, _rs41_getDataAddressShort1, &numErrors));
     LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW1");
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort2, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, 1, 1, _rs41_getDataAddressShort2, &numErrors));
     LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW2");
 
     /* Add some errors, max. 12 in both codewords. This is still correctable. */
@@ -143,10 +146,10 @@ TEST(fec, reedsolomon_rs41)
         _rs41_raw_dewhitened[errorLocations2[i]] ^= 0xFF;
     }
 
-    /* Codewords must corrected, and correct number of errors detected */
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort1, &numErrors));
+    /* Codewords must be corrected, and correct number of errors detected */
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, 1, 1, _rs41_getDataAddressShort1, &numErrors));
     LONGS_EQUAL_TEXT(nErrors1, numErrors, "Number of errors injected in CW1");
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, _rs41_getDataAddressShort2, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(24, 0, 1, 1, _rs41_getDataAddressShort2, &numErrors));
     LONGS_EQUAL_TEXT(nErrors2, numErrors, "Number of errors injected in CW2");
 
     /* TODO validate corrected frames! */
@@ -159,12 +162,15 @@ TEST(fec, reedsolomon_cf06)
     int numErrors;
     int i;
 
+    /* Prepare Galois field */
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_makeGaloisField(0x11D));
+
     /* Begin with a correct codeword. Should be accepted, and no errors detected.
      * Actually a CF06 frame consists of two codewords, so do two tests!
      */
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, _cf06_getData1, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, 1, 1, _cf06_getData1, &numErrors));
     LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW1");
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, _cf06_getData2, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, 1, 1, _cf06_getData2, &numErrors));
     LONGS_EQUAL_TEXT(0, numErrors, "No corrections in valid CW2");
 
     /* Add some errors, max. 3 in both codewords. This is still correctable.
@@ -183,10 +189,10 @@ TEST(fec, reedsolomon_cf06)
         _cf06_raw[errorLocations2[i]] ^= 0xFF;
     }
 
-    /* Codewords must corrected, and correct number of errors detected */
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, _cf06_getData1, &numErrors));
+    /* Codewords must be corrected, and correct number of errors detected */
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, 1, 1, _cf06_getData1, &numErrors));
     LONGS_EQUAL_TEXT(nErrors1, numErrors, "Number of errors injected in CW1");
-    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, _cf06_getData2, &numErrors));
+    ENUMS_EQUAL_INT(LPCLIB_SUCCESS, REEDSOLOMON_process(6, 1, 1, 1, _cf06_getData2, &numErrors));
     LONGS_EQUAL_TEXT(nErrors2, numErrors, "Number of errors injected in CW2");
 
     /* TODO validate corrected frames! */

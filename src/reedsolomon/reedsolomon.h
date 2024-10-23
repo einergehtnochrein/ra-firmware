@@ -35,7 +35,8 @@ extern "C" {
 
 typedef uint8_t * (*_REEDSOLOMON_GetDataAddressFunc)(int index);
 
-LPCLIB_Result REEDSOLOMON_process (int m, int firstZero, _REEDSOLOMON_GetDataAddressFunc access, int *pnErrors);
+LPCLIB_Result REEDSOLOMON_makeGaloisField (uint32_t primPoly);
+LPCLIB_Result REEDSOLOMON_process (int m, int firstZero, int generatorPrimitive, int primRoot, _REEDSOLOMON_GetDataAddressFunc access, int *pnErrors);
 
 #ifdef __cplusplus
 }
