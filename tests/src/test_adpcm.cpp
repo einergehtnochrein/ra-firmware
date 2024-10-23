@@ -54,7 +54,7 @@ TEST(adpcm, nrm16)
         int32_t sl = (int16_t)(floor(pcm[i] / 5.0));
         codes[i] = ADPCM_processSample(&adpcm, sl);
 
-#if 1
+#if 0
         printf("%6d,%6d,%6d,%2X,%6d,"
                "%6d,%6d,%6d,%6d,%6d,%6d,%6d,"
                "%6d,%6d,%6d,%6d,"

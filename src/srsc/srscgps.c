@@ -21,6 +21,14 @@ LPCLIB_Result _SRSC_processGpsFrame (
 
     switch (rawGps->type) {
 //TODO TODO TODO C34/C50 type must be provided as input!
+        case SRSC_FRAME_GPS_DATE:
+            cookedGps->gpsDate = data;
+            break;
+
+        case SRSC_FRAME_GPS_TIME:
+            cookedGps->gpsTime = data;
+            break;
+
         case SRSC_FRAME_GPS_LATITUDE:
             i32 = (int32_t)data / 1000000;
             if ((i32 < -90) || (i32 > 90)) {  // C50

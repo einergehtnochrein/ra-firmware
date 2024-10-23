@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "lpclib.h"
 #include "bsp.h"
@@ -124,7 +125,24 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
     }
     snprintf(sSpecial, sizeof(sSpecial), "%"PRIu32, special);
 
-    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f,,,%.2lf",
+    /* Calculate Posix time if available */
+    double posixTime = 0;
+    if ((instance->gps.gpsDate >= 0) && (instance->gps.gpsTime >= 0)) {
+        struct tm *t;
+        t = localtime(NULL);
+        t->tm_year = 100 + instance->gps.gpsDate / 10000;
+        t->tm_mon = (instance->gps.gpsDate % 10000) / 100 - 1;
+        t->tm_mday = instance->gps.gpsDate % 100;
+        t->tm_hour = instance->gps.gpsTime / 10000;
+        t->tm_min = (instance->gps.gpsTime % 10000) / 100;
+        t->tm_sec = instance->gps.gpsTime % 100;
+        posixTime = mktime(t);
+
+        instance->gps.gpsDate = -1;
+        instance->gps.gpsTime = -1;
+    }
+
+    length = sprintf((char *)s, "%"PRIu32",8,%.3f,%d,%.5lf,%.5lf,%s,%.1f,,,%s,,%s,%.3f,%.1f,%.2f,%.1f,%.2f,%d,,,%.3f,,%.0lf,%.2lf",
                     instance->id,
                     f,                                  /* Frequency [MHz] */
                     instance->gps.usedSats,
@@ -141,6 +159,7 @@ static void _SRSC_sendKiss (SRSC_InstanceData *instance)
                     instance->rxOffset / 1e3f,
                     instance->gps.usedSats,
                     instance->config.batteryVoltage,    /* Battery voltage [V] */
+                    posixTime,
                     instance->realTime * 0.01
                     );
     if (length > 0) {
