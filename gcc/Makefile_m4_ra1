@@ -16,7 +16,7 @@ C_SRCS = \
     adf7021.c sys.c scanner.c ephemupdate.c \
     bl652.c \
     gps/gps.c gps/rinex.c gps/observer.c \
-    reedsolomon/reedsolomon.c bch/bch.c \
+    fec/reedsolomon/reedsolomon.c fec/bch/bch.c \
     sonde.c \
     beacon/beacon.c beacon/beaconconfig.c beacon/beacondsp.c beacon/beaconpdf1.c beacon/beaconpdf2.c \
     dfm/dfm.c dfm/dfmconfig.c dfm/dfmgps.c dfm/dfmmetrology.c \
@@ -58,10 +58,11 @@ EXE_DEPENDENCIES += \
     $(OBJDIR)/$(RINEXLIB) $(OBJDIR)/$(M0LIB) ../libs/pdm/libpdm.a
 
 INCLUDES += \
-    -I../src/bch \
     -I../src/beacon \
     -I../src/china1 \
     -I../src/dfm \
+    -I../src/fec/bch \
+    -I../src/fec/reedsolomon \
     -I../src/gps \
     -I../src/imet \
     -I../src/jinyang \
@@ -71,7 +72,6 @@ INCLUDES += \
     -I../src/modem \
     -I../src/monitor \
     -I../src/mrz \
-    -I../src/reedsolomon \
     -I../src/rs41 \
     -I../src/rs92 \
     -I../src/semihosting \
