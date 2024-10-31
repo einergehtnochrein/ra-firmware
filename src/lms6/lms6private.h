@@ -45,6 +45,11 @@ bool _LMS6_iterateInstance (LMS6_InstanceData **instance);
 /* Remove an instance from the chain */
 void _LMS6_deleteInstance (LMS6_InstanceData *instance);
 
+/* Check CRC of a data frame */
+_Bool _LMS6_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
+/* Reed-Solomon error correction */
+LPCLIB_Result _LMS6_checkReedSolomon (uint8_t rawFrame[], int *pNumErrors);
+
 #ifdef __cplusplus
 }
 #endif
