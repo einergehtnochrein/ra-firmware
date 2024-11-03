@@ -370,12 +370,13 @@ static const SYNC_Config configLMS6 = {
     .conf = {
         {
             .id = IPC_PACKET_TYPE_LMS6,
-            .pattern     = {0x56081C971AA73D3ELL, 0},
-            .patternMask = {0xFFFFFFFFFFFFFFFFLL, 0},
-            .nMaxDifference = 1,
-            .frameLengthBits = 2 * 255 * 8,
+            /* Check last 48 symbols of 64-symbol ASM */
+            .pattern     = {0x00001C971AA73D3ELL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 255 * 8,
             .startOffset = 0,
-            .dataState = SYNC_STATE_DATA_RAW,
+            .dataState = SYNC_STATE_DATA_CCSDS,
             .inverted = false,
         },
     },

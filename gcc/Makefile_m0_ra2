@@ -10,7 +10,7 @@ OBJDIR = obj_m0_ra2
 MAKEFILE = Makefile_m0_ra2
 
 C_SRCS = \
-    main_m0.c sync_detect.c
+    main_m0.c sync_detect.c viterbi.c
 
 CPP_SRCS =
 
