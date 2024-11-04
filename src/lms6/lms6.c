@@ -46,6 +46,8 @@
  * Reed-Solomon code:  RS(255,223), symbols from GF(256) with primitive polynomial 0x187
  *                     and generator element alpha^11. RS generator polynomial
  *                     g = (x - (alpha^11)^112)*...*(x - (alpha^11)^143)
+ *                     TODO It looks like RS codeword bytes are sent LSB first into
+ *                          the convolutional encoder
  *
  * (For a detailed description see https://public.ccsds.org/Publications/BlueBooks.aspx,
  *  CCSDS 131.0-B-x  TM Synchronization and Channel Coding)
@@ -70,14 +72,22 @@
  */
 
 
+#define LMS6_RINGBUFFER_SIZE    512     /* Must be large enough to take twice the maximum of a
+                                         * data frame (223 bytes) and a RS codeword payload
+                                         * (223 bytes)
+                                         */
+#define LMS6_FRAME_TYPE_T       "$T"
+
 /** Context */
 typedef struct LMS6_Context {
     uint8_t *pRawData;
 
-    bool thisFrameNumberValid;
-
     float rxFrequencyHz;
     int nCorrectedErrors;
+
+    uint8_t ringBuffer[2 * LMS6_RINGBUFFER_SIZE];   /* Ringbuffer with linear extension */
+    int ringBufferWrIndex;
+    int ringBufferRdIndex;
 
     LMS6_InstanceData *instance;
 } LMS6_Context;
@@ -98,6 +108,58 @@ LPCLIB_Result LMS6_open (LMS6_Handle *pHandle)
 /* Send position as a KISS packet */
 static void _LMS6_sendKiss (LMS6_InstanceData *instance)
 {
+    char s[160];
+    int length = 0;
+
+
+    /* Convert lat/lon from radian to decimal degrees */
+    double latitude = instance->gps.observerLLA.lat;
+    if (!isnan(latitude)) {
+        latitude *= 180.0 / M_PI;
+    }
+    double longitude = instance->gps.observerLLA.lon;
+    if (!isnan(longitude)) {
+        longitude *= 180.0 / M_PI;
+    }
+    float direction = instance->gps.observerLLA.direction;
+    if (!isnan(direction)) {
+        direction *= 180.0 / M_PI;
+    }
+    float velocity = instance->gps.observerLLA.velocity;
+    if (!isnan(velocity)) {
+        velocity *= 3.6f;
+    }
+
+    length = snprintf((char *)s, sizeof(s),
+                "%"PRIu32",23,%.3f,,%.5lf,%.5lf,%.0f,%.1f,%.1f,%.1f,%.1f,%.1f,,,%.1f,,%.1f,,,%"PRIu32",,,,,%.2lf",
+                    instance->id,
+                    instance->rxFrequencyMHz,               /* Nominal sonde frequency [MHz] */
+                    latitude,                               /* Latitude [degrees] */
+                    longitude,                              /* Longitude [degrees] */
+                    instance->gps.observerLLA.alt,          /* Altitude [m] */
+                    instance->gps.observerLLA.climbRate,    /* Climb rate [m/s] */
+                    direction,                              /* Direction [degrees} */
+                    velocity,                               /* Velocity [km/h] */
+                    instance->metro.temperature,                      /* Temperature main sensor [°C] */
+                    instance->metro.pressure,               /* Pressure [hPa] */
+                    instance->metro.humidity,               /* Relative humidity [%] */
+                    instance->rssi,
+                    instance->frameNumber,
+                    instance->realTime * 0.01
+                    );
+
+    if (length > 0) {
+        SYS_send2Host(HOST_CHANNEL_KISS, s);
+    }
+
+    length = snprintf(s, sizeof(s), "%"PRIu32",23,0,%"PRIu32,
+                instance->id,
+                instance->serial
+                );
+
+    if (length > 0) {
+        SYS_send2Host(HOST_CHANNEL_INFO, s);
+    }
 }
 
 
@@ -109,12 +171,10 @@ LPCLIB_Result LMS6_processBlock (
         float rssi,
         uint64_t realTime)
 {
-    /* Return if raw data is not the size of a RS(255,223) frame plus tail byte (in symbols!) */
-    if (numBits != 2*(255+1)*8) {
+    /* Return if raw data is not the size of an RS(255,223) block */
+    if (numBits != 255 * 8) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
-
-    //TODO convolutional decoder
 
     handle->pRawData = buffer;
 
@@ -124,17 +184,53 @@ LPCLIB_Result LMS6_processBlock (
         return LPCLIB_ERROR;
     }
 
-    //TODO  add to data ring buffer; detect data frame, return if no complete data frame yet
-
     /* Remember RX frequency (difference to nominal sonde frequency will be reported of frequency offset) */
     handle->rxFrequencyHz = rxFrequencyHz;
 
-    /* Check data frame CRC */
-#if 0
-    if (_LMS6_checkCRC(..., ..., ...)) {
-
+    /* Copy RS codeword message part to ring buffer */
+    memcpy(&handle->ringBuffer[handle->ringBufferWrIndex], handle->pRawData, 223);
+    int extSize = 223 - (LMS6_RINGBUFFER_SIZE - handle->ringBufferWrIndex);
+    if (extSize > 0) {
+        memcpy(handle->ringBuffer, &handle->ringBuffer[LMS6_RINGBUFFER_SIZE], extSize);
     }
-#endif
+    handle->ringBufferWrIndex = (handle->ringBufferWrIndex + 223) % LMS6_RINGBUFFER_SIZE;
+
+    /* Look for frame signature */
+    while (handle->ringBufferRdIndex != handle->ringBufferWrIndex) {
+        if (handle->ringBuffer[handle->ringBufferRdIndex] == '$') {
+            /* Possible signature start found. Check if there's currently enough data in
+             * ringbuffer for a complete frame.
+             */
+            int bytesAvailable = handle->ringBufferWrIndex >= handle->ringBufferRdIndex ?
+                        handle->ringBufferWrIndex - handle->ringBufferRdIndex :
+                        LMS6_RINGBUFFER_SIZE - handle->ringBufferRdIndex + handle->ringBufferWrIndex;
+            if (bytesAvailable >= (int)sizeof(LMS6_RawFrame)) {
+                LMS6_RawFrame *p = (LMS6_RawFrame *)&handle->ringBuffer[handle->ringBufferRdIndex];
+                if (!strncmp(p->signature, LMS6_FRAME_TYPE_T, 4 /* TODO sizeof... */)) {
+                    /* Check data frame CRC */
+                    if (_LMS6_checkCRC(p, sizeof(LMS6_RawFrame) - sizeof(uint16_t), __REV16(p->crc))) {
+                        _LMS6_processConfigBlock(p, &handle->instance);
+                        if (handle->instance) {
+                            handle->instance->rssi = rssi;
+                            handle->instance->realTime = realTime;
+                            handle->instance->rxFrequencyMHz = handle->rxFrequencyHz / 1e6f;
+                            handle->instance->frameNumber = __REV16(p->frameNumber);
+
+                            if (_LMS6_processPayload(p,
+                                                      &handle->instance->gps,
+                                                      &handle->instance->metro) == LPCLIB_SUCCESS) {
+                                _LMS6_sendKiss(handle->instance);
+                            }
+                        }
+                    }
+
+                    handle->ringBufferRdIndex = (handle->ringBufferRdIndex + sizeof(LMS6_RawFrame)) % LMS6_RINGBUFFER_SIZE;
+                }
+            }
+            break;
+        }
+        handle->ringBufferRdIndex = (handle->ringBufferRdIndex + 1) % LMS6_RINGBUFFER_SIZE;
+    }
 
     return LPCLIB_SUCCESS;
 }

@@ -16,14 +16,39 @@ extern "C" {
 #include "gps.h"
 
 
+typedef __PACKED(struct {
+    uint8_t d[3];
+}) int24_str;
+
+typedef __PACKED(struct {
+    char signature[4];
+
+    uint32_t serial;
+    uint16_t frameNumber;
+    uint32_t time_ms;
+    int32_t reserved0A;
+    int32_t latitude;
+    int32_t longitude;
+    int32_t altitude;
+    int24_str reserved1A;
+    int24_str reserved1D;
+    int24_str reserved20;
+
+    uint8_t _dummy_[182];
+
+    uint16_t crc;
+}) LMS6_RawFrame;
+
+
 typedef struct {
     float temperature;                  /* Temperature [°C] main (air) sensor */
     float pressure;                     /* Atmospheric pressure [hPa] */
+    float humidity;
 } LMS6_CookedMetrology;
 
 
 typedef struct {
-    double gpstime;
+    double tow;
     ECEF_Coordinate observerECEF;
     LLA_Coordinate observerLLA;
 } LMS6_CookedGps;
@@ -33,9 +58,15 @@ typedef struct {
 typedef struct _LMS6_InstanceData {
     struct _LMS6_InstanceData *next;
     uint32_t id;
-    char name[20];                              /* Sonde name */
+    uint32_t serial;
     uint32_t lastUpdated;
+    float rssi;
+    uint64_t realTime;
     float rxFrequencyMHz;
+    uint32_t frameNumber;
+
+    LMS6_CookedGps gps;
+    LMS6_CookedMetrology metro;
 } LMS6_InstanceData;
 
 
@@ -46,9 +77,18 @@ bool _LMS6_iterateInstance (LMS6_InstanceData **instance);
 void _LMS6_deleteInstance (LMS6_InstanceData *instance);
 
 /* Check CRC of a data frame */
-_Bool _LMS6_checkCRC (uint8_t *buffer, int length, uint16_t receivedCRC);
+_Bool _LMS6_checkCRC (void *buffer, int length, uint16_t receivedCRC);
 /* Reed-Solomon error correction */
 LPCLIB_Result _LMS6_checkReedSolomon (uint8_t rawFrame[], int *pNumErrors);
+
+LPCLIB_Result _LMS6_processConfigBlock (
+        const LMS6_RawFrame *rawConfig,
+        LMS6_InstanceData **instancePointer);
+
+LPCLIB_Result _LMS6_processPayload (
+        const LMS6_RawFrame *payload,
+        LMS6_CookedGps *cookedGps,
+        LMS6_CookedMetrology *cookedMetro);
 
 #ifdef __cplusplus
 }

@@ -13,7 +13,7 @@ static LMS6_InstanceData *instanceList;
 
 
 /* Get a new calibration data structure for a new sonde */
-static LMS6_InstanceData *_LMS6_getInstanceDataStructure (const char *name)
+static LMS6_InstanceData *_LMS6_getInstanceDataStructure (uint32_t serial)
 {
     LMS6_InstanceData *p;
     LMS6_InstanceData *instance;
@@ -24,7 +24,7 @@ static LMS6_InstanceData *_LMS6_getInstanceDataStructure (const char *name)
     int numSondes = 0;
     p = instanceList;
     while (p) {
-        if (!strcmp(p->name, name)) {
+        if (serial == p->serial) {
             /* Found it! */
             return p;
         }
@@ -58,9 +58,7 @@ static LMS6_InstanceData *_LMS6_getInstanceDataStructure (const char *name)
     if (instance) {
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
-        strncpy(instance->name, name, sizeof(instance->name) - 1);
-        instance->name[sizeof(instance->name) - 1] = 0;
-        //instance->temperatureTx = NAN;
+        instance->serial = serial;
 
         /* Insert into list */
         p = instanceList;
@@ -83,87 +81,28 @@ static LMS6_InstanceData *_LMS6_getInstanceDataStructure (const char *name)
 }
 
 
-#if 0
 /* Process the config/calib block. */
-LPCLIB_Result _RS41_processConfigBlock (
-        const RS41_SubFrameCalibConfig *rawConfig,
-        RS41_InstanceData **instancePointer)
+LPCLIB_Result _LMS6_processConfigBlock (
+        const LMS6_RawFrame *rawConfig,
+        LMS6_InstanceData **instancePointer)
 {
-    char s[11];
-    unsigned int i, j;
-
-
-    /* Get the sonde name (remove spaces) */
-    j = 0;
-    for (i = 0; i < sizeof(rawConfig->name); i++) {
-        /* Copy if not a space character */
-        if (rawConfig->name[i] != ' ') {
-            s[j] = rawConfig->name[i];
-            ++j;
-        }
-
-        /* Probably never happens, but just in case: Test for premature end of string. */
-        if (!rawConfig->name[i]) {
-            break;
-        }
-    }
-    s[j] = 0;
-
-    /* We must have a valid name by now */
-    if (strlen(s) == 0) {
-        return LPCLIB_ERROR;
-    }
-
     /* Valid pointer to take the output values required */
     if (!instancePointer) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
     /* Allocate new instance space if new sonde! */
-    RS41_InstanceData *instance = _RS41_getInstanceDataStructure(s);
+    LMS6_InstanceData *instance = _LMS6_getInstanceDataStructure(__REV(rawConfig->serial));
     *instancePointer = instance;
 
     if (instance) {
-        /* Add fragment to calibration data */
-        int fragmentIndex = rawConfig->thisCalibIndex;
-
-        if (fragmentIndex <= RS41_CALIBRATION_MAX_INDEX) {
-            instance->fragmentValidFlags |= (1ull << fragmentIndex);
-
-            memcpy(instance->rawData[fragmentIndex], rawConfig->calibFragment, sizeof(instance->rawData[fragmentIndex]));
-        }
-
         /* Set time marker to be able to identify old records */
         instance->lastUpdated = os_time;
-
-        /* Cook some other values */
-        instance->frameCounter = rawConfig->frameCounter;
-        instance->batteryVoltage = rawConfig->batteryVoltage100mV / 10.0f;
-        instance->onDescent = (rawConfig->flags & (1u << 1)) ? true : false;
-        instance->temperatureRef = rawConfig->temperatureRef;
-        instance->txPower_dBm = (rawConfig->txPower == 0) ? 1 : (-1 + 3 * rawConfig->txPower);
-        if ((1 <= rawConfig->cryptoMode) && (rawConfig->cryptoMode <= 4)) {
-            instance->is_SGM = true;
-            if ((3 <= rawConfig->cryptoMode) && (rawConfig->cryptoMode <= 4)) {
-                instance->encrypted = true;
-            }
-        }
-
-        if (_RS41_checkValidCalibration(instance, CALIB_FREQUENCY)) {
-            instance->rxFrequencyMHz = 400.0f + (instance->params.frequency * 10) / 64000.0f;
-        }
-
-        /* Last fragment contains volatile data */
-        if (fragmentIndex == RS41_CALIBRATION_MAX_INDEX) {
-            instance->killCounterRefFrame = instance->frameCounter;
-            instance->killCounterRefCount = instance->params.killCountdown;
-            instance->temperatureTx = instance->params.intTemperatureRadio;
-        }
     }
 
     return LPCLIB_SUCCESS;
 }
-#endif
+
 
 /* Iterate through instances */
 bool _LMS6_iterateInstance (LMS6_InstanceData **instance)
