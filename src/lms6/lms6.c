@@ -163,6 +163,61 @@ static void _LMS6_sendKiss (LMS6_InstanceData *instance)
 }
 
 
+static char _lms6_rawCompressed[320];
+
+static void _LMS6_sendRaw (LMS6_InstanceData *instance, uint8_t *buffer, uint32_t length)
+{
+    uint32_t i = 0;
+    int j;
+    uint8_t uu[4+1];
+    int N = ((length + 1) / 3) * 3;
+    int n;
+    int slen = 0;
+    char *s = _lms6_rawCompressed;
+
+
+    slen += snprintf(&s[slen], sizeof(_lms6_rawCompressed) - slen, "%"PRIu32",23,1,%"PRIu32",",
+                     instance->id,
+                     length
+                    );
+
+    for (n = 0; n < N; n += 3) {
+        uu[0] = uu[1] = uu[2] = uu[3] = uu[4] = 0;
+
+        if (i < length)  {
+            uu[0] = buffer[i] & 0x3F;
+            uu[1] = (buffer[i] >> 6) & 0x03;
+            ++i;
+        }
+        if (i < length)  {
+            uu[1] |= (buffer[i] << 2) & 0x3C;
+            uu[2] = (buffer[i] >> 4) & 0x0F;
+            ++i;
+        }
+        if (i < length)  {
+            uu[2] |= (buffer[i] << 4) & 0x30;
+            uu[3] = (buffer[i] >> 2) & 0x3F;
+            ++i;
+        }
+
+        for (j = 0; j < 4; j++) {
+            uu[j] ^= 0x20;
+            if (uu[j] <= 0x20) {
+                uu[j] |= 0x40;
+            }
+            /* Deviation from UUENCODE: Avoid comma, replace by space */
+            if (uu[j] == ',') {
+                uu[j] = ' ';
+            }
+        }
+
+        slen += snprintf(&s[slen], sizeof(_lms6_rawCompressed) - slen, "%s", uu);
+    }
+
+    SYS_send2Host(HOST_CHANNEL_INFO, s);
+}
+
+
 LPCLIB_Result LMS6_processBlock (
         LMS6_Handle handle,
         void *buffer,
@@ -207,6 +262,8 @@ LPCLIB_Result LMS6_processBlock (
             if (bytesAvailable >= (int)sizeof(LMS6_RawFrame)) {
                 LMS6_RawFrame *p = (LMS6_RawFrame *)&handle->ringBuffer[handle->ringBufferRdIndex];
                 if (!strncmp(p->signature, LMS6_FRAME_TYPE_T, 4 /* TODO sizeof... */)) {
+                    _LMS6_sendRaw(handle->instance, (uint8_t *)p, sizeof(*p));
+
                     /* Check data frame CRC */
                     if (_LMS6_checkCRC(p, sizeof(LMS6_RawFrame) - sizeof(uint16_t), __REV16(p->crc))) {
                         _LMS6_processConfigBlock(p, &handle->instance);
