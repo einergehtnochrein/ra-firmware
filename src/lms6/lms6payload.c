@@ -36,9 +36,9 @@ LPCLIB_Result _LMS6_processPayload (
 
     lla = cookedGps->observerLLA;
 
-    lla.lat = __REV(payload->latitude) * _lms6_coordinateFactor;
-    lla.lon = __REV(payload->longitude) * _lms6_coordinateFactor;
-    lla.alt = __REV(payload->altitude) * 0.001f;
+    lla.lat = (int32_t)__REV(payload->latitude) * _lms6_coordinateFactor;
+    lla.lon = (int32_t)__REV(payload->longitude) * _lms6_coordinateFactor;
+    lla.alt = (int32_t)__REV(payload->altitude) * 0.001f;
     lla.climbRate = _LMS6_read24_BigEndian(payload->reserved20.d) / 100.0f;
     lla.direction = NAN;
     lla.velocity = NAN;
