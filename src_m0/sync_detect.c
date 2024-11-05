@@ -413,6 +413,12 @@ void PIN_INT3_IRQHandler (void)
                 break;
 
             case SYNC_STATE_DATA_CCSDS:
+                /* In this mode take RSSI sample immediately after sync detect */
+                if (handle->writeIndex == 0) {
+                    /* Tell M4 to keep current RSSI value */
+                    LPC_MAILBOX->IRQ1SET = (1u << 1);
+                }
+
                 /* Process symbol pairs */
                 handle->symbolPair = (handle->symbolPair << 1) | bit;
                 if (++handle->symbolPhase >= 2) {
@@ -434,10 +440,6 @@ void PIN_INT3_IRQHandler (void)
                             ipc_s2m[handle->activeBuffer].valid = 1;
 
                             LPC_MAILBOX->IRQ1SET = (1u << 0);
-                        }
-                        else if (handle->rxCounterBits == handle->frameLengthBits / 2) {
-                            /* Tell M4 to keep current RSSI value */
-                            LPC_MAILBOX->IRQ1SET = (1u << 1);
                         }
                     }
                 }
