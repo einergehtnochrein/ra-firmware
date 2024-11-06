@@ -1,7 +1,8 @@
 COMPONENT_NAME=fec
 
 SRC_FILES = \
-  $(PROJECT_SRC_DIR)/src/reedsolomon/reedsolomon.c
+  $(PROJECT_SRC_DIR)/src/fec/reedsolomon/reedsolomon.c \
+  $(PROJECT_SRC_DIR)/src_m0/viterbi.c
 
 TEST_SRC_FILES = \
   $(UNITTEST_SRC_DIR)/test_fec.cpp

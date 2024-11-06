@@ -3,7 +3,8 @@
 #include <iostream>
 #include <iomanip>
 
-#include "reedsolomon/reedsolomon.h"
+#include "fec/reedsolomon/reedsolomon.h"
+#include "src_m0/viterbi.h"
 
 
 /* RS41 raw frame after dewhitening and with correct bit order */
@@ -80,6 +81,30 @@ static uint8_t _lms6_raw[255] = {
     0xf2, 0xa7, 0xa2, 0x16, 0xe2, 0x35, 0xe0, 0xa1, 0xd1, 0x94, 0x5d, 0xe4, 0xa8, 0x85, 0x07
 };
 
+/* LMS-6, convolutionally encoded bytes 0x10...0x4F, start state: End of ASM */
+static uint8_t _lms6_test_10_4f[128] = {
+    0x42, 0xca, 0xa6, 0xa6, 0x72, 0x7d, 0x9d, 0x61, 0x47, 0x4b, 0x68, 0x57, 0xbc, 0x8c, 0x53, 0x90,
+    0x8a, 0x06, 0xd5, 0x1a, 0x01, 0xc1, 0xee, 0xdd, 0x34, 0xf7, 0x1b, 0xeb, 0xcf, 0x30, 0x20, 0x2c,
+    0xf9, 0x6e, 0x7d, 0x72, 0xa9, 0xa9, 0x46, 0xb5, 0x9c, 0x9f, 0xb3, 0x83, 0x67, 0x58, 0x88, 0x44,
+    0x51, 0xd2, 0x0e, 0xce, 0xda, 0x15, 0x35, 0x09, 0xef, 0x23, 0xc0, 0x3f, 0x14, 0xe4, 0xfb, 0xf8,
+    0x22, 0x81, 0x61, 0x9d, 0xb5, 0x46, 0x5a, 0x5a, 0x80, 0x70, 0xaf, 0x6c, 0x7b, 0xb7, 0x94, 0xab,
+    0x4d, 0x3d, 0x12, 0x21, 0xc6, 0xfa, 0x29, 0xe6, 0xf3, 0xcc, 0xdc, 0xd0, 0x08, 0x0b, 0xe7, 0x17,
+    0x3e, 0x5b, 0x4b, 0x87, 0x9f, 0x5c, 0x70, 0x40, 0xaa, 0x6a, 0x85, 0x76, 0x51, 0xad, 0xbe, 0xb1,
+    0x67, 0x27, 0x38, 0x3b, 0xec, 0xe0, 0x03, 0xfc, 0xd9, 0xd6, 0xf6, 0xca, 0x22, 0x11, 0xcd, 0x0d
+};
+
+#if 0
+static uint8_t _lms6_real[128] = {
+    0x79, 0xd9, 0xa9, 0x48, 0x7c, 0x29, 0x1d, 0x23, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93,
+    0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93,
+    0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93,
+    0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93,
+    0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x50, 0x93,
+    0x50, 0x93, 0x50, 0x93, 0x50, 0x93, 0x66, 0x2f, 0x5c, 0x45, 0x78, 0x95, 0x55, 0x55, 0x55, 0x55,
+    0x6d, 0xf4, 0xd8, 0xc9, 0xd9, 0x73, 0x59, 0x78, 0xad, 0xcf, 0x1c, 0x4e, 0x60, 0x56, 0x4f, 0x03,
+    0xaf, 0xde, 0x4b, 0x1a, 0x9f, 0x9c, 0x5f, 0x73, 0x9a, 0x32, 0x43, 0x69, 0x7d, 0x47, 0x9f, 0x67,
+};
+#endif
 
 
 static uint8_t _rs41_null;
@@ -313,4 +338,92 @@ TEST(fec, reedsolomon_lms6)
     LONGS_EQUAL_TEXT(nErrors, numErrors, "Number of errors injected in CW");
 
     /* TODO validate corrected frame! */
+}
+
+
+/* Test of the "general" Reed Solomon decoder, uses LMS-6 frame as an example */
+TEST(fec, viterbi_lms6)
+{
+    int i, j;
+    VITERBI_Handle viterbi;
+    uint8_t decoded[sizeof(_lms6_test_10_4f) / 2];
+    uint8_t data;
+
+    VITERBI_open(&viterbi, 0x1D);
+
+    /* Introduce some errors */
+    _lms6_test_10_4f[7] ^= 0x42;
+    _lms6_test_10_4f[20] ^= 0x42;
+    _lms6_test_10_4f[42] ^= 0x42;
+    _lms6_test_10_4f[57] ^= 0x42;
+    _lms6_test_10_4f[91] ^= 0x42;
+    _lms6_test_10_4f[104] ^= 0x42;
+
+    j = 0;
+    for (i = 0; i < sizeof(_lms6_test_10_4f); i += 2) {
+        ENUMS_EQUAL_INT(LPCLIB_PENDING, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 0] >> 6, &data));
+        ENUMS_EQUAL_INT(LPCLIB_PENDING, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 0] >> 4, &data));
+        ENUMS_EQUAL_INT(LPCLIB_PENDING, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 0] >> 2, &data));
+        ENUMS_EQUAL_INT(LPCLIB_PENDING, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 0] >> 0, &data));
+        ENUMS_EQUAL_INT(LPCLIB_PENDING, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 1] >> 6, &data));
+        ENUMS_EQUAL_INT(LPCLIB_PENDING, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 1] >> 4, &data));
+        ENUMS_EQUAL_INT(LPCLIB_PENDING, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 1] >> 2, &data));
+
+        if (i/2 < 2) {
+            ENUMS_EQUAL_INT(LPCLIB_PENDING, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 1] >> 0, &data));
+        }
+        else {
+            ENUMS_EQUAL_INT(LPCLIB_SUCCESS, VITERBI_decodeSymbolPair(viterbi, _lms6_test_10_4f[i + 1] >> 0, &data));
+
+            decoded[j++] = data;
+        }
+    }
+
+    /* Add another 16 (random) symbols to produce the last two output bytes */
+    for (i = 0; i < 2*8; i++) {
+        if (VITERBI_decodeSymbolPair(viterbi, 0, &data) == LPCLIB_SUCCESS) {
+            decoded[j++] = data;
+        }
+    }
+
+    /* Check if everything decoded as expected */
+    for (i = 0; i < 64; i++) {
+        LONGS_EQUAL_TEXT(0x10+i, decoded[i], "decoded[x]");
+    }
+
+    /*******************************************************************/
+
+#if 0
+    VITERBI_open(&viterbi, 0x1D);
+
+    memset(decoded, 0, sizeof(decoded));
+    j = 0;
+    for (i = 0; i < sizeof(_lms6_real); i += 2) {
+        VITERBI_decodeSymbolPair(viterbi, _lms6_real[i + 0] >> 6, &data);
+        VITERBI_decodeSymbolPair(viterbi, _lms6_real[i + 0] >> 4, &data);
+        VITERBI_decodeSymbolPair(viterbi, _lms6_real[i + 0] >> 2, &data);
+        VITERBI_decodeSymbolPair(viterbi, _lms6_real[i + 0] >> 0, &data);
+        VITERBI_decodeSymbolPair(viterbi, _lms6_real[i + 1] >> 6, &data);
+        VITERBI_decodeSymbolPair(viterbi, _lms6_real[i + 1] >> 4, &data);
+        VITERBI_decodeSymbolPair(viterbi, _lms6_real[i + 1] >> 2, &data);
+        if (VITERBI_decodeSymbolPair(viterbi, _lms6_real[i + 1] >> 0, &data) == LPCLIB_SUCCESS) {
+            decoded[j++] = data;
+        }
+    }
+
+    /* Add another 16 (random) symbols to produce the last two output bytes */
+    for (i = 0; i < 2*8; i++) {
+        if (VITERBI_decodeSymbolPair(viterbi, 0, &data) == LPCLIB_SUCCESS) {
+            decoded[j++] = data;
+        }
+    }
+
+    /* Show result */
+    for (i = 0; i < 64; i++) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)decoded[i] << " ";
+        if (i % 16 == 15) {
+            std::cout << std::endl;
+        }
+    }
+#endif
 }

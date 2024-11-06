@@ -4,6 +4,7 @@
 #include "lpclib.h"
 #include "bsp.h"
 #include "sync_detect.h"
+#include "viterbi.h"
 
 
 #define MAX_PATTERNS        4
@@ -28,6 +29,10 @@ struct _SyncDetectorContext {
     int symbolPhase;
     int nSubBlockBits;
     int nSubBlockBytes;
+
+    /* For CCSDS convolutional decoder */
+    VITERBI_Handle viterbi;
+    uint8_t symbolPair;
 } syncContext;
 
 
@@ -95,6 +100,7 @@ void PIN_INT3_IRQHandler (void)
                             ipc_s2m[handle->activeBuffer].numBits = handle->frameLengthBits + handle->config->conf[i].startOffset * 8;
                             ipc_s2m[handle->activeBuffer].param = handle->config->conf[i].id;
                             ipc_s2m[handle->activeBuffer].rxTime = os_time;
+                            VITERBI_open(&handle->viterbi, 0x1D);
                         }
                     }
                 }
@@ -401,6 +407,39 @@ void PIN_INT3_IRQHandler (void)
                         else if (handle->rxCounterBits == handle->frameLengthBits / 2) {
                             /* Tell M4 to keep current RSSI value */
                             LPC_MAILBOX->IRQ1SET = (1u << 1);
+                        }
+                    }
+                }
+                break;
+
+            case SYNC_STATE_DATA_CCSDS:
+                /* In this mode take RSSI sample immediately after sync detect */
+                if (handle->writeIndex == 0) {
+                    /* Tell M4 to keep current RSSI value */
+                    LPC_MAILBOX->IRQ1SET = (1u << 1);
+                }
+
+                /* Process symbol pairs */
+                handle->symbolPair = (handle->symbolPair << 1) | bit;
+                if (++handle->symbolPhase >= 2) {
+                    handle->symbolPhase = 0;
+
+                    uint8_t data;
+                    if (VITERBI_decodeSymbolPair(handle->viterbi, handle->symbolPair, &data) == LPCLIB_SUCCESS) {
+                        ipc_s2m[handle->activeBuffer].data8[handle->writeIndex] = data;
+
+                        ++handle->writeIndex;
+
+                        handle->rxCounterBits -= 8;
+                        if (handle->rxCounterBits <= 0) {
+                            handle->state = SYNC_STATE_HUNT;
+                            if (handle->postProcess) {
+                                handle->postProcess(handle, &ipc_s2m[handle->activeBuffer], handle->writeIndex);
+                            }
+                            handle->writeIndex = 0;
+                            ipc_s2m[handle->activeBuffer].valid = 1;
+
+                            LPC_MAILBOX->IRQ1SET = (1u << 0);
                         }
                     }
                 }

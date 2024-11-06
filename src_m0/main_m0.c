@@ -17,6 +17,7 @@ typedef enum {
     MODE_PSB3 = 11,
     MODE_IMET54 = 12,
     MODE_MTS01 = 13,
+    MODE_LMS6 = 14,
 } SYNC_Mode;
 
 
@@ -364,6 +365,24 @@ static const SYNC_Config configMTS01 = {
 };
 
 
+static const SYNC_Config configLMS6 = {
+    .nPatterns = 1,
+    .conf = {
+        {
+            .id = IPC_PACKET_TYPE_LMS6,
+            /* Check last 48 symbols of 64-symbol ASM */
+            .pattern     = {0x00001C971AA73D3ELL, 0},
+            .patternMask = {0x0000FFFFFFFFFFFFLL, 0},
+            .nMaxDifference = 0,
+            .frameLengthBits = 255 * 8,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_CCSDS,
+            .inverted = false,
+        },
+    },
+};
+
+
 void MAILBOX_IRQHandler (void)
 {
     uint32_t requests = LPC_MAILBOX->IRQ0;
@@ -420,6 +439,10 @@ void MAILBOX_IRQHandler (void)
     else if (requests & (1u << 12)) {
         newMode = MODE_MTS01;
         LPC_MAILBOX->IRQ0CLR = (1u << 12);
+    }
+    else if (requests & (1u << 13)) {
+        newMode = MODE_LMS6;
+        LPC_MAILBOX->IRQ0CLR = (1u << 13);
     }
     else if (requests & (1u << 30)) {
         resetSync = true;
@@ -492,6 +515,9 @@ int main (void)
                     break;
                 case MODE_MTS01:
                     syncConfig = &configMTS01;
+                    break;
+                case MODE_LMS6:
+                    syncConfig = &configLMS6;
                     break;
                 case MODE_AFSK:
                 default:

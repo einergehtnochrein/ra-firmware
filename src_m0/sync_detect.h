@@ -12,6 +12,7 @@ typedef enum {
     SYNC_STATE_DATA_BIPHASE_M,
     SYNC_STATE_DATA_MANCHESTER,
     SYNC_STATE_DATA_MANCHESTER_UART_8N1,
+    SYNC_STATE_DATA_CCSDS,
 } SYNC_State;
 
 typedef struct _SyncDetectorContext *SYNC_Handle;
