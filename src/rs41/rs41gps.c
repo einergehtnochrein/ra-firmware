@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "lpclib.h"
 #include "rs41.h"
@@ -51,6 +52,62 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
 }
 
 
+LPCLIB_Result _RS41_processGnssPositionBlock (
+        const RS41_SubFrameGnssPosition *rawGps,
+        RS41_CookedGps *cookedGps)
+{
+    ECEF_Coordinate ecef;
+    LLA_Coordinate lla;
+
+    ecef.x = rawGps->ecefX / 100.0;
+    ecef.y = rawGps->ecefY / 100.0;
+    ecef.z = rawGps->ecefZ / 100.0;
+    ecef.vx = rawGps->speedX / 100.0f;
+    ecef.vy = rawGps->speedY / 100.0f;
+    ecef.vz = rawGps->speedZ / 100.0f;
+    GPS_convertECEF2LLA(&ecef, &lla);
+    GPS_applyGeoidHeightCorrection(&lla);
+
+    if (lla.alt < -100.0) {
+        return LPCLIB_ERROR;
+    }
+
+    cookedGps->observerECEF = ecef;
+    cookedGps->observerLLA = lla;
+    cookedGps->usedSats = 0;
+    cookedGps->pdop = NAN;
+    cookedGps->sAcc = 0;
+    cookedGps->estimatedPressure = 1013.25f * expf(-1.18575919e-4f * lla.alt);
+
+    //TODO leap seconds?
+    struct tm calendarTime = {
+        .tm_sec = rawGps->second,
+        .tm_min = rawGps->minute,
+        .tm_hour = rawGps->hour,
+        .tm_mday = rawGps->mday,
+        .tm_mon = rawGps->month - 1,
+        .tm_year = rawGps->year - 1900,
+        .tm_isdst = -1,
+    };
+    time_t unixTime = mktime(&calendarTime);
+    if (unixTime >= 0) {
+        cookedGps->gpstime = unixTime - 315964800;
+    }
+
+#if 0
+    /* Invalidate position if this is not a valid position solution */
+    if (cookedGps->usedSats == 0) {
+        cookedGps->observerLLA.lat = NAN;
+        cookedGps->observerLLA.lon = NAN;
+        cookedGps->observerLLA.alt = NAN;
+        cookedGps->estimatedPressure = NAN;
+    }
+#endif
+
+    return LPCLIB_SUCCESS;
+}
+
+
 /* Process the GPS block (sat info). */
 LPCLIB_Result _RS41_processGpsInfoBlock (
         const RS41_SubFrameGpsInfo *rawGps,
@@ -72,6 +129,27 @@ LPCLIB_Result _RS41_processGpsInfoBlock (
 
         raw->sats[i].cno = rawGps->sats[i].cno_mesQI / 32;
         raw->sats[i].mesQI = rawGps->sats[i].cno_mesQI % 32;
+    }
+
+    cookedGps->visibleSats = nSats;
+
+    return LPCLIB_SUCCESS;
+}
+
+
+//TODO: just a guess
+/* Process the GNSS block (sat info). */
+LPCLIB_Result _RS41_processGnssInfoBlock (
+        const RS41_SubFrameGnssInfo *rawGps,
+        RS41_CookedGps *cookedGps)
+{
+    uint8_t nSats = 0;
+
+    for (int i = 0; i < 16; i++) {
+        /* Count number of valid sats */
+        if ((rawGps->sats[i] & 0x70) != 0) {
+            ++nSats;
+        }
     }
 
     cookedGps->visibleSats = nSats;
