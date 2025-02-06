@@ -389,8 +389,14 @@ LPCLIB_Result RS41_processBlock (
                     }
                     break;
                 case RS41_SUBFRAME_GPS_POSITION:
+                case RS41_SUBFRAME_GNSS_POSITION:
                     if (handle->instance) {
-                        _RS41_processGpsPositionBlock((RS41_SubFrameGpsPosition *)(p + 2), &handle->instance->gps);
+                        if (p[0] == RS41_SUBFRAME_GPS_POSITION) {
+                            _RS41_processGpsPositionBlock((RS41_SubFrameGpsPosition *)(p + 2), &handle->instance->gps);
+                        }
+                        else {
+                            _RS41_processGnssPositionBlock((RS41_SubFrameGnssPosition *)(p + 2), &handle->instance->gps);
+                        }
 
                         LPCLIB_Event event;
                         LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
@@ -406,6 +412,13 @@ LPCLIB_Result RS41_processBlock (
                                 (RS41_SubFrameGpsInfo *)(p + 2),
                                 &handle->instance->gps,
                                 &handle->rawGps);
+                    }
+                    break;
+                case RS41_SUBFRAME_GNSS_INFO:
+                    if (handle->instance) {
+                        _RS41_processGnssInfoBlock(
+                                (RS41_SubFrameGnssInfo *)(p + 2),
+                                &handle->instance->gps);
                     }
                     break;
                 case RS41_SUBFRAME_GPS_RAW:

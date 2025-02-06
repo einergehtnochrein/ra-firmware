@@ -27,6 +27,9 @@ typedef enum {
     RS41_SUBFRAME_XDATA = 0x7E,
     RS41_SUBFRAME_METROLOGY_SHORT = 0x7F,
     RS41_SUBFRAME_CRYPT80 = 0x80,
+    RS41_SUBFRAME_GNSS_POSITION = 0x82,
+    RS41_SUBFRAME_GNSS_INFO = 0x83,
+    RS41_SUBFRAME_XXX = 0x96,
 } RS41_SubFrameType;
 
 #define RS41_CALIBRATION_MAX_INDEX      50
@@ -156,6 +159,33 @@ typedef __PACKED(struct {
     }) sats[12];
     uint16_t crc;
 }) RS41_SubFrameGpsRaw;
+
+
+//TODO
+typedef __PACKED(struct {
+    int32_t ecefX;
+    int32_t ecefY;
+    int32_t ecefZ;
+    int16_t speedX;
+    int16_t speedY;
+    int16_t speedZ;
+    uint16_t year;
+    uint8_t month;
+    uint8_t mday;
+    uint8_t hour;
+    uint8_t minute;
+    uint8_t second;
+    uint8_t reserved019[13];
+    uint16_t crc;
+}) RS41_SubFrameGnssPosition;
+
+
+//TODO: just a guess
+typedef __PACKED(struct {
+    uint8_t reserved000[25];
+    uint8_t sats[16];
+    uint16_t crc;
+}) RS41_SubFrameGnssInfo;
 
 
 typedef struct {
@@ -410,12 +440,26 @@ LPCLIB_Result _RS41_processGpsPositionBlock (
         RS41_CookedGps *cookedGps);
 
 
+/* Process the GNSS block (position).
+ */
+LPCLIB_Result _RS41_processGnssPositionBlock (
+        const RS41_SubFrameGnssPosition *rawGps,
+        RS41_CookedGps *cookedGps);
+
+
 /* Process the GPS block (sat info).
  */
 LPCLIB_Result _RS41_processGpsInfoBlock (
         const RS41_SubFrameGpsInfo *rawGps,
         RS41_CookedGps *cookedGps,
         RS41_RawGps *raw);
+
+
+/* Process the GNSS block (sat info).
+ */
+LPCLIB_Result _RS41_processGnssInfoBlock (
+        const RS41_SubFrameGnssInfo *rawGps,
+        RS41_CookedGps *cookedGps);
 
 
 /* Process the GPS raw satellite data.
