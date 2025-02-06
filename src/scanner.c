@@ -103,7 +103,7 @@ static void _SCANNER_getSpectrum (void)
 {
     SCANNER_Handle handle = &scannerContext;
     const int N = 10;
-    const int OVER = 100;
+    const int OVER = 30;
     const uint32_t grid = 10000;
     int i;
     int n;
