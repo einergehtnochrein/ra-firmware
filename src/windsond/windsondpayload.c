@@ -166,7 +166,16 @@ LPCLIB_Result _WINDSOND_processPayload (WINDSOND_InstanceData **instancePointer,
         *instancePointer = instance;
 
         _Bool haveHUM = false;
-        if ((payload[0] == 0x04) || (payload[0] == 0x1B) || (payload[0] == 0x3E) || (payload[0] == 0x45)) {  //TODO ???
+        /* The bit pattern in payload[0] seems to be a model indicator, with no particular meaning
+         * assigned to single bits. However, it looks like we must use this "model" indicator
+         * with a look-up table to determine whether the sonde sends a humidity value.
+         *
+         * Previous positive list of known models with humidity sensor:  04 1B 3E 45
+         * New positive list of known models with humidity sensor:  04 0A 3E 45
+         * NOTE: 1B was removed after double-checking old recordings. 0A was added after such
+         *       sondes were first observed in July 2025.
+         */
+        if ((payload[0] == 0x04) || (payload[0] == 0x0A) || (payload[0] == 0x3E) || (payload[0] == 0x45)) {  //TODO ???
             haveHUM = true;
         }
         _Bool haveBASE1 = flags != 0;
