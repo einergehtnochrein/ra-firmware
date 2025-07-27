@@ -196,7 +196,7 @@ static void _ADF7021_setMuxout (ADF7021_Handle handle, ADF7021_Muxout muxout, bo
 /* Set up clocks */
 static void _ADF7021_setClocks (ADF7021_Handle handle)
 {
-    uint32_t bbos_clk_divide = lrintf(log2f((float)handle->referenceFrequency / 1.5e6f) - 2.0f);
+    uint32_t bbos_clk_divide = lrintf(log2f((float)handle->referenceFrequency / 2.0e6f) - 1.5f);
     uint32_t seq_clk_divide = lrintf((float)handle->referenceFrequency / 100e3f);
     uint32_t agc_clk_divide = lrintf((float)handle->referenceFrequency / (seq_clk_divide * handle->agcClockFrequency));
     uint32_t cdr_clk_divide = 1;
