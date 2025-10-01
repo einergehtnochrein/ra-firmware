@@ -69,7 +69,6 @@ typedef struct UART_Context *UART_Handle;
 typedef enum UART_Opcode {
     UART_OPCODE_INVALID = 0,                /**< (List terminator) */
     UART_OPCODE_SET_BAUDRATE,               /**< Set baudrate by value */
-    UART_OPCODE_SET_BAUDRATE_BY_DIVIDERS,   /**< Set baudrate by dividers */
     UART_OPCODE_SET_ASYNC_FORMAT,           /**< Set frame format for asynchronous mode */
     UART_OPCODE_SET_IRDA_FORMAT,            /**< Set IrDA format */
     UART_OPCODE_SET_SYNC_FORMAT,            /**< Set frame format for synchronous mode */

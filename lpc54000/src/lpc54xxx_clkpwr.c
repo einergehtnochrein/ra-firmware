@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, DF9DQ
+/* Copyright (c) 2014-2025, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
