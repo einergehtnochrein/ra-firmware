@@ -422,10 +422,12 @@ LPCLIB_Result RS41_processBlock (
                     }
                     break;
                 case RS41_SUBFRAME_GPS_RAW:
-                    _RS41_processGpsRawBlock(
-                            (RS41_SubFrameGpsRaw *)(p + 2),
-                            &handle->rawGps,
-                            &handle->instance->gps);
+                    if (handle->instance) {
+                        _RS41_processGpsRawBlock(
+                                (RS41_SubFrameGpsRaw *)(p + 2),
+                                &handle->rawGps,
+                                &handle->instance->gps);
+                    }
                     break;
                 case RS41_SUBFRAME_CRYPT78:
                 case RS41_SUBFRAME_CRYPT80:
