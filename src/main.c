@@ -93,10 +93,15 @@ int main (void)
 
     /* Prepare M0 */
     extern uint32_t M0IMAGE_start;
-    LPC_SYSCON->CPUCTRL = (LPC_SYSCON->CPUCTRL | 0xC0C40000) | (1 << 3) | (1 << 5);
-    LPC_SYSCON->CPSTACK = ((volatile uint32_t *)&M0IMAGE_start)[0];
-    LPC_SYSCON->CPBOOT = ((volatile uint32_t *)&M0IMAGE_start)[1];
-    LPC_SYSCON->CPUCTRL = ((LPC_SYSCON->CPUCTRL | 0xC0C40000) | (1 << 3)) & ~(1 << 5);
+    uint32_t m0_sp = ((volatile uint32_t *)&M0IMAGE_start)[0];
+    uint32_t m0_pc = ((volatile uint32_t *)&M0IMAGE_start)[1];
+    /* Let's not reset the M0 if it is presumably under debugger control. */
+    if ((LPC_SYSCON->CPSTACK != m0_sp) || (LPC_SYSCON->CPBOOT != m0_pc)) {
+        LPC_SYSCON->CPUCTRL = (LPC_SYSCON->CPUCTRL | 0xC0C40000) | (1 << 3) | (1 << 5);
+        LPC_SYSCON->CPSTACK = ((volatile uint32_t *)&M0IMAGE_start)[0];
+        LPC_SYSCON->CPBOOT = ((volatile uint32_t *)&M0IMAGE_start)[1];
+        LPC_SYSCON->CPUCTRL = ((LPC_SYSCON->CPUCTRL | 0xC0C40000) | (1 << 3)) & ~(1 << 5);
+    }
 
     while (1) {
         heapinfo = mallinfo();

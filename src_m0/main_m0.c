@@ -539,3 +539,26 @@ int main (void)
     }
 }
 
+
+
+#if defined(__GNUC__)
+void HardFault_Handler (void)
+{
+    /* Ignore debug events if not in debug mode */
+    uint32_t sp = __get_MSP();
+    uint32_t pc = ((volatile uint32_t *)sp)[6];
+    uint16_t instr = ((volatile uint16_t *)pc)[0];
+    if ((instr >> 8) == 0xBE) {
+        /* BKPT instruction. Skip it. */
+        ((volatile uint32_t *)sp)[6] = pc + 2;
+        return;
+    }
+
+    __asm (
+    "_HardFault_loop:                           \n\t"
+    "   b _HardFault_loop                       \n\t"
+    "   bx r14                                  \n\t"
+    );
+}
+#endif
+
