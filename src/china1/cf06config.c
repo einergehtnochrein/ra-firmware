@@ -47,11 +47,12 @@ static CF06_InstanceData *_CF06_getInstanceDataStructure (const char *name)
 
             p = p->next;
         }
+
+        _CF06_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (CF06_InstanceData *)calloc(1, sizeof(CF06_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (CF06_InstanceData *)calloc(1, sizeof(CF06_InstanceData));
 
     if (instance) {
         /* Prepare structure */

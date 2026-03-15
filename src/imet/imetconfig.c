@@ -49,11 +49,12 @@ IMET_InstanceData *_IMET_getInstanceDataStructure (float frequency)
 
             p = p->next;
         }
+
+        _IMET_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (IMET_InstanceData *)calloc(1, sizeof(IMET_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (IMET_InstanceData *)calloc(1, sizeof(IMET_InstanceData));
 
     if (instance) {
         /* Prepare structure */

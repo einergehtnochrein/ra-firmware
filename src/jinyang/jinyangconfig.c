@@ -49,11 +49,12 @@ static JINYANG_InstanceData *_JINYANG_getInstanceDataStructure (float frequencyM
 
             p = p->next;
         }
+
+        _JINYANG_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (JINYANG_InstanceData *)calloc(1, sizeof(JINYANG_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (JINYANG_InstanceData *)calloc(1, sizeof(JINYANG_InstanceData));
 
     if (instance) {
         /* Prepare structure */

@@ -49,11 +49,12 @@ static M20_InstanceData *_M20_getInstanceDataStructure (const char *name)
 
             p = p->next;
         }
+
+        _M20_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (M20_InstanceData *)calloc(1, sizeof(M20_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (M20_InstanceData *)calloc(1, sizeof(M20_InstanceData));
 
     if (instance) {
         /* Prepare structure */

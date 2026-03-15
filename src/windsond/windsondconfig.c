@@ -55,34 +55,16 @@ WINDSOND_InstanceData *_WINDSOND_getInstanceDataStructure (float frequencyMHz, u
 
             p = p->next;
         }
+
+        _WINDSOND_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (WINDSOND_InstanceData *)calloc(1, sizeof(WINDSOND_InstanceData));
 
-        if (instance) {
-            instance->id = SONDE_getNewID(sonde);
-
-            /* Insert into list */
-            p = instanceList;
-            if (!p) {
-                instanceList = instance;
-            }
-            else {
-                while (p) {
-                    if (!p->next) {
-                        p->next = instance;
-                        break;
-                    }
-
-                    p = p->next;
-                }
-            }
-        }
-    }
+    /* We need a new calibration structure */
+    instance = (WINDSOND_InstanceData *)calloc(1, sizeof(WINDSOND_InstanceData));
 
     if (instance) {
         /* Prepare structure */
+        instance->id = SONDE_getNewID(sonde);
         instance->rxFrequencyMHz = frequencyMHz;
         instance->name_id = id;
         instance->name_sid = sid;
@@ -94,6 +76,22 @@ WINDSOND_InstanceData *_WINDSOND_getInstanceDataStructure (float frequencyMHz, u
         instance->ground_altitude = 0;
         instance->ground_pressure = 1013.25f;
         instance->ref_temperature = 15.0f;
+
+        /* Insert into list */
+        p = instanceList;
+        if (!p) {
+            instanceList = instance;
+        }
+        else {
+            while (p) {
+                if (!p->next) {
+                    p->next = instance;
+                    break;
+                }
+
+                p = p->next;
+            }
+        }
     }
 
     return instance;
