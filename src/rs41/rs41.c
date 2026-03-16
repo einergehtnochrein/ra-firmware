@@ -401,7 +401,7 @@ LPCLIB_Result RS41_processBlock (
                         LPCLIB_Event event;
                         LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                         event.opcode = APP_EVENT_HEARD_SONDE;
-                        event.block = SONDE_DETECTOR_RS41_RS92;
+                        event.block = SONDE_DETECTOR_RS41_RS92_NCAR;
                         event.parameter = (void *)((uintptr_t)lrintf(rxFrequencyHz));
                         SYS_handleEvent(event);
                     }

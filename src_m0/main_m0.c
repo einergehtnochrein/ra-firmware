@@ -28,7 +28,7 @@ SYNC_Handle sync;
 
 
 static const SYNC_Config configVaisala = {
-    .nPatterns = 2,
+    .nPatterns = 3,
     .conf = {
         {
             .id = IPC_PACKET_TYPE_VAISALA_RS92,
@@ -48,6 +48,16 @@ static const SYNC_Config configVaisala = {
             .frameLengthBits = 510 * 8,
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+        },
+        {
+            .id = IPC_PACKET_TYPE_RD41,
+            .pattern     = {0x995695A9555995A9LL, 0x000000000000A65ALL},
+            .patternMask = {0xFFFFFFFFFFFFFFFFLL, 0x000000000000FFFFLL},
+            .nMaxDifference = 2,
+            .frameLengthBits = (120-4) * 8,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_MANCHESTER_UART_8N1,
             .inverted = false,
         },
     },

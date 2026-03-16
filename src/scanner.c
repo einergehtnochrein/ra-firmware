@@ -314,7 +314,7 @@ void SCANNER_setManualSondeDetector (SCANNER_Handle handle, SONDE_Detector sonde
 SONDE_Detector SCANNER_getManualSondeDetector (SCANNER_Handle handle)
 {
     if (handle == LPCLIB_INVALID_HANDLE) {
-        return SONDE_DETECTOR_RS41_RS92;
+        return SONDE_DETECTOR_RS41_RS92_NCAR;
     }
 
     return handle->manualSondeDetector;
@@ -431,7 +431,7 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
     scannerContext.queue = osMailCreate(osMailQ(scannerQueueDef), NULL);
 
     handle->manualFrequency = 405.1e6f;
-    handle->manualSondeDetector = SONDE_DETECTOR_RS41_RS92;
+    handle->manualSondeDetector = SONDE_DETECTOR_RS41_RS92_NCAR;
     handle->mode = SCANNER_MODE_MANUAL;
     handle->previousMode = SCANNER_MODE_MANUAL;
 
@@ -460,7 +460,7 @@ PT_THREAD(SCANNER_thread (SCANNER_Handle handle))
                 PT_YIELD(&handle->pt);
             }
             else {
-                SONDE_Detector sondeDetector = SONDE_DETECTOR_RS41_RS92;
+                SONDE_Detector sondeDetector = SONDE_DETECTOR_RS41_RS92_NCAR;
                 float frequency = 0;
                 uint32_t durationMs = 1;
                 if (_SCANNER_getNextQrg(&sondeDetector, &frequency, &durationMs)) {

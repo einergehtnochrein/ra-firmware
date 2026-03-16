@@ -54,6 +54,7 @@ typedef enum {
     SONDE_WINDSOND_S1,
     SONDE_MTS01,
     SONDE_LMS6,
+    SONDE_NCAR,
 } SONDE_Type;
 
 
@@ -77,13 +78,14 @@ typedef enum {
     SONDE_DECODER_WINDSOND = 15,
     SONDE_DECODER_MTS01 = 16,
     SONDE_DECODER_LMS6 = 17,
+    SONDE_DECODER_NCAR = 18,
     _SONDE_DECODER_UNDEFINED_ = -1,
 } SONDE_Decoder;
 
 
 /* Detector: Types of sondes the receiver can detect in parallel */
 typedef enum {
-    SONDE_DETECTOR_RS41_RS92 = 0,
+    SONDE_DETECTOR_RS41_RS92_NCAR = 0,
     SONDE_DETECTOR_DFM = 1,
     SONDE_DETECTOR_C34_C50 = 2,
     SONDE_DETECTOR_IMET = 3,

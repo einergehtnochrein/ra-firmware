@@ -51,6 +51,7 @@
 #include "mon.h"
 #include "mrz.h"
 #include "mts01.h"
+#include "ncar.h"
 #include "pdm.h"
 #include "pilot.h"
 #include "psb3.h"
@@ -136,6 +137,7 @@ struct SYS_Context {
     osTimerId inactivityTimeout;
     osTimerId startupPowerControlTimeout;
 
+    NCAR_Handle ncar;
     RS41_Handle rs41;
     RS92_Handle rs92;
     BEACON_Handle beacon;
@@ -954,7 +956,7 @@ LPCLIB_Result SYS_enableDetector (SYS_Handle handle, float frequency, SONDE_Dete
                 LPC_MAILBOX->IRQ0SET = (1u << 7); //TODO
                 break;
 
-            case SONDE_DETECTOR_RS41_RS92:
+            case SONDE_DETECTOR_RS41_RS92_NCAR:
                 ADF7021_setDemodClockDivider(radio, CONFIG_getDemodClockDivider(4800));
                 ADF7021_setBitRate(radio, 4800);
                 ADF7021_ioctl(radio, radioModeVaisala);
@@ -1661,6 +1663,7 @@ if (cl[0] != 0) {
                     WINDSOND_resendLastPositions(handle->windsond);
                     MTS01_resendLastPositions(handle->mts01);
                     LMS6_resendLastPositions(handle->lms6);
+                    NCAR_resendLastPositions(handle->ncar);
 
                     handle->linkEstablished = true;
                 }
@@ -1685,9 +1688,9 @@ if (cl[0] != 0) {
                 if (sscanf(cl, "#%*d,%d", &selector) == 1) {
                     char s[40];
 
-                    detector = SONDE_DETECTOR_RS41_RS92;
+                    detector = SONDE_DETECTOR_RS41_RS92_NCAR;
                     switch (selector) {
-                        case 0:     detector = SONDE_DETECTOR_RS41_RS92; break;
+                        case 0:     detector = SONDE_DETECTOR_RS41_RS92_NCAR; break;
                         case 1:     detector = SONDE_DETECTOR_DFM; break;
                         case 2:     detector = SONDE_DETECTOR_C34_C50; break;
                         case 3:     detector = SONDE_DETECTOR_IMET; break;
@@ -1743,11 +1746,11 @@ if (cl[0] != 0) {
                                         break;
                                     case SONDE_DECODER_RS41:
                                         RS41_removeFromList(handle->rs41, id, &frequency);
-                                        detector = SONDE_DETECTOR_RS41_RS92;
+                                        detector = SONDE_DETECTOR_RS41_RS92_NCAR;
                                         break;
                                     case SONDE_DECODER_RS92:
                                         RS92_removeFromList(handle->rs92, id, &frequency);
-                                        detector = SONDE_DETECTOR_RS41_RS92;
+                                        detector = SONDE_DETECTOR_RS41_RS92_NCAR;
                                         break;
                                     case SONDE_DECODER_DFM:
                                         DFM_removeFromList(handle->dfm, id, &frequency);
@@ -1809,6 +1812,10 @@ if (cl[0] != 0) {
                                         LMS6_removeFromList(handle->lms6, id, &frequency);
                                         detector = SONDE_DETECTOR_LMS6;
                                         break;
+                                    case SONDE_DECODER_NCAR:
+                                        NCAR_removeFromList(handle->ncar, id, &frequency);
+                                        detector = SONDE_DETECTOR_RS41_RS92_NCAR;
+                                        break;
                                     default:
                                         /* ignore */
                                         break;
@@ -1854,9 +1861,9 @@ if (cl[0] != 0) {
                             if (sscanf(cl, "#%*d,%*d,%d", &selector) == 1) {
                                 char s[40];
 
-                                detector = SONDE_DETECTOR_RS41_RS92;
+                                detector = SONDE_DETECTOR_RS41_RS92_NCAR;
                                 switch (selector) {
-                                    case 0:     detector = SONDE_DETECTOR_RS41_RS92; break;
+                                    case 0:     detector = SONDE_DETECTOR_RS41_RS92_NCAR; break;
                                     case 1:     detector = SONDE_DETECTOR_DFM; break;
                                     case 2:     detector = SONDE_DETECTOR_C34_C50; break;
                                     case 3:     detector = SONDE_DETECTOR_IMET; break;
@@ -2128,6 +2135,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
     PSB3_open(&handle->psb3);
     MTS01_open(&handle->mts01);
     LMS6_open(&handle->lms6);
+    NCAR_open(&handle->ncar);
     PDM_open(0, &handle->pdm);
 
     handle->rssiTick = osTimerCreate(osTimer(rssiTimer), osTimerPeriodic, (void *)SYS_TIMERMAGIC_RSSI);
@@ -2260,6 +2268,7 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                 case 15: sondeType = SONDE_IMET54; break;
                                 case 16: sondeType = SONDE_MTS01; break;
                                 case 17: sondeType = SONDE_LMS6; break;
+                                case 18: sondeType = SONDE_NCAR; break;
                             }
 
                             /* Process buffer */
@@ -2460,6 +2469,17 @@ PT_THREAD(SYS_thread (SYS_Handle handle))
                                     /* Frame complete. Let scanner prepare for next frequency */
                                     SCANNER_notifyValidFrame(scanner);
                                 }
+                            }
+                            else if (sondeType == SONDE_NCAR) {
+                                NCAR_processBlock(
+                                        handle->ncar,
+                                        ipc[bufferIndex].data8,
+                                        ipc[bufferIndex].numBits,
+                                        handle->currentFrequency,
+                                        SYS_getFrameRssi(handle),
+                                        handle->realTime);
+                                /* Let scanner prepare for next frequency */
+                                SCANNER_notifyValidFrame(scanner);
                             }
                         }
 
