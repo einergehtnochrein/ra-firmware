@@ -28,7 +28,7 @@ SYNC_Handle sync;
 
 
 static const SYNC_Config configVaisala = {
-    .nPatterns = 2,
+    .nPatterns = 3,
     .conf = {
         {
             .id = IPC_PACKET_TYPE_VAISALA_RS92,
@@ -48,6 +48,16 @@ static const SYNC_Config configVaisala = {
             .frameLengthBits = 510 * 8,
             .startOffset = 0,
             .dataState = SYNC_STATE_DATA_RAW,
+            .inverted = false,
+        },
+        {
+            .id = IPC_PACKET_TYPE_RD41,
+            .pattern     = {0x995695A9555995A9LL, 0x000000000000A65ALL},
+            .patternMask = {0xFFFFFFFFFFFFFFFFLL, 0x000000000000FFFFLL},
+            .nMaxDifference = 2,
+            .frameLengthBits = (120-4) * 8,
+            .startOffset = 0,
+            .dataState = SYNC_STATE_DATA_MANCHESTER_UART_8N1,
             .inverted = false,
         },
     },
@@ -538,4 +548,27 @@ int main (void)
         }
     }
 }
+
+
+
+#if defined(__GNUC__)
+void HardFault_Handler (void)
+{
+    /* Ignore debug events if not in debug mode */
+    uint32_t sp = __get_MSP();
+    uint32_t pc = ((volatile uint32_t *)sp)[6];
+    uint16_t instr = ((volatile uint16_t *)pc)[0];
+    if ((instr >> 8) == 0xBE) {
+        /* BKPT instruction. Skip it. */
+        ((volatile uint32_t *)sp)[6] = pc + 2;
+        return;
+    }
+
+    __asm (
+    "_HardFault_loop:                           \n\t"
+    "   b _HardFault_loop                       \n\t"
+    "   bx r14                                  \n\t"
+    );
+}
+#endif
 

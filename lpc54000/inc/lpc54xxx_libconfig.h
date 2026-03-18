@@ -165,10 +165,12 @@
 #define LPCLIB_I2C_NUM_SLAVE_ADDRESSES                  4
 #endif
 
-/** Default slave address (2*0x01...2*0x78, 0x00=off) */
+/** Default slave address (0x01...0x78, 0x00=off) */
+#ifndef LPCLIB_I2C_SLAVE_DEFAULT_ADDRESS
 #define LPCLIB_I2C_SLAVE_DEFAULT_ADDRESS                (0x00)
-/** Mask for default slave address (0xFE=all address bits relevant) */
+/** Mask for default slave address */
 #define LPCLIB_I2C_SLAVE_DEFAULT_MASK                   (0x00)
+#endif
 
 /** Support I2C bit-banging via GPIO's */
 #ifndef LPCLIB_I2CEMU

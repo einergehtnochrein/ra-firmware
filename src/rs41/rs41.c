@@ -401,7 +401,7 @@ LPCLIB_Result RS41_processBlock (
                         LPCLIB_Event event;
                         LPCLIB_initEvent(&event, LPCLIB_EVENTID_APPLICATION);
                         event.opcode = APP_EVENT_HEARD_SONDE;
-                        event.block = SONDE_DETECTOR_RS41_RS92;
+                        event.block = SONDE_DETECTOR_RS41_RS92_NCAR;
                         event.parameter = (void *)((uintptr_t)lrintf(rxFrequencyHz));
                         SYS_handleEvent(event);
                     }
@@ -422,10 +422,12 @@ LPCLIB_Result RS41_processBlock (
                     }
                     break;
                 case RS41_SUBFRAME_GPS_RAW:
-                    _RS41_processGpsRawBlock(
-                            (RS41_SubFrameGpsRaw *)(p + 2),
-                            &handle->rawGps,
-                            &handle->instance->gps);
+                    if (handle->instance) {
+                        _RS41_processGpsRawBlock(
+                                (RS41_SubFrameGpsRaw *)(p + 2),
+                                &handle->rawGps,
+                                &handle->instance->gps);
+                    }
                     break;
                 case RS41_SUBFRAME_CRYPT78:
                 case RS41_SUBFRAME_CRYPT80:

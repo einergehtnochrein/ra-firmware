@@ -34,7 +34,7 @@ static RS41_InstanceData *_RS41_getInstanceDataStructure (const char *name)
     }
 
     /* If we have reached the maximum number of sondes that we want to track in parallel,
-     * do a garbage collection now: Identify the least recently used entry and reuse it.
+     * do a garbage collection now: Identify the least recently used entry and remove it.
      */
     if (numSondes >= RS41_MAX_SONDES) {
         uint32_t oldest = (uint32_t)-1;
@@ -49,11 +49,12 @@ static RS41_InstanceData *_RS41_getInstanceDataStructure (const char *name)
 
             p = p->next;
         }
+
+        _RS41_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (RS41_InstanceData *)calloc(1, sizeof(RS41_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (RS41_InstanceData *)calloc(1, sizeof(RS41_InstanceData));
 
     if (instance) {
         /* Prepare structure */

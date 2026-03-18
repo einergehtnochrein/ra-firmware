@@ -47,11 +47,12 @@ static IMET54_InstanceData *_IMET54_getInstanceDataStructure (float frequencyMHz
 
             p = p->next;
         }
+
+        _IMET54_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (IMET54_InstanceData *)calloc(1, sizeof(IMET54_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (IMET54_InstanceData *)calloc(1, sizeof(IMET54_InstanceData));
 
     if (instance) {
         /* Prepare structure */

@@ -49,11 +49,12 @@ static MEISEI_InstanceData *_MEISEI_getInstanceDataStructure (float frequencyMHz
 
             p = p->next;
         }
+
+        _MEISEI_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (MEISEI_InstanceData *)calloc(1, sizeof(MEISEI_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (MEISEI_InstanceData *)calloc(1, sizeof(MEISEI_InstanceData));
 
     if (instance) {
         /* Prepare structure */

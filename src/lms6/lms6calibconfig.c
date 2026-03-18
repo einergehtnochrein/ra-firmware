@@ -49,11 +49,12 @@ static LMS6_InstanceData *_LMS6_getInstanceDataStructure (uint32_t serial)
 
             p = p->next;
         }
+
+        _LMS6_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (LMS6_InstanceData *)calloc(1, sizeof(LMS6_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (LMS6_InstanceData *)calloc(1, sizeof(LMS6_InstanceData));
 
     if (instance) {
         /* Prepare structure */

@@ -1,24 +1,26 @@
 
 #include "lpclib.h"
 #include "app.h"
-#include "cf06.h"
-#include "cf06private.h"
+#include "ncar.h"
+#include "ncarprivate.h"
 
 
-#define CF06_MAX_SONDES          2
+#define RD41_MAX_SONDES         3
 
 
-/* Points to list of instance structures */
-static CF06_InstanceData *instanceList;
+/* Points to list of calibration structures */
+static NCAR_InstanceData *instanceList;
 
 
-/* Get a new instance data structure for a new sonde */
-static CF06_InstanceData *_CF06_getInstanceDataStructure (const char *name)
+/* Get a new calibration data structure for a new sonde */
+static NCAR_InstanceData *_NCAR_getInstanceDataStructure (const char *name)
 {
-    CF06_InstanceData *p;
-    CF06_InstanceData *instance;
+    NCAR_InstanceData *p;
+    NCAR_InstanceData *instance;
 
-    /* Count the number of sondes while traversing the list. */
+    /* Check if we already have the calibration data. Count the number of sondes
+     * while traversing the list.
+     */
     int numSondes = 0;
     p = instanceList;
     while (p) {
@@ -34,7 +36,7 @@ static CF06_InstanceData *_CF06_getInstanceDataStructure (const char *name)
     /* If we have reached the maximum number of sondes that we want to track in parallel,
      * do a garbage collection now: Identify the least recently used entry and reuse it.
      */
-    if (numSondes >= CF06_MAX_SONDES) {
+    if (numSondes >= RD41_MAX_SONDES) {
         uint32_t oldest = (uint32_t)-1;
 
         p = instanceList;
@@ -47,17 +49,17 @@ static CF06_InstanceData *_CF06_getInstanceDataStructure (const char *name)
 
             p = p->next;
         }
-
-        _CF06_deleteInstance(instance);
     }
-
-    /* We need a new calibration structure */
-    instance = (CF06_InstanceData *)calloc(1, sizeof(CF06_InstanceData));
+    else {
+        /* We need a new calibration structure */
+        instance = (NCAR_InstanceData *)calloc(1, sizeof(NCAR_InstanceData));
+    }
 
     if (instance) {
         /* Prepare structure */
         instance->id = SONDE_getNewID(sonde);
         strncpy(instance->name, name, sizeof(instance->name) - 1);
+        instance->name[sizeof(instance->name) - 1] = 0;
 
         /* Insert into list */
         p = instanceList;
@@ -82,46 +84,61 @@ static CF06_InstanceData *_CF06_getInstanceDataStructure (const char *name)
 
 
 /* Process the config/calib block. */
-LPCLIB_Result _CF06_prepare (
-        CF06_PayloadBlock1 *block1,
-        CF06_InstanceData **instancePointer,
-        float rxFrequencyHz)
+LPCLIB_Result _RD41_processConfigBlocks (
+        const RD41_SubFrameFrameNumber *rawFrame,
+        const RD41_SubFrameConfig *rawConfig,
+        NCAR_InstanceData **instancePointer)
 {
-    LPCLIB_Result result = LPCLIB_SUCCESS;
+    char s[11];
+//    unsigned int i, j;
 
-    /* Valid pointer to take the output value required */
+    strcpy(s, "RD41");
+#if 0
+    /* Get the sonde name (remove spaces) */
+    j = 0;
+    for (i = 0; i < sizeof(raw->name); i++) {
+        /* Copy if not a space character */
+        if (rawConfig->name[i] != ' ') {
+            s[j] = rawConfig->name[i];
+            ++j;
+        }
+
+        /* Probably never happens, but just in case: Test for premature end of string. */
+        if (!rawConfig->name[i]) {
+            break;
+        }
+    }
+    s[j] = 0;
+#endif
+    /* We must have a valid name by now */
+    if (strlen(s) == 0) {
+        return LPCLIB_ERROR;
+    }
+
+    /* Valid pointer to take the output values required */
     if (!instancePointer) {
         return LPCLIB_ILLEGAL_PARAMETER;
     }
 
-    /* Format serial number */
-    char s[20];
-    snprintf(s, sizeof(s), "%lu%02lu%02lu%02lu",
-             (block1->serial >>  0) & 0xFF,
-             (block1->serial >>  8) & 0xFF,
-             (block1->serial >> 16) & 0xFF,
-             (block1->serial >> 24) & 0xFF);
-
-    /* Allocate new calib space if new sonde! */
-    CF06_InstanceData *instance = _CF06_getInstanceDataStructure(s);
+    /* Allocate new instance space if new sonde! */
+    NCAR_InstanceData *instance = _NCAR_getInstanceDataStructure(s);
     *instancePointer = instance;
 
-    if (!instance) {
-        return LPCLIB_ERROR;
+    if (instance) {
+        /* Set time marker to be able to identify old records */
+        instance->lastUpdated = os_time;
+
+        /* Cook some other values */
+        instance->frameCounter = __REV16(rawFrame->frameCounter_BE);
+        instance->batteryVoltage = __REV16(rawConfig->battery_voltage_BE) / 1e3f;
     }
 
-    instance->rxFrequencyMHz = rxFrequencyHz / 1e6f;
-    //instance->frameCounter = packet->frameCounter;
-
-    /* Set time marker to be able to identify old records */
-    instance->lastUpdated = os_time;
-
-    return result;
+    return LPCLIB_SUCCESS;
 }
 
 
 /* Iterate through instances */
-bool _CF06_iterateInstance (CF06_InstanceData **instance)
+bool _NCAR_iterateInstance (NCAR_InstanceData **instance)
 {
     bool result = false;
 
@@ -146,16 +163,16 @@ bool _CF06_iterateInstance (CF06_InstanceData **instance)
 
 
 /* Remove an instance from the chain */
-void _CF06_deleteInstance (CF06_InstanceData *instance)
+void _NCAR_deleteInstance (NCAR_InstanceData *instance)
 {
     if ((instance == NULL) || (instanceList == NULL)) {
         /* Nothing to do */
         return;
     }
 
-    CF06_InstanceData **parent = &instanceList;
-    CF06_InstanceData *p = NULL;
-    while (_CF06_iterateInstance(&p)) {
+    NCAR_InstanceData **parent = &instanceList;
+    NCAR_InstanceData *p = NULL;
+    while (_NCAR_iterateInstance(&p)) {
         if (p == instance) {                /* Found */
             *parent = p->next;              /* Remove from chain */
             free(instance);                 /* Free allocated memory */

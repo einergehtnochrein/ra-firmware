@@ -47,11 +47,12 @@ static GTH3_InstanceData *_GTH3_getInstanceDataStructure (const char *name)
 
             p = p->next;
         }
+
+        _GTH3_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (GTH3_InstanceData *)calloc(1, sizeof(GTH3_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (GTH3_InstanceData *)calloc(1, sizeof(GTH3_InstanceData));
 
     if (instance) {
         /* Prepare structure */

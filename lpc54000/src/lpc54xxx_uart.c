@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017, DF9DQ
+/* Copyright (c) 2016-2025, DF9DQ
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -559,15 +559,6 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
             }
             break;
 
-#if 0
-        case UART_OPCODE_SET_BAUDRATE_BY_DIVIDERS:
-            uart->DLL = pConfig->pDividers->integer & 0xFF;
-            uart->DLM = (pConfig->pDividers->integer >> 8) & 0xFF;
-            uart->FDR = ((pConfig->pDividers->fracMul << UART_FDR_MULVAL_Pos) & UART_FDR_MULVAL_Msk)
-                      | ((pConfig->pDividers->fracDivAdd << UART_FDR_DIVADDVAL_Pos) & UART_FDR_DIVADDVAL_Msk)
-                      ;
-            break;
-#endif
         case UART_OPCODE_SET_ASYNC_FORMAT:
             temp = uart->CFG & ~(0
                 | UART_CFG_DATALEN_Msk
@@ -619,16 +610,6 @@ void UART_ioctl (UART_Handle handle, const UART_Config *pConfig)
             handle->pRxBuffer = pConfig->buffer.pBuffer;
             handle->rxBufferSize = pConfig->buffer.size;
             break;
-#if 0
-        case UART_OPCODE_SET_FIFO_THRESHOLD:
-            /* NOTE: This should only be called once immediately after opening the port.
-             *       (otherwise disable interrupt)
-             */
-            uart->SCR = (uart->SCR & ~UART_CONTEXT_FIFO_MASK)
-                      | ((pConfig->threshold >> 8) & 0xFF);
-            uart->FCR = (pConfig->threshold & 0xFF) | UART_FCR_FIFOENABLE_Msk;
-            break;
-#endif
 
         case UART_OPCODE_SET_HARDWARE_HANDSHAKE:
             uart->CFG = (uart->CFG & ~UART_CFG_CTSEN_Msk)
@@ -805,10 +786,8 @@ static void UART_commonIRQHandler (UART_Name uartNum)
 #if LPCLIB_FAMILY == LPCLIB_FAMILY_LPC5411X
     uint32_t fifointstat;
 #endif
-//    uint8_t n;
     LPCLIB_Event event;
     UART_Handle handle = &uartContext[uartNum];
-//    volatile uint8_t dummy;
 
 
     /* Preset some event fields */

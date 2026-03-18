@@ -51,11 +51,12 @@ static MRZ_InstanceData *_MRZ_getInstanceDataStructure (float frequencyMHz)
 
             p = p->next;
         }
+
+        _MRZ_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (MRZ_InstanceData *)calloc(1, sizeof(MRZ_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (MRZ_InstanceData *)calloc(1, sizeof(MRZ_InstanceData));
 
     if (instance) {
         /* Prepare structure */

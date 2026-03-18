@@ -47,11 +47,12 @@ static MTS01_InstanceData *_MTS01_getInstanceDataStructure (float frequencyMHz)
 
             p = p->next;
         }
+
+        _MTS01_deleteInstance(instance);
     }
-    else {
-        /* We need a new calibration structure */
-        instance = (MTS01_InstanceData *)calloc(1, sizeof(MTS01_InstanceData));
-    }
+
+    /* We need a new calibration structure */
+    instance = (MTS01_InstanceData *)calloc(1, sizeof(MTS01_InstanceData));
 
     if (instance) {
         /* Prepare structure */
